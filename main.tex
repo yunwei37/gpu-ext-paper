@@ -26,8 +26,8 @@
 \newcommand*\circled[1]{\tikz[baseline=(char.base)]{
             \node[shape=circle,draw=black!80,line width=0.2mm,inner sep=0.1pt] (char) {#1};}}
 
-\newcommand{\sys}{Cuprobe\xspace}
-\newcommand{\tech}{Branch Frequency Prediction\xspace}
+\newcommand{\sys}{gbpf\xspace}
+\newcommand{\tech}{GPU eBPF Extension Framework\xspace}
 \newcommand{\speedup}{10\%}
 
 \newcommand{\eg}{e.g.,\xspace}
@@ -91,7 +91,7 @@
 \newcommand{\todo}[1]{\grumbler{olive}{todo}{#1}}
 
 
-\title{\sys: Precise and Efficient GPU Profiling with eBPF-enabled Instrumentation}
+\title{Safe and Efficient Extensions Runtime for GPU}
 
 
 % \copyrightyear{2025}
@@ -107,24 +107,15 @@
 % }
 
 
-\maketitle
-
 \begin{abstract}
-% GPU observability is crucial for ensuring high performance in large language model (LLM) workloads and other computationally intensive applications in high-performance computing (HPC) environments. 
-% GPU observability is essential to achieving high efficiency in large language model (LLM) workloads and other computationally intensive applications within high-performance computing (HPC) environments.
-% Large-scale HPC deployments depend on GPU acceleration to manage data-intensive computations and vast model parameters. % no need this, duplicated
-% In this paper, we present a method that combines real-time GPU telemetry, dynamic instrumentation, and automated performance analysis to identify bottlenecks across multiple layers—from kernel execution and memory transfers to heterogeneous compute orchestration.
-% % By combining real-time GPU telemetry, dynamic instrumentation, and automated performance analysis, we can pinpoint bottlenecks at multiple layers—ranging from kernel execution and memory transfers to heterogeneous compute orchestration. 
-% This enhanced observability not only simplifies the detection and resolution of performance issues but also enables more efficient hardware utilization and resource planning, ultimately lowering costs and reducing time-to-solution by leveraging eBPF uprobes.
-% % This enhanced visibility not only streamlines the process of identifying and addressing performance constraints, but also facilitates more efficient hardware utilization and resource planning, ultimately reducing costs and accelerating time-to-solution using the abstraction of eBPF uprobe. 
-% Moreover, our eBPF-driven, programmable observability techniques integrate seamlessly with both AI-driven pipelines (e.g., LLM training and inference) and traditional HPC workflows, such as large-scale simulations, climate modeling, and computational fluid dynamics. This holistic view of GPU performance empowers researchers and engineers to optimize code paths, eliminate inefficiencies, and fully exploit HPC resources.
-Precise GPU observability and programmability are essential for optimizing performance in AI workloads and other computationally intensive high‐performance computing (HPC) applications. 
-\xiangyu{Mention the existing work and their drawback?}
-In this paper, we introduce \sys, the first framework and eBPF runtime that dynamically offloads eBPF bytecode onto GPUs via dynamic PTX injection. Designed primarily for observability, our system leverages real‐time GPU telemetry, eBPF‐based dynamic instrumentation, and automated performance analysis to pinpoint bottlenecks at multiple layers—including kernel execution, memory transfers, and heterogeneous compute orchestration—without incurring significant overhead or interrupting active GPU kernels. 
-By dynamically compiling eBPF programs into PTX snippets and injecting them directly into running GPU kernels, \sys provides fine‐grained, low‐overhead instrumentation that seamlessly integrates with existing eBPF ecosystems. 
-We demonstrate \sys’s versatility through three representative use cases: MemTrace, where on‐the‐fly GPU memory‐access tracing identifies cache‐miss patterns and bank conflicts; Fair Share Scheduling, which injects instrumentation to analyze and adapt fair share scheduling in order for improved load balancing; CPU–GPU Collaborative Inference, enabling coordinated profiling across host and device to optimize data‐transfer pipelines for ML Green use. \xiangyu{Any concrete statistics for the result?}
+
+  Modern GPU workloads in machine learning and HPC present complex behaviors that are challenging to observe, optimize and customize. An ideal GPU extension framework requires four key characteristics: (1) intra-kernel programmability to observe and modify running kernels at the instruction level, (2) safety to prevent crashes and memory corruption, (3) efficiency to minimize runtime overhead, and (4) unified programmability to coherently manage logic across the host CPU and GPU. We analyze existing approaches and find they fall short: host-side tools treat the GPU as a black box, failing on intra-kernel programmability; vendor-specific libraries like CUPTI and NVBit are GPU specific, lacking a unified programming model to control system-wide behavior and often introducing substantial overhead. This paper presents \sys, the first framework that extends the eBPF paradigm for general-purpose, programmable extensions directly into GPU kernels. \sys defines GPU-specific attach points for memory operations and synchronization primitives, verifies and JIT-compiles eBPF bytecode to PTX/SPIR-V with runtime injection, and provides on-device helper calls, plus shared CPU-GPU maps. By executing eBPF programs safely within GPU contexts, our framework enables fine-grained memory profiling, adaptive scheduling, and programmable optimization with 10× lower overhead than existing binary instrumentation. We demonstrate \sys's generality through three applications achieving <3\% overhead for memory tracing, near-ideal fairness (Jain's $F \approx 0.96$) for multi-tenant scheduling, and dynamic CPU-GPU workload partitioning for ML inference.
 \end{abstract}
 \begin{document}
+
+\maketitle
+
+
 \input{tex/intro}
 \input{tex/background}
 %\input{tex/security}
