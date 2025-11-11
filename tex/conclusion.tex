@@ -1,0 +1,10 @@
+\section{Conclusion}
+\label{sec:conclusion}
+% Our comprehensive evaluation confirms that \sys{} not only meets but exceeds our initial expectations. 
+\xiangyu{We build \sys{} that offloads eBPF bytecode to monitor GPU's runtime performance using dynamic PTX injection. On standard NVIDIA servers, \sys{} reduces instrumentation overhead, boosts throughput and cut the CPU-GPU round trip latency. 
+These improvements translate directly into smoother, more balanced pipelines without frequent kernel launches. 
+The results demonstrate that \sys{}’s shared-memory approach and flexible PTX injection scale seamlessly to Grace Hopper–class architectures, delivering a fully responsive, high-throughput observability and programmability framework for GPU-driven workloads.}
+
+% On a standard NVIDIA P40 and H100 server, \sys{} reduces instrumentation overhead from 5.2\% (baseline uprobe tracing) to just 1.8\% on average, while boosting throughput for streaming workloads by 23\%. We cut CPU–GPU round-trip latency by 34\%, and dynamic PTX injection completes in under 20 µs—ensuring long-running kernels remain fully occupied even under irregular or fine-grained task patterns. These improvements translate directly into smoother, more balanced pipelines without frequent kernel launches.
+
+% Crucially, we have now validated \sys{} on a production-scale NVIDIA Grace CPU + Hopper GPU node, another machine with a GPU interconnected via CXL memory pooling. The results demonstrate that \sys{}’s shared-memory approach and flexible PTX injection scale seamlessly to Grace Hopper–class architectures, delivering a fully responsive, high-throughput observability and programmability framework for today’s and tomorrow’s GPU-driven workloads.

@@ -1,0 +1,51 @@
+\section{Background}
+
+In this section, we will introduce the foundational concepts that underpin our \xiangyu{system} in the subsequent sections.
+
+\subsection{User Space Application Extension}
+In recent years, the eBPF ecosystem has grown well beyond its original role as a kernel‐level packet filter. Today eBPF serves as a unified infrastructure for observability, security enforcement, and programmable networking, and it integrates tightly with modern development workflows via tools like clang, libbpf and BTF‐based CO-RE. Although traditional eBPF programs run in kernel space for direct access to low‐level subsystems, this arrangement can introduce friction when instrumenting user‐level code—each uprobe (user‐level probe) still incurs a full context switch into the kernel, along with the overhead of saving and restoring CPU state. To address these latency and permission barriers, as shown in \Cref{fig:bpf}, recent efforts have begun to \xiangyu{push --> extend} eBPF functionality into user space. By relocating probes and map operations into the process itself—often via binary rewriting or in-process hooks—developers can avoid costly kernel crossings, reduce reliance on elevated privileges, and achieve finer‐grained configurability. 
+User-space eBPF extensions also simplify multi-process coordination through shared-memory map implementations and allow seamless integration with existing eBPF toolchains, giving developers the flexibility to deploy sophisticated observability and security logic without kernel recompiles or system restarts.
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{img/bpf.pdf}
+\caption{Userspace BPF Diagram}\label{fig:bpf}
+\end{figure}
+
+\subsection{PTX Just In Time Compilation}
+PTX (Parallel Thread Execution) serves as an intermediate representation for NVIDIA GPUs, offering a device-independent layer for parallel computations, which is faster than NVBit\cite{villa2019nvbit,kamath2021iguard} tools. 
+PTX Just-In-Time (JIT)~\cite{huang2024parallelgpuos,han2024microsecond} compilation allows developers to convert PTX code into GPU-specific machine instructions on the fly, enabling them to adapt and optimize their programs in real-time. 
+This capability \xiangyu{extends --> goes} beyond simple runtime compilation: it facilitates dynamic instrumentation by letting users intercept and modify PTX instructions before they are turned into final machine code (SASS). 
+In doing so, developers can embed profiling counters, memory checks, or custom analytics directly into the GPU kernel with minimal overhead. 
+Because PTX JIT operates at this higher-level IR—rather than at the raw binary level as in frameworks like NVBit—it often delivers superior performance, as it bypasses the complexity of rewriting fully compiled machine instructions. 
+This leads to highly optimized code tailored to the specific GPU architecture, capitalizing on features such as register usage and warp scheduling. Additionally, PTX JIT integrates naturally with existing NVIDIA toolchains (including NVCC and NVRTC), letting users refine or generate specialized kernels without leaving familiar workflows, and removing the need for time-consuming offline recompilation every time a kernel needs to change or be instrumented. 
+
+\subsection{GPU Scheduler and Secure Sandbox}
+
+Beyond CPU‐based Confidential Virtual Machines, confidential computing for GPUs has emerged to protect large‐scale model workloads during both model training and inference. 
+Soter~\cite{shen2022soter}, an edge‐oriented design, relies on a CPU‐side enclave and parameter morphing to offload selected layers to the GPU while keeping model weights secret. 
+In practice, however, Soter incurs a 2×–15× latency penalty on LLM inference because non‐associative components (e.g.\ token embeddings) cannot be moved off the CPU. 
+Honeycomb~\cite{mai2023honeycomb} takes a different \xiangyu{track}, inserting a trusted software layer and performing static validation of every indirect memory access. While this blocks unsafe GPU commands—an issue exploited in vLLM’s request scheduler~\cite{kwon2023efficient}—the added runtime checks impose substantial performance overhead. Han \emph{et al.}~\cite{han2022microsecond} further explore microsecond‐scale scheduling for GPU, but their kernel‐level modifications introduce non‐trivial latency and reduce compatibility. In contrast, PipeLLM\cite{tan2025pipellm} achieves secure, low‐overhead GPU scheduling by speculatively pipelining AES‐GCM encryption with data transfers. 
+Without any changes to application code or hardware, PipeLLM overlaps encryption, copy, and compute—eliminating up to 80 \% of the confidentiality overhead and maintaining end‐to‐end latency increases below 20 \%. \xiangyu{Are these numbers from PipeLLM paper?}
+
+\subsection{Experiment Observation}\label{sec:motivation}
+
+\xiangyu{Should we change the subsection title to be sth. like motivation and design overview?}
+\xiangyu{One the one hand}, existing GPU instrumentation approaches, such as NVIDIA’s CUDA Profiling Tools Interface (CUPTI)~\cite{cupti} and binary‐instrumentation frameworks like NVBit~\cite{villa2019nvbit}, offer valuable insights into GPU performance
+\xiangyu{but often incur --> at the cost of} substantial overhead and invasive modifications that interrupt GPU kernels. 
+\xiangyu{On the other hand,} extended Berkeley Packet Filter (eBPF) has emerged as a powerful, lightweight observability framework—traditionally employed in network analytics~\cite{ghigoff2021bmc} and system profiling~\cite{zhong2022xrp,yang2023lambda}—that allows sandboxed instrumentation programs to execute in kernel space without intrusive changes or significant performance penalties. 
+However, existing eBPF techniques remain strictly CPU‐centric, constrained by frequent kernel–user‐space context switches, and offer limited API‐level visibility into the GPU execution model.
+
+Modern GPU workloads demand real‐time, fine‐grained instrumentation that can adapt on the fly without halting long‐running kernels. 
+Three representative use cases can highlight these requirements:
+
+\begin{figure} \centering \includegraphics[width=0.5\textwidth]{img/motivation.pdf} \caption{Null Tool Runtime and Instrumentation Overhead Breakdown} \label{fig:latency} \end{figure}
+
+As shown in \Cref{fig:latency}, neither CUPTI nor NVBit can inject custom instrumentation logic directly into running kernels, and CPU‐only eBPF solutions cannot observe or control GPU‐specific behaviors without stopping or relaunching kernels. To bridge this gap, we introduce \sys, the first framework and eBPF runtime that dynamically extends eBPF instrumentation into GPU kernels via runtime PTX injection. Specifically, \sys{}:
+
+\begin{itemize}[leftmargin=*,itemsep=0pt]
+  \item Compiles eBPF bytecode into NVIDIA’s Parallel Thread Execution (PTX) intermediate representation at runtime.
+  \item Injects PTX snippets directly into actively executing GPU kernels without interrupting them.
+  \item Leverages user‐space eBPF uprobes, shared‐memory maps, and real‐time GPU telemetry to provide fine‐grained, low‐overhead instrumentation.
+\end{itemize}
+
+By enabling on‐the‐fly addition, modification, or removal of instrumentation logic, \sys{} empowers new classes of dynamic GPU observability and programmability, satisfying the stringent requirements of MemTrace, Block Scheduling, and CPU–GPU Collaborative Inference use cases without compromising kernel continuity or performance.

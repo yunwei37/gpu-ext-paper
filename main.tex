@@ -1,0 +1,145 @@
+\documentclass[letterpaper, twocolumn, 10pt]{article}
+\usepackage{usenix}
+
+% Optional: Comment out the CCS concepts and keywords.
+\usepackage{tikz}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{xspace}
+\usepackage{cleveref}
+\usepackage{balance}
+\usepackage{url}
+\usepackage{siunitx}
+\usepackage{comment}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{minted}
+\usepackage{tikz}
+\usepackage{subcaption}
+\usepackage{hyperref}
+
+\usetikzlibrary{shapes,arrows,positioning,fit}
+
+\setminted{xleftmargin=10pt} % what a hack.
+\setminted{fontsize=\footnotesize}
+\setminted{frame=lines}
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
+            \node[shape=circle,draw=black!80,line width=0.2mm,inner sep=0.1pt] (char) {#1};}}
+
+\newcommand{\sys}{Cuprobe\xspace}
+\newcommand{\tech}{Branch Frequency Prediction\xspace}
+\newcommand{\speedup}{10\%}
+
+\newcommand{\eg}{e.g.,\xspace}
+\newcommand{\ie}{i.e.,\xspace}
+\newcommand{\etc}{etc.\xspace}
+
+% Cleveref formatting
+\crefname{algocf}{algorithm}{algorithms}
+\Crefname{algocf}{Algorithm}{Algorithms}
+\crefformat{section}{\S#2#1#3}
+\Crefformat{section}{Section~#2#1#3}
+\crefformat{subsection}{\S#2#1#3}
+\Crefformat{subsection}{Section~#2#1#3}
+\crefformat{subsubsection}{\S#2#1#3}
+\Crefformat{subsubsection}{Section~#2#1#3}
+\crefformat{figure}{figure~#2#1#3}
+\Crefformat{figure}{Figure~#2#1#3}
+
+
+% Numbers
+\newcommand{\numcases}{7\xspace}
+\newcommand{\speedupAccel}{xxx\xspace}
+\newcommand{\eBPFSlowdownAccel}{xxx\xspace}
+\newcommand{\speedupMonitor}{xxx\xspace}
+
+
+\newlength{\mintednumbersep}
+\AtBeginDocument{%
+  \sbox0{\tiny00}%
+  \setlength\mintednumbersep{\parindent}%
+  \addtolength\mintednumbersep{-\wd0}%
+}
+
+\setminted{xleftmargin=\parindent}
+\setminted{numbersep=\mintednumbersep}
+\setminted{mathescape}
+\setminted{linenos}
+\setminted{fontsize=\small}
+
+
+%%% for AQ's itemizations:
+\newenvironment{smenumerate}%
+  {\begin{enumerate}[itemsep=-0pt, parsep=0pt, topsep=0pt, leftmargin=2pc]}
+  {\end{enumerate}}
+
+\newenvironment{smitemize}%
+  {\begin{list}{$\bullet$}%
+    {\setlength{\parsep}{0pt}%
+      \setlength{\topsep}{0pt}%
+      \setlength{\leftmargin}{2pc}%
+      \setlength{\itemsep}{1pt}}}
+  {\end{list}}
+
+
+
+\newcommand{\grumbler}[3]{\noindent{\color{#1}{\bf \fbox{#2}} {\it #3}}}
+\newcommand{\arq}[1]{\grumbler{red}{ARQ}{#1}}
+\newcommand{\yy}[1]{\grumbler{blue}{YY}{#1}}
+\newcommand{\yusheng}[1]{\grumbler{green}{YS}{#1}}
+\newcommand{\xiangyu}[1]{\grumbler{orange}{XG}{#1}}
+\newcommand{\todo}[1]{\grumbler{olive}{todo}{#1}}
+
+
+\title{\sys }
+
+
+% \copyrightyear{2025}
+% \acmYear{2025}
+% \setcopyright{rightsretained}
+% \acmConference[HCDS '25]{4th Workshop on Heterogeneous Composable and Disaggregated Systems}{March 30, 2025}{Rotterdam, Netherlands}
+% \acmBooktitle{4th Workshop on Heterogeneous Composable and Disaggregated Systems (HCDS '25), March 30, 2025, Rotterdam, Netherlands}
+% \acmPrice{}
+% \acmDOI{10.1145/3723851.3726984}
+% \acmISBN{979-8-4007-  1470-2/25/03}
+% \author{
+% Anonymous Authors
+% }
+
+
+\maketitle
+
+\begin{abstract}
+% GPU observability is crucial for ensuring high performance in large language model (LLM) workloads and other computationally intensive applications in high-performance computing (HPC) environments. 
+% GPU observability is essential to achieving high efficiency in large language model (LLM) workloads and other computationally intensive applications within high-performance computing (HPC) environments.
+% Large-scale HPC deployments depend on GPU acceleration to manage data-intensive computations and vast model parameters. % no need this, duplicated
+% In this paper, we present a method that combines real-time GPU telemetry, dynamic instrumentation, and automated performance analysis to identify bottlenecks across multiple layers—from kernel execution and memory transfers to heterogeneous compute orchestration.
+% % By combining real-time GPU telemetry, dynamic instrumentation, and automated performance analysis, we can pinpoint bottlenecks at multiple layers—ranging from kernel execution and memory transfers to heterogeneous compute orchestration. 
+% This enhanced observability not only simplifies the detection and resolution of performance issues but also enables more efficient hardware utilization and resource planning, ultimately lowering costs and reducing time-to-solution by leveraging eBPF uprobes.
+% % This enhanced visibility not only streamlines the process of identifying and addressing performance constraints, but also facilitates more efficient hardware utilization and resource planning, ultimately reducing costs and accelerating time-to-solution using the abstraction of eBPF uprobe. 
+% Moreover, our eBPF-driven, programmable observability techniques integrate seamlessly with both AI-driven pipelines (e.g., LLM training and inference) and traditional HPC workflows, such as large-scale simulations, climate modeling, and computational fluid dynamics. This holistic view of GPU performance empowers researchers and engineers to optimize code paths, eliminate inefficiencies, and fully exploit HPC resources.
+Precise GPU observability and programmability are essential for optimizing performance in AI workloads and other computationally intensive high‐performance computing (HPC) applications. 
+\xiangyu{Mention the existing work and their drawback?}
+In this paper, we introduce \sys, the first framework and eBPF runtime that dynamically offloads eBPF bytecode onto GPUs via dynamic PTX injection. Designed primarily for observability, our system leverages real‐time GPU telemetry, eBPF‐based dynamic instrumentation, and automated performance analysis to pinpoint bottlenecks at multiple layers—including kernel execution, memory transfers, and heterogeneous compute orchestration—without incurring significant overhead or interrupting active GPU kernels. 
+By dynamically compiling eBPF programs into PTX snippets and injecting them directly into running GPU kernels, \sys provides fine‐grained, low‐overhead instrumentation that seamlessly integrates with existing eBPF ecosystems. 
+We demonstrate \sys’s versatility through three representative use cases: MemTrace, where on‐the‐fly GPU memory‐access tracing identifies cache‐miss patterns and bank conflicts; Fair Share Scheduling, which injects instrumentation to analyze and adapt fair share scheduling in order for improved load balancing; CPU–GPU Collaborative Inference, enabling coordinated profiling across host and device to optimize data‐transfer pipelines for ML Green use. \xiangyu{Any concrete statistics for the result?}
+\end{abstract}
+\begin{document}
+\input{tex/intro}
+\input{tex/background}
+%\input{tex/security}
+% \input{tex/technique}
+\input{tex/design}
+\input{tex/usecase}
+\input{tex/eval}
+\input{tex/suggestion}
+\input{tex/related-work}
+\input{tex/conclusion}
+% \section{Acknowledgment}
+
+% The authors wish to acknowledge the use of Claude in the writing of this paper. This tool was used to assist with improving the language in the paper and providing translations on implementations section.
+
+\bibliographystyle{plain}
+\bibliography{cite}
+
+\end{document}
