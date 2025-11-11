@@ -137,16 +137,7 @@ These trampolines are linked into the device's code image via in-place patching 
 
 \subsection{Isolation Requirement}\label{sec:isolation}
 
-Dynamic PTX injection must not corrupt application state. \sys therefore runs injected snippets in a protected domain.
-
-\paragraph{Guardian-inspired GPU Partition}
-Drawing on Guardian~\cite{pavlidakis2024guardian}, \sys partitions GPU address space at runtime and fences every load/store with lightweight masking:
-
-\begin{itemize}[leftmargin=*,itemsep=0pt]
-  \item \textbf{Dynamic Partitioning:} At initialization, \sys{} uses one partition of entire GPU memory. Each instrumentation snippet is tagged with its owner's partition ID.
-  \item \textbf{PTX-Level Bounds Fencing:} Before every memory access, bitwise AND/OR operations mask the computed address into the tenant's partition range, guaranteeing that out-of-bounds addresses wrap harmlessly within the correct domain.
-  \item \textbf{Client–Server Enforcement:} Inspired by Guardian's client–server model, all CUDA calls (allocations, copies, launches) are intercepted and forwarded to a trusted Manager. This server maintains the partition bounds table and rejects any operation that would violate domain isolation.
-\end{itemize}
+Dynamic PTX injection must not corrupt application state. \sys therefore runs injected snippets in a protected domain through eBPF verification and runtime sandboxing.
 
 \paragraph{Runtime Sandbox Integration}
 During JIT compilation, \sys{} wraps each PTX snippet in a minimal prologue/epilogue sequence that:
@@ -154,9 +145,9 @@ During JIT compilation, \sys{} wraps each PTX snippet in a minimal prologue/epil
   %\item
   a) Saves a live register state to a safe context.
   %\item
-  b) Applies bitwise partition masking and invokes the instrumentation logic.
+  b) Executes the verified instrumentation logic within bounded memory regions.
   %\item
   c) Restores registers and resumes normal kernel execution.
 %\end{itemize}
 
-Combining Guardian-style fencing with trampolines and shared-memory coordination ensures injected code remains isolated from application kernels.
+The eBPF verifier ensures injected code operates only on designated shared memory regions, preventing corruption of application state. Combined with trampolines and shared-memory coordination, this approach ensures injected code remains isolated from application kernels.
