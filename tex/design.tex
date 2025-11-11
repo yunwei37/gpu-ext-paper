@@ -40,7 +40,8 @@ int curetprobe_matMulTiled(struct pt_regs *ctx) {
 
 \subsection{Userspace eBPF integration}
 \begin{figure}
-\includegraphics[width=0.8\columnwidth]{img/main.pdf}
+\centering
+\fbox{\parbox{0.8\columnwidth}{\centering [Figure: \sys Design]}}
 \vspace{-.5ex}
 \caption{\sys Design}
 \label{fig:system-design}
@@ -50,7 +51,7 @@ Figure~\ref{fig:system-design} shows a unified user-space eBPF runtime that keep
 
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=.82\linewidth]{img/gate.pdf}
+  \fbox{\parbox{.82\linewidth}{\centering [Figure: \sys Gate Design]}}
   \vspace{-.5ex}
   \caption{\sys Gate design for CPU–GPU communication, showing the MPK+CFI‐protected shared memory region, trampoline hooks, and PTX injector within the isolation boundary.}
   \label{fig:mpk_gate}

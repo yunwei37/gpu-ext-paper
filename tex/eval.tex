@@ -10,9 +10,9 @@ We evaluated \sys{} on three machines. Server A is a dual-socket Intel Gold 6138
 
 We quantify instrumentation overhead with a latency micro-benchmark that measures GPU load/store latency under \sys{} vs. NVBit (gpumemtrace~\cite{villa2019nvbit}) across varying access sizes. As shown in Figure~\ref{fig:end_to_end_latency}, \sys{} adds substantially less latency than NVBit, staying low and stable below 128 KB and rising modestly thereafter. \Cref{fig:latency1} compares with the PyTorch profiler (CUPTI+NVTX): p10 and mean latencies are slightly better under \sys{}. Lightweight PTX injection at runtime is the key enabler of the lower overhead.
 
-\begin{figure} \centering \includegraphics[width=0.5\textwidth]{img/end_to_end_latency.pdf} \caption{Runtime Overhead} \label{fig:end_to_end_latency} \end{figure}
+\begin{figure} \centering \fbox{\parbox{0.5\textwidth}{\centering [Figure: Runtime Overhead]}} \caption{Runtime Overhead} \label{fig:end_to_end_latency} \end{figure}
 
-\begin{figure} \centering \includegraphics[width=0.5\textwidth]{img/latency_comparison.pdf} \caption{Resnet Inference Latency Overhead} \label{fig:latency1} \end{figure}
+\begin{figure} \centering \fbox{\parbox{0.5\textwidth}{\centering [Figure: Resnet Inference Latency Overhead]}} \caption{Resnet Inference Latency Overhead} \label{fig:latency1} \end{figure}
 
 \subsection{\sys{} Performance}
 We compare end-to-end throughput and time-to-result against a native baseline (no persistent kernel, no PTX injection). For small batches, \sys{} pays modest startup/JIT cost but reduces launch frequency; for larger or irregular workloads, it matches or beats native by avoiding relaunches and sustaining higher utilization.
@@ -26,7 +26,7 @@ We benchmark shared-memory bandwidth and one-way latency on three servers using 
 We evaluate accuracy and overhead on synthetic and real kernels. A bank-conflict microbenchmark shows per-warp access patterns and conflict rates within 2\% of hardware counters. In \Cref{fig:memtrace}, instrumenting GEMM, SpMV, and a 1D stencil adds under 3\% end-to-end overhead; PTX injection remains below 50 \(\mu\)s. MemTrace also pinpointed a convolution-bank conflict that a simple padding fix resolved for a 12\% gain.
 \begin{figure}
 \centering
-\includegraphics[width=\columnwidth]{img/memtrace.pdf}
+\fbox{\parbox{\columnwidth}{\centering [Figure: MemTrace Overhead Comparison]}}
 \caption{MemTrace Overhead Comparison}\label{fig:memtrace}
 \end{figure}
 \subsubsection{Fair Share Scheduling}\label{sec:eval_fair_sched}
@@ -44,7 +44,7 @@ where \(x_i\) is the throughput achieved by tenant \(i\) and \(M=3\).
 
 \begin{figure}
 \centering
-\includegraphics[width=\columnwidth]{img/plot_cuda_scheduler.pdf}
+\fbox{\parbox{\columnwidth}{\centering [Figure: BFS Scheduler Comparison]}}
 \caption{BFS Scheduler Comparison}\label{fig:plot_cuda_scheduler}
 \end{figure}
 
@@ -64,21 +64,21 @@ For online optimization, \sys collects per-layer times, transfer latencies, and 
 
 \begin{figure}
 \centering
-\includegraphics[width=\columnwidth]{img/slice_plot.pdf}
+\fbox{\parbox{\columnwidth}{\centering [Figure: Latency comparison of static CPU GPU slice percentage]}}
 \caption{Latency comparison of static CPU GPU slice percentage}\label{fig:slicing-percentage}
 \end{figure}
 \begin{figure}
 \centering
-\includegraphics[width=\columnwidth]{img/heatmap.pdf}
+\fbox{\parbox{\columnwidth}{\centering [Figure: LLAMA2 hidden representation Heatmap on Server A]}}
 \caption{LLAMA2 hidden representation Heatmap on Server A}\label{fig:heatmap}
 \end{figure}
 \begin{figure}
 \centering
-\includegraphics[width=\columnwidth]{img/heatmap1.pdf}
+\fbox{\parbox{\columnwidth}{\centering [Figure: LLAMA2 hidden representation Heatmap on Server B]}}
 \caption{LLAMA2 hidden representation Heatmap on Server B}\label{fig:heatmap1}
 \end{figure}
 \begin{figure}
 \centering
-\includegraphics[width=\columnwidth]{img/plot_data.pdf}
+\fbox{\parbox{\columnwidth}{\centering [Figure: LLAMA2 Power Generation Full CPU Full GPU offload]}}
 \caption{LLAMA2 Power Generation Full CPU Full GPU offload on 2015‑12‑31}\label{fig:power_vs_throughput}
 \end{figure}
