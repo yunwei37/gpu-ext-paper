@@ -2,55 +2,28 @@
 \section{Evaluation}
 \label{sec:evaluation}
 
-We evaluated \sys{} on \xiangyu{one cluster consisting of }three machines. 
-Server A is a dual-socket Intel Gold 6138 processor (80 cores, 2.0 GHz, 55 MB LLC) equipped with 256 GB DDR3 RAM and an NVIDIA P40 GPU. 
-Server B is a single socket Intel Xeon 6787p (86 cores, 2.0 GHz, 336MB LLC) with 768 GB DDR5 RAM(512GB CXL Module) and an NVIDIA H100 GPU. 
-Server C is a Grace Hopper Machine. 
-Unless otherwise mentioned, each metric is the average of 10 trials on server A.\xiangyu{Why do we choose 10? Is 10 sufficient to prove the effectiveness? May be worthwhile to say it.}  
-We report averages using geometric mean for \xiangyu{metrics such as the average speedup and arithmetic mean for the rest}. 
+We evaluated \sys{} on \xiangyu{one cluster consisting of }three machines. Server A is a dual-socket Intel Gold 6138 processor (80 cores, 2.0 GHz, 55 MB LLC) equipped with 256 GB DDR3 RAM and an NVIDIA P40 GPU. Server B is a single socket Intel Xeon 6787p (86 cores, 2.0 GHz, 336MB LLC) with 768 GB DDR5 RAM(512GB CXL Module) and an NVIDIA H100 GPU. Server C is a Grace Hopper Machine. Unless otherwise mentioned, each metric is the average of 10 trials on server A.\xiangyu{Why do we choose 10? Is 10 sufficient to prove the effectiveness? May be worthwhile to say it.}  We report averages using geometric mean for \xiangyu{metrics such as the average speedup and arithmetic mean for the rest}.
 
 \xiangyu{I like your description in the eval section. To highlight our results, I suggest highlighting 1 sentence in each subsection.}
 
 \subsection{Micro-benchmark Performance}
 
-We assessed the instrumentation overhead introduced by \sys{} through a latency-focused micro-benchmark. 
-Specifically, we measured GPU memory access latency while instrumenting load and store operations, comparing \sys{} with NVBit-based instrumentation (gpumemtrace~\cite{villa2019nvbit}). 
-Both systems were evaluated using a set of operations with varying memory access sizes. Our micro-benchmark results, as depicted in Figure~\ref{fig:latency}, demonstrate that \sys{} introduces significantly lower instrumentation overhead compared to NVBit-based approaches. 
-While NVBit exhibited substantial latency increases due to heavy instrumentation overhead, \sys{} maintained relatively stable and low latencies across smaller memory access sizes (below 128 KB). 
-Beyond 128 KB, latency moderately increased, while still lower than the baseline. We also compared with the PyTorch profiler which uses CUPTI and NVTX in \Cref{fig:latency1} where p10 latency and mean latency, \sys is slightly better than PyTorch Profiler. \xiangyu{Do we need to say some numeric values? (e.g., A's latency is x times lower than B's)}
-These results validate our key design decision: \textit{dynamically injecting lightweight PTX instrumentation at runtime significantly reduces overhead compared to traditional GPU instrumentation methods.}
+We quantify instrumentation overhead with a latency micro-benchmark that measures GPU load/store latency under \sys{} vs. NVBit (gpumemtrace~\cite{villa2019nvbit}) across varying access sizes. As shown in Figure~\ref{fig:end_to_end_latency}, \sys{} adds substantially less latency than NVBit, staying low and stable below 128 KB and rising modestly thereafter. \xiangyu{Do we need to say some numeric values? (e.g., A's latency is x times lower than B's)} \Cref{fig:latency1} compares with the PyTorch profiler (CUPTI+NVTX): p10 and mean latencies are slightly better under \sys{}. Lightweight PTX injection at runtime is the key enabler of the lower overhead.
 
-\begin{figure} \centering \includegraphics[width=0.5\textwidth]{img/end_to_end_latency.pdf} \caption{Runtime Overhead\xiangyu{Add more description to the figure?}} \label{fig:latency} \end{figure}
+\begin{figure} \centering \includegraphics[width=0.5\textwidth]{img/end_to_end_latency.pdf} \caption{Runtime Overhead\xiangyu{Add more description to the figure?}} \label{fig:end_to_end_latency} \end{figure}
 
 \begin{figure} \centering \includegraphics[width=0.5\textwidth]{img/latency_comparison.pdf} \caption{Resnet Inference Latency Overhead} \label{fig:latency1} \end{figure}
 
 \subsection{\sys{} Performance}
-We evaluated \sys{} by comparing its end-to-end performance against a native implementation of the same workloads. 
-In this comparison, both systems utilized the same input data and computational tasks, but the native version excluded the overhead of persistent kernels, shared memory synchronization, and PTX injection. 
-Our measurements focused on overall throughput and total processing time from the initial data transfer to the final result retrieval. 
-
-In small-scale scenarios with relatively light input batches, we observed that \sys{} introduces a modest overhead due to the persistent kernel’s initialization and JIT compilation steps. 
-This overhead is offset by a significant reduction in kernel launch frequency, which becomes increasingly beneficial as task size or complexity grows. For larger inputs and more irregular workloads, \sys{} consistently outperformed or closely matched the native implementation in total execution time. 
-The ability to avoid repeated kernel launches, particularly under streaming or dynamically generated tasks, yielded lower latency and more consistent GPU utilization.
+We compare end-to-end throughput and time-to-result against a native baseline (no persistent kernel, no PTX injection). For small batches, \sys{} pays modest startup/JIT cost but reduces launch frequency; for larger or irregular workloads, it matches or beats native by avoiding relaunches and sustaining higher utilization.
 
 \subsection{Shared Memory Performance}
-We evaluated the different shared memory implementations on three separate servers.
-To characterize the performance of our shared‐memory implementation, we ran a suite of microbenchmarks on three distinct server configurations.  
-Each experiment measured two key metrics: raw shared‐memory bandwidth (GB/s) and one‐way access latency (ns), using both CPU‐only and GPU‐access patterns. On each platform, we allocated a 1 GiB shared region, then measured: \textbf{GPU→CPU} and \textbf{CPU→GPU} throughput via pinned‐buffer kernels and host‐pinned memcpy.  
+We benchmark shared-memory bandwidth and one-way latency on three servers using a 1 GiB region and both CPU-only and GPU access patterns (GPU-to-CPU and CPU-to-GPU). Servers A/B deliver 12–18 GB/s over PCIe with 8–15 µs cross-domain latencies; Server C's coherent fabric sustains \(>100\) GB/s and \(<500\) ns round-trip, highlighting the advantage of hardware coherence for live instrumentation.
 
-We observed that Servers A and B achieved peak CPU‐to‐GPU bandwidths of 12–18 GB/s over PCIe, with one‐way latencies of 8–15 µs for cross‐domain barriers. 
-By contrast, Server C’s unified coherent fabric delivered over 100 GB/s sustained throughput and reduced round‐trip latencies to under 500 ns, \textit{demonstrating the dramatic benefits of hardware‐coherent shared memory for live GPU instrumentation.}
-
-\subsection{Use Case Evaluation}\label{sec:evaluation}
+\subsection{Use Case Evaluation}\label{sec:usecase_evaluation}
 
 \subsubsection{MemTrace}\label{sec:eval_memtrace}
-We evaluate MemTrace on both synthetic microbenchmarks and real-world GPU kernels to quantify its accuracy, overhead, and diagnostic utility. 
-First, using a custom bank-conflict microbenchmark that repeatedly issues strided loads with varying strides, we verify that MemTrace correctly reconstructs per-warp memory‐access patterns and bank‐conflict counts. 
-Across 1M memory transactions, MemTrace reports conflict rates within 2\% of ground truth obtained via hardware counters, demonstrating high fidelity.
-
-To assess overhead, in \Cref{fig:memtrace}, we instrument two common CUDA kernels—matrix multiplication (1024×1024 tiles) and sparse‐matrix–vector multiply (SpMV) on a 10M-edge graph, a dense matrix‐multiply (compute‐bound), sparse‐matrix–vector multiply (memory‐bound), 1D stencil (balanced). 
-In all cases, MemTrace incurs under 3\% end-to-end runtime overhead compared to uninstrumented execution, with peak PTX‐injection latency below 50 µs per kernel launch. 
-Finally, we showcase debugging of a tiled convolution kernel from a popular deep‐learning framework: MemTrace pinpoints an unexpected bank‐conflict hotspot in the inner tile loop, guiding a simple padding fix that improves throughput by 12\%.
+We evaluate accuracy and overhead on synthetic and real kernels. A bank-conflict microbenchmark shows per-warp access patterns and conflict rates within 2\% of hardware counters. In \Cref{fig:memtrace}, instrumenting GEMM, SpMV, and a 1D stencil adds under 3\% end-to-end overhead; PTX injection remains below 50 \(\mu\)s. MemTrace also pinpointed a convolution-bank conflict that a simple padding fix resolved for a 12\% gain.
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/memtrace.pdf}
@@ -58,20 +31,15 @@ Finally, we showcase debugging of a tiled convolution kernel from a popular deep
 \end{figure}
 \subsubsection{Fair Share Scheduling}\label{sec:eval_fair_sched}
 
-We evaluate Fair Share Scheduling in multi‐tenant scenarios where several GPU kernels with differing resource demands (compute‐bound, memory‐bound, and mixed) run concurrently on the same device. 
-We compare three policies: (1) a naïve FIFO queue, (2) a static proportional‐share allocator that divides blocks evenly by tenant, and (3) \sys’s dynamic Fair Share Scheduler, which continuously measures per‐block execution times via injected PTX trampolines and reassigns block‐launch quotas to equalize effective progress across tenants.
+We evaluate Fair Share Scheduling in multi‐tenant scenarios where several GPU kernels with differing resource demands (compute‐bound, memory‐bound, and mixed) run concurrently on the same device. We compare three policies: (1) a naïve FIFO queue, (2) a static proportional‐share allocator that divides blocks evenly by tenant, and (3) \sys's dynamic Fair Share Scheduler, which continuously measures per‐block execution times via injected PTX trampolines and reassigns block‐launch quotas to equalize effective progress across tenants.
 
-Experiments use a mix of 2 workloads: ResNet‐18 inference, and a graph‐analytics BFS kernel. Each tenant submits blocks in fixed batches of 256; under Fair Share Scheduling, the host scheduler recalculates each tenant’s next batch size every 10 ms to target equalized completion ratios. We quantify fairness using Jain’s fairness index:
+Experiments use ResNet-18 inference and a BFS kernel. Tenants submit 256-block batches; the host recomputes quotas every 10 ms to equalize progress. We quantify fairness using Jain's index:
 \[
   F = \frac{\bigl(\sum_{i=1}^M x_i\bigr)^2}{M\,\sum_{i=1}^M x_i^2}\!,
 \]
 where \(x_i\) is the throughput achieved by tenant \(i\) and \(M=3\).
 
-\Cref{fig:plot_cuda_scheduler} presents a side-by-side comparison of our three scheduling policies—Baseline FIFO, Static Proportional, and Fair Share—in terms of both end-to-end application runtime (blue bars, left axis) and average per-block launch latency (orange bars, right axis). Under the naïve FIFO policy, the total execution time climbs to roughly 205 s and the average kernel-launch latency sits just below 1 ms, reflecting unregulated queuing delays and resource contention among co-running tenants. Switching to a static proportional-share allocator immediately cuts the total runtime by about 35 \%, down to 130 s, and reduces average launch latency to roughly 0.6 ms. However, the large error bar on the static-schedule’s latency measurement indicates high variability from run to run, likely due to imbalances in how fixed block quotas interact with each tenant’s particular compute- versus memory-bound behavior.
-
-When we enable our dynamic Fair Share Scheduler, we see a further reduction in both metrics: total runtime falls to approximately 122 s (a further 6 \% speedup), and average launch latency tightens to around 0.5 ms. 
-Moreover, the error bars for Fair Share are noticeably smaller on both bars, demonstrating that adaptive quota adjustments not only boost average throughput but also dramatically improve performance stability. 
-In short, Fair Share Scheduling delivers near–ideal fairness across heterogeneous workloads while simultaneously minimizing the overhead of repeated kernel launches—outperforming both FIFO and static proportional sharing in overall efficiency and consistency.
+\Cref{fig:plot_cuda_scheduler} compares FIFO, Static Proportional, and Fair Share on runtime (blue, left axis) and launch latency (orange, right axis). FIFO: ~205 s and ~1 ms; Static: ~130 s and ~0.6 ms but higher variance; Fair Share: ~122 s and ~0.5 ms with tighter error bars. Adaptive quotas improve both throughput and stability over baselines.
 
 
 \begin{figure}
@@ -81,28 +49,20 @@ In short, Fair Share Scheduling delivers near–ideal fairness across heterogene
 \end{figure}
 
 \subsubsection{ML Green: CPU–GPU Collaborative Inference}\label{sec:eval_ml_green}
-For the CPU–GPU collaborative inference use case, we integrate \sys into a ResNet-50 image-classification pipeline and a LLAMA2-based question-answering pipeline, running on an H100 Server backed by CXL memory. We compare (1) naïve static CPU–GPU splitted inference, (2) optimized online profiling and LRU or LFU caching policy, and (3) \sys’s full CPU and full GPU offloading.
+We integrate \sys into ResNet-50 and LLaMA2 pipelines on H100+CXL and compare: (1) static CPU–GPU splits, (2) online profiling with LRU/LFU caching, and (3) full CPU and full GPU offloading.
 
 \paragraph{Static CPU–GPU splitted inference}
-In \Cref{fig:slicing-percentage}, if we offload more of the ResNet and LLaMA2 workloads onto the GPU—which unlike the tiny MNIST network consisting of deep convolutional or transformer layers with high compute‐to‐memory ratios—the device’s massive parallelism and specialized tensor hardware begin to pay off in spades. 
-In the ResNet experiments, moving even a few of the earlier convolutional blocks onto the GPU drives down the worst‐case slice latency by upwards of 15–20\%, and as we increase the GPU slice count into the mid‐single‐digits, the tail latency falls to roughly 70–80\% of the CPU‐only baseline. 
-This improvement arises because the GPU handles the large matrix‐multiply and convolution operations far more efficiently than the host, amortizing the cost of each kernel launch across thousands of parallel threads. 
-Likewise, for LLaMA2’s transformer‐style attention and feed‐forward layers, distributing work across multiple CUDA kernels exploits the device’s warp‐level scheduling and tensor cores to whittle the maximum slice execution time down to 60–70\% relative to the purely CPU‐bound case. 
-These gains are not unbounded: once we reach high GPU occupancy and saturate the global memory interface, further slicing yields diminishing returns. Kernel launch overhead, register pressure, and contention for shared resources begin to counterbalance the benefits of finer granularity, producing a performance plateau beyond roughly 20–25 GPU slices. 
-Taken together, these results underscore that model size, layer complexity, and compute‐to‐memory characteristics must all be factored into any static slice‐and‐offload strategy: small, lightweight models may actually regress under GPU offload, whereas large, data‐parallel networks stand to gain dramatically—provided the slicing granularity is tuned to the GPU’s execution and memory‐access profile.
+\Cref{fig:slicing-percentage} shows that offloading deeper ResNet/LLaMA2 layers reduces tail latency by 15–40\% versus CPU-only until GPU occupancy and memory bandwidth saturate (plateauing around 20–25 slices). Gains stem from efficient GEMM/conv/attention on tensor cores; very small models may not benefit.
 
-\Cref{fig:heatmap,fig:heatmap1} depict end-to-end inference latencies for the 32‐layer LLaMA2 model as a function of the CPU–GPU split point. Each heatmap cell represents the total inference time when layers 1…(start–1) execute on the host CPU, layers start…end on the GPU, and the remaining layers on the CPU again; invalid splits (end < start) are left blank. On both servers, latencies steadily decrease as more layers are offloaded—culminating in the bottom‐right cell (start = 1, end = 32), which corresponds to the pure-GPU case. Indeed, the fastest GPU-only run clocks in at 0.323 s, slightly outperforming the best two‐layer split (0.347 s). Server A incurs overall latencies of approximately 9.12–9.15 s for mixed CPU/GPU execution, whereas Server B’s superior GPU drives times down to roughly 0.5–8 s. Beyond roughly 20–25 offloaded layers, further splitting yields only marginal gains, reflecting kernel-launch overheads and memory‐interface saturation that offset the benefits of finer‐grained offload.
+\Cref{fig:heatmap,fig:heatmap1} plot LLaMA2 latencies over split points. Latency drops as more layers move to GPU, with the pure-GPU case best (0.323 s vs. 0.347 s for the best two-way split). Server A ranges ~9.12–9.15 s (mixed), Server B ~0.5–8 s. Beyond ~20–25 offloaded layers, launch overheads and bandwidth saturation limit gains.
 
 \paragraph{Optimized online profiling and LRU or LFU caching policy}
-During the execution of a LLAMA2 7B‐based application across CPU and GPU, \sys continuously collects lightweight telemetry—per‐layer execution times, data‐transfer latencies, and cache‐hit statistics—via the host‐side profiler and in‐kernel PTX trampolines. At regular intervals (e.g.\ every 100 inferences), these measurements feed an adaptive optimizer that selects the split point minimizing end‐to‐end latency while balancing CPU load and GPU throughput. 
-To avoid repeating the full profiling cycle on every batch, \sys maintains a small “partition cache” in the shared memory region: each entry maps a chosen layer index to its precompiled PTX injection snippet and the corresponding performance delta. When cache capacity is reached, entries are evicted according to either a least‐recently‐used (LRU) or least‐frequently‐used (LFU) policy, ensuring that the most effective partition decisions remain resident. 
-By reusing cached splits and kernels, \sys reduces profiling overhead to under 2 \% of total runtime. 
-In practice, this online profiling plus smart eviction strategy yields consistent throughput gains of 10-12 \% over static partitioning, even as input characteristics or model behavior evolve at runtime.
+For online optimization, \sys collects per-layer times, transfer latencies, and cache stats, then periodically selects the latency-minimizing split while balancing CPU/GPU load. A small shared "partition cache" (LRU/LFU) stores compiled snippets and deltas, keeping overhead under 2\% and delivering 10–12\% throughput gains over static splits as workloads evolve.
 
 \paragraph{Full CPU Full GPU offloading}
-Figure \ref{fig:power_vs_throughput} overlays our one-day renewable generation profile with the end-to-end token‐processing throughput of two inference pipelines (Tok1 stands for Full CPU Full GPU offloading and Tok2 stands for GPU frequency scaling) on December 31, 2015. 
-On the left vertical axis we plot solar (orange) and wind (blue) power in kilowatts; on the right axis we show tokens-per-second for each pipeline (green and red curves). Between midnight and \~08:00 both solar and wind outputs remain near zero, and token throughput sits at a steady $\approx$0.8 tokens/s. 
-After sunrise solar generation climbs smoothly, peaking at \~12.5 kW \~15:00, before tapering off to zero by early evening. Wind exhibits a similar midday rise—albeit with slightly more variability—rising from negligible overnight levels to roughly 12 kW at the same peak hour. In lockstep with available renewable power, both Tok1 and Tok2 ramp from their nighttime baseline up to about 1.35–1.40 tokens/s at the generation peak, then fall back as the sun sets and winds calm. Throughout the day Tok2 maintains a small but consistent advantage ($\approx$0.05 tokens/s) over Tok1. This tight coupling between energy availability and processing throughput underscores how full-offload scheduling can exploit fluctuating renewable supply to maximize inference performance without exceeding the instantaneous power budget.
+\Cref{fig:power_vs_throughput} overlays renewable generation and token throughput for two pipelines (Tok1: full-CPU/full-GPU offloading; Tok2: GPU frequency scaling). Throughput tracks solar/wind availability, peaking at ~1.35–1.40 tok/s and returning to ~0.8 tok/s overnight; Tok2 maintains a small advantage (\(~0.05\) tok/s). This illustrates energy-aware scheduling benefits without exceeding power budgets.
+
+\xiangyu{Is it possible for us to expand the impact of \sys{} by mentioning its potential to target more use cases.}
 
 \begin{figure}
 \centering
@@ -124,6 +84,3 @@ After sunrise solar generation climbs smoothly, peaking at \~12.5 kW \~15:00, be
 \includegraphics[width=\columnwidth]{img/plot_data.pdf}
 \caption{LLAMA2 Power Generation Full CPU Full GPU offload on 2015‑12‑31}\label{fig:power_vs_throughput}
 \end{figure}
-
-
-\xiangyu{Is it possible for us to expand the impact of \sys{} by mentioning its potential to target more use cases.}

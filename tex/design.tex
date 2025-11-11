@@ -2,7 +2,8 @@
 \section{\sys Design}
 \subsection{\sys and Curetprobe}\label{sec:curetprobe}
 \xiangyu{Is this name for the subsection better? From \sys{} to Curetprobe}
-\noindent Cuprobe provides a dynamic, eBPF-based “uprobe/uretprobe” mechanism for GPU functions by attaching instrumentation at user‐land function entry and exit points. For example, the following eBPF program traces a tiled matrix‐multiply kernel (\texttt{matMulTiled}), incrementing a call counter and measuring total execution time:
+
+\noindent Cuprobe provides eBPF-style uprobe/uretprobe hooks for GPU functions at user level. The example below traces a tiled matrix multiply (\texttt{matMulTiled}), counting calls and measuring total time with standard eBPF maps:
 
 \begin{minted}[highlightlines=false,fontsize=\small]{c}
 SEC("cuprobe/_Z11matMulTiledPKfS0_Pf")
@@ -10,7 +11,7 @@ int cuprobe_matMulTiled(struct pt_regs *ctx) {
     u32 pid = bpf_get_current_pid_tgid() >> 32;
     u64 ts  = bpf_ktime_get_ns();
     bpf_map_update_elem(&start_ts, &pid, &ts, BPF_ANY);
-    u64 one = 1, *cnt = bpf_map_lookup_elem(&call_count, 
+    u64 one = 1, *cnt = bpf_map_lookup_elem(&call_count,
         &pid);  // increment call count
     if (cnt) *cnt += 1;
     else    bpf_map_update_elem(&call_count, &pid, &one,
@@ -27,16 +28,16 @@ int curetprobe_matMulTiled(struct pt_regs *ctx) {
             &pid); // accumulate execution time
     if (total) {
         *total += delta;
-        bpf_map_update_elem(&total_time_ns, &pid, 
+        bpf_map_update_elem(&total_time_ns, &pid,
             total, BPF_EXIST);
     } else {
-        bpf_map_update_elem(&total_time_ns, &pid, 
+        bpf_map_update_elem(&total_time_ns, &pid,
             &delta, BPF_NOEXIST);
     }
 }
 \end{minted}
 
-\noindent Curetprobe extends this model onto the GPU by translating these same eBPF probe handlers into PTX instrumentation snippets and injecting them directly into running CUDA kernels. At JIT time, \sys compiles the above eBPF bytecode into equivalent PTX trampolines at the entry and exit of \texttt{matMulTiled} within the GPU kernel image. These trampolines record per‐warp timestamps and update shared eBPF maps exactly as their CPU counterparts. By preserving the original map semantics, Curetprobe achieves function‐level profiling on the device without kernel reloads, delivering sub‐microsecond instrumentation overhead and live visibility into GPU execution.
+\noindent Curetprobe lifts the same semantics onto the device by JIT–translating probe handlers into PTX and injecting them into running kernels. Entry/exit trampolines record per‐warp timestamps and update shared eBPF maps, preserving map semantics and enabling function-level profiling without kernel reloads.
 
 \subsection{Userspace eBPF integration}
 \begin{figure}
@@ -46,12 +47,7 @@ int curetprobe_matMulTiled(struct pt_regs *ctx) {
 \label{fig:system-design}
 \end{figure}
 
-Figure~\ref{fig:system-design} depicts our unified user‐space eBPF architecture, which seamlessly integrates traditional eBPF toolchains with GPU‐resident instrumentation. 
-\xiangyu{Source eBPF programs are compiled to standard bytecode} using \xiangyu{existing} tools such as \texttt{clang}, \texttt{bpftool}, or \texttt{bpftrace}. 
-\xiangyu{Instead of} loading directly into the kernel, this bytecode is handed off to a user‐space runtime (e.g., via \texttt{libbpf}) that includes a user‐space verifier and JIT compiler (\texttt{bpftime‐syscall.so}), enabling safety checks and transformations without requiring elevated privileges. 
-When necessary, the same runtime may invoke the \texttt{bpf()} syscall to deploy programs or maps into the kernel subsystem, but by default, all instrumentation remains in user space. At the core of the design is a shared‐memory region—allocated, for instance, with \texttt{boost::managed\_shared\_memory}—that hosts eBPF maps accessible to both CPU threads and GPU kernels with zero copy. 
-The JIT compiler can translate eBPF bytecode into PTX snippets and inject them into running CUDA kernels at designated hook points (akin to uprobes), allowing GPU‐side probes to record events directly into the same eBPF maps. 
-This arrangement affords flexible attaching targets—spanning kernel probes, user‐level functions, or GPU hooks—and provides real‐time, low‐overhead observability across CPU and GPU domains while preserving compatibility with existing eBPF workflows.  
+Figure~\ref{fig:system-design} shows a unified user-space eBPF runtime that keeps verification, JIT, and maps in user space by default. \xiangyu{Source eBPF programs are compiled to standard bytecode} using \xiangyu{existing} tools such as \texttt{clang}, \texttt{bpftool}, or \texttt{bpftrace}. Programs compiled with \texttt{clang}/\texttt{libbpf} write to maps in a shared-memory region (e.g., \texttt{boost::managed\_shared\_memory}) visible to CPU threads and GPU kernels. \xiangyu{Instead of} loading directly into the kernel, this bytecode is handed off to a user‐space runtime (e.g., via \texttt{libbpf}) that includes a user‐space verifier and JIT compiler (\texttt{bpftime‐syscall.so}), enabling safety checks and transformations without requiring elevated privileges. On demand, eBPF bytecode is translated to PTX and injected at GPU hook points so device-side probes write into the same maps, yielding real-time, low-overhead cross CPU–GPU observability.
 
 \begin{figure}[ht]
   \centering
@@ -62,83 +58,45 @@ This arrangement affords flexible attaching targets—spanning kernel probes, us
 \end{figure}
 \subsection{\sys Gate}
 
-\Cref{fig:mpk_gate} illustrates how we safely extend a user-space eBPF runtime into GPU kernels while enforcing strict isolation and coordinated shared memory. 
-On the CPU side (left), the eBPF runtime executes inside an MPK-protected domain, ensuring that only vetted instrumentation code can write into the shared region. All program loads and updates happen under MPK and CFI enforcement. Crossing the isolation boundary (shaded blue), the MPK Gate module mediates every CPU and CPU GPU syncing interaction: any request to modify instrumentation state in shared memory must pass through the Gate, which validates MPK permissions before allowing the write.
-
-The shared memory region (center), implemented with \texttt{boost::managed\_shared\_memory}, is mapped into both CPU and GPU address spaces. This single region lets updates from the eBPF runtime appear immediately on the device without extra copies. On the GPU side (right), we launch a long-running ``persistent” kernel that includes small trampoline stubs at each hook point. 
-When the execution reaches a stub, the kernel atomically jumps into the PTX Injector, which fetches and executes the latest instrumentation snippet (compiled from your eBPF bytecode) directly from shared memory. Upon completion, control returns to the original kernel logic.
-
-To guarantee safety, we apply static GPU memory-bound-check analysis on all injected code. 
-This ensures that no instrumentation can stray into GPU-private buffers or access CPU memory outside the MPK-protected region. By keeping the kernel alive and dynamically swapping in new PTX probes, we eliminate repeated launches and enable truly live, on-the-fly GPU observability.
+\Cref{fig:mpk_gate} summarizes isolation and coordination. The runtime runs in an MPK/CFI-protected domain and mediates all updates to a shared region mapped by CPU and GPU. A persistent kernel jumps via trampolines into a PTX injector to execute the latest snippet from shared memory, then resumes. Static bound checks prevent access outside the protected region, enabling safe, live instrumentation.
 
 \subsection{GPU Trampoline}\label{sec:gpu_trampoline}
 
-To support in‐place instrumentation without tearing down long‐running GPU kernels, \sys{} employs a lightweight PTX‐level ``trampoline” mechanism. 
-A trampoline is a small stub of injected PTX code inserted at a designated patch point—typically at the entry or exit of a CUDA kernel function or at key memory‐access sites. 
-When the GPU’s program counter reaches this stub, execution temporarily diverts into our instrumentation logic before resuming the original kernel flow.
-
-Concretely, each trampoline stub performs three steps:
+To instrument long-running kernels in place, \sys{} uses tiny PTX trampolines at entry/exit or hot sites. When reached, execution briefly diverts to our snippet and then resumes. Each trampoline:
 \begin{itemize}[leftmargin=*,itemsep=0pt]
-  \item \textbf{Context Save:} Push the minimal set of live registers and predicate flags into a per‐warp scratch buffer in shared memory, preserving the kernel’s architectural state.
-  \item \textbf{Instrumentation Jump:} Branch into the injected PTX snippet—compiled on the fly from eBPF bytecode—which may read or update shared eBPF maps, record timestamps, count events, or apply custom analysis.
-  \item \textbf{Context Restore:} Reload the saved registers and flags, then jump back to the next instruction in the original kernel code.
+  \item \textbf{Save:} store minimal live state to a per‐warp scratch buffer.
+  \item \textbf{Probe:} jump to the injected PTX (from eBPF) to read/update maps or record events.
+  \item \textbf{Restore:} reload state and resume the original control flow.
 \end{itemize}
+Trampolines are patched atomically at JIT time and confined to the protected domain (\S\ref{sec:isolation}); we observe sub–\(1\,\mu\)s overhead per invocation in practice.
 
-By generating trampolines at JIT time and patching branch targets atomically, \sys{} ensures that no global kernel relaunch or module reload is required. Moreover, trampolines are confined within the \emph{protected domain} (see Section~\ref{sec:isolation}), so they may only access approved shared memory regions and may not overwrite application buffers. In our experiments, the added latency per trampoline invocation remains under 1 µs, enabling fine‐grained, live instrumentation of GPU kernels with negligible impact on overall throughput.  
 
-
-\section{Implementation}
+\section{\sys{} Implementation}
 In this section, we will talk about the \sys implementation.\xiangyu{Suggest removing this sentence.}
 \label{sec:design}
 
-\subsection{Self‐Modifying Code}\label{sec:self_modifying_code}
-We require true self-modifying PTX \xiangyu{What does true self-modifying PTX mean?} on the device to stream new instrumentation into a long-running kernel, but current NVIDIA drivers offer no direct support. 
-To work around this, we piggy-back on ParallelGPU OS (POS)~\cite{huang2024parallelgpuos}, an OS-level framework that transparently checkpoints and restores GPU applications without any source changes. 
-POS hooks every CUDA driver call to build a fine-grained DAG of kernel launches and their buffer read/write sets. 
-By speculatively inferring each kernel’s buffer accesses from its arguments—and then validating those patterns at runtime—POS provides “soft” copy-on-write, dirty-bit, and on-demand-load semantics on hardware that lacks those primitives natively.
-
-Building on POS’s buffering and dependency infrastructure, our runtime emits JIT-compiled PTX fragments and patches them directly into the resident kernel image. 
-Whenever a new PTX snippet is injected, POS records the new code region in its DAG, applies soft copy-on-write to any overlapping buffer pages, and validates that the modified code and data views remain consistent before letting the kernel proceed.
-
-This tight integration allows us to perform live code transformations—such as installing trampoline stubs or altering kernel logic—without restarting the GPU workload or risking state corruption. 
-Thanks to POS’s dependency-driven scheduler and lightweight buffer-tracking, we achieve: (1) Transparent correctness: POS’s emulated COW and dirty-bit mechanisms isolate code patches and data updates, ensuring semantic integrity. 
-(2) Concurrent operation: Checkpoint/restore tasks run in parallel with instrumentation injections, minimizing interruptions. 
-\xiangyu{(3)?} Low latency: By avoiding full memory copies, self-modification incurs under 20 µs per patch on average. 
-Overall, POS provides a robust substrate for on-the-fly PTX self-modification, enabling production-grade dynamic instrumentation of GPU kernels.
+% [Removed: Self‐Modifying Code / POS / checkpoint & restore / record & replay]
 
 \subsection{Shared Memory}
 
-We leverage \texttt{boost::managed\_shared\_memory} to create a unified buffer that both the host and device can access without expensive copies. 
-This shared region holds critical data structures—eBPF maps, input batches, and intermediate states—mapped simultaneously into CPU and GPU address spaces. 
-By ensuring GPU‐compatibility at allocation time, we eliminate the need to marshal or memcpy data between domains, yielding lower latency and reduced code complexity. 
-Emerging architectures such as NVIDIA’s Grace Hopper \xiangyu{promise --> offers} hardware‐coherent, large‐scale memory pools over high‐speed interconnects. 
-On such platforms, our \texttt{managed\_shared\_memory} can transparently scale to multi‐gigabyte working sets, with fine‐grained coherence handled by the interconnect fabric. 
-This advancement will further minimize synchronization overhead and allow kernels to process broader data ranges without the usual replication or barrier penalties.
+We place maps and coordination buffers in \texttt{managed\_shared\_memory} for zero-copy CPU/GPU access, reducing marshaling and latency. Coherent platforms (e.g., Grace Hopper) further scale capacity and minimize synchronization costs via fabric-managed coherence. Emerging architectures such as NVIDIA's Grace Hopper \xiangyu{promise --> offers} hardware‐coherent, large‐scale memory pools over high‐speed interconnects.
 
 
 \subsection{Cross‐Domain Memory Synchronization}
 
-On discrete CPU–GPU platforms without hardware cache coherence, every shared‐memory access across domains must incur explicit barriers and synchronization, which often translates into tens to hundreds of microseconds of overhead. 
-\xiangyu{The reason is that }to transfer writes from the GPU to the CPU, the device must execute \_\_threadfence\_system() to flush any outstanding writes into system‐visible memory, followed by a host-side cudaStreamSynchronize() to wait for the GPU to complete. 
-Conversely, after the CPU updates shared memory, it must again synchronize with the GPU (via cudaStreamSynchronize() or a recorded cudaEvent) before the device can read the new values reliably. Each such round trip involves driver round‐trips, PCIe or NVLink transactions, and potential context switches, all contributing to substantial latency.
-
-In our implementation, we encapsulate these low-level operations into a concise PTX instruction called memsys\_bar. 
-The device-side function memsys\_bar\_gpu() invokes \_\_threadfen=ce\_system() to ensure that all prior writes to host‐pinned memory are visible system-wide. 
-On the host side, memsys\_bar\_cpu() calls cudaStreamSynchronize() on a specified stream to wait for the GPU to finish its pending commands, including memory writes. This wrapper simplifies code, clarifies intent, and centralizes performance tuning. \xiangyu{I have one suggestion. If we have supporting results for these statements in the eval section, we should point them to relevant sections}
+On non-coherent systems, cross-domain visibility requires explicit barriers (device \_\_threadfence\_system and host stream sync). \xiangyu{The reason is that }to transfer writes from the GPU to the CPU, the device must execute \_\_threadfence\_system() to flush any outstanding writes into system‐visible memory, followed by a host-side cudaStreamSynchronize() to wait for the GPU to complete. We encapsulate these as a simple device/host pair to centralize tuning and reduce boilerplate:
 \begin{minted}[highlightlines=false,fontsize=\small]{c}
 // Ensure GPU writes become visible to the CPU
 __device__ inline void memsys_bar_gpu() {
     __threadfence_system();
 }
 // Wait for the GPU on the given stream
-static inline void memsys_bar_cpu(cudaStream_t stream = 
+static inline void memsys_bar_cpu(cudaStream_t stream =
         0) {
     cudaStreamSynchronize(stream);
 }
 \end{minted}
-To demonstrate usage, consider a persistent kernel that reads a command flag from shared memory. 
-Before loading the flag, the kernel calls memsys\_bar\_gpu() to enforce visibility of CPU‐side writes. The host code updates the flag and then calls memsys\_bar\_cpu() to guarantee the GPU will observe the change when it next schedules work. 
-This two-line barrier abstraction hides the underlying complexity of cross-domain synchronization.
+In a persistent kernel, call the GPU fence before reading shared state; after host updates, synchronize the stream to ensure visibility. This two-call barrier hides cross-domain complexity. On the host side, memsys\_bar\_cpu() calls cudaStreamSynchronize() on a specified stream to wait for the GPU to finish its pending commands, including memory writes. This wrapper simplifies code, clarifies intent, and centralizes performance tuning. \xiangyu{I have one suggestion. If we have supporting results for these statements in the eval section, we should point them to relevant sections}
 \begin{minted}[highlightlines=false,fontsize=\small]{c}
 using namespace boost::interprocess;
 __device__ int *shared_flag;
@@ -157,53 +115,40 @@ int main() {
     cudaDeviceSynchronize();
 }
 \end{minted}
-Looking into systems like NVIDIA’s Grace Hopper, which support hardware cache coherence across CPU and GPU, these explicit barriers will become unnecessary. 
-Under a coherent interconnect such as NVLink/CXL, cache lines are automatically propagated and merged at the L2/L3 levels, eliminating the need for manual \_\_threadfence\_system() or stream synchronizations. 
-Early measurements indicate that cross-domain latency on such platforms can shrink from tens of microseconds to just hundreds of nanoseconds, reducing synchronization overhead by an order of magnitude and enabling truly low-latency shared-memory coordination.
+Looking into systems like NVIDIA's Grace Hopper, which support hardware cache coherence across CPU and GPU, these explicit barriers will become unnecessary. Under a coherent interconnect such as NVLink/CXL, cache lines are automatically propagated and merged at the L2/L3 levels, eliminating the need for manual \_\_threadfence\_system() or stream synchronizations. Early measurements indicate that cross-domain latency on such platforms can shrink from tens of microseconds to just hundreds of nanoseconds, reducing synchronization overhead by an order of magnitude and enabling truly low-latency shared-memory coordination.
 
 \subsection{Synchronization}
-Given that multiple CPU threads and GPU kernels share data structures, synchronization must be carefully managed to avoid race conditions and ensure memory consistency. 
-We rely on several mechanisms that operate at different levels. 
-On the CPU side, standard lock-based or lock-free data structures (e.g., using \texttt{std::atomic} or Boost interprocess primitives) ensure that host processes do not introduce inconsistent states in shared regions. 
-Within the GPU, we use CUDA atomic operations and device-wide memory fences to serialize updates to global or shared memory. 
-This combined strategy, supported by a well-defined data layout in \texttt{managed\_shared\_memory}, ensures that asynchronous updates remain visible to all participants. 
-For frequent small-scale synchronization events, we minimize warp-level conflicts by having only a small subset of threads perform atomic operations, whereas the rest of the kernel continues to process data in parallel.
+We use host atomics/interprocess primitives and device CUDA atomics/fences over well-defined layouts in shared memory. To reduce contention, only a subset of threads performs atomics while others proceed in parallel.
 
 \subsection{PTX Generation \& Injection}\label{sec:ptx_injection}
 
-Our system performs eBPF or application-specific code transformations into PTX to enable GPU-side instrumentation and computation. 
-When user-space or eBPF logic requests that certain functions be offloaded or traced on the GPU, our JIT compiler generates specialized PTX snippets. 
-These are then dynamically injected into the running kernel through device-resident hooks. We refer to this technique as “PTX injection”, which allows us to intercept or insert instructions without tearing down the existing kernel context. 
-This approach helps reduce overhead compared to stopping the kernel, recompiling the entire codebase, and relaunching it.
-
-Once injected, the PTX code can interoperate with eBPF maps or other shared memory buffers, granting it direct access to the same data structures used by the CPU side. PTX injection creates a flexible environment for GPU instrumentation, tracepoints, and user-defined logic that can adapt in real time as new workloads arrive or instrumentation needs change. By carefully managing memory barriers and code patching points, we ensure that newly injected PTX interacts cleanly with the previously running kernel components.
+User/eBPF logic triggers JIT generation of PTX snippets that are installed via in-place patching ("PTX injection"). Snippets interoperate with eBPF maps and shared buffers to support flexible, low-latency instrumentation without relaunching kernels.
 
 \paragraph{Trampoline Mechanism}
-To insert instrumentation at arbitrary points within a live kernel, \sys{} employs a PTX-level \emph{trampoline} mechanism. At runtime, we identify candidate patch points (e.g., function entry, memory-access sites, or barrier syncs) and emit a small trampoline stub in PTX that:
+At runtime we patch candidate sites (entry, memory access, barriers) with a tiny PTX stub that:
 \begin{itemize}[leftmargin=*,itemsep=0pt]
   \item Saves the minimal GPU register and predicate state.
   \item Jumps into the injected instrumentation snippet.
   \item Restores the original state and resumes normal execution.
 \end{itemize}
-These trampolines are linked into the device’s code image via in-place patching of branch targets, enabling fine-grained hooking without requiring kernel relaunch or full recompilation. Our trampoline generator handles label resolution, register allocation, and insertion of necessary synchronization primitives to avoid hazards.
+These trampolines are linked into the device's code image via in-place patching of branch targets, enabling fine-grained hooking without requiring kernel relaunch or full recompilation. Our trampoline generator handles label resolution, register allocation, and insertion of necessary synchronization primitives to avoid hazards.
 
 
 
 \subsection{Isolation Requirement}\label{sec:isolation}
 
-Dynamic PTX injection and trampoline-based instrumentation introduce new code into live GPU kernels, which \xiangyu{must be prevented from --> might bring the risk of} corrupting application state or violating memory safety. 
-To ensure that injected instrumentation runs in a strictly controlled environment, \sys{} enforces an \emph{isolation requirement} by placing all injected snippets into a protected execution domain.
+Dynamic PTX injection and trampoline-based instrumentation introduce new code into live GPU kernels, which \xiangyu{must be prevented from --> might bring the risk of} corrupting application state or violating memory safety. \sys therefore runs injected snippets in a protected domain.
 
-\paragraph{Guardian-inspired GPU Partition}  
-Drawing on the principles of Guardian’s PTX-level bounds checking for multi-tenant GPU sharing~\cite{pavlidakis2024guardian}, \sys{} partitions the GPU address space at runtime and instruments every load/store with lightweight fencing logic:
+\paragraph{Guardian-inspired GPU Partition}
+Drawing on Guardian~\cite{pavlidakis2024guardian}, \sys partitions GPU address space at runtime and fences every load/store with lightweight masking:
 
 \begin{itemize}[leftmargin=*,itemsep=0pt]
-  \item \textbf{Dynamic Partitioning:} At initialization, \sys{} uses one partition of entire GPU memory. Each instrumentation snippet is tagged with its owner’s partition ID.
-  \item \textbf{PTX-Level Bounds Fencing:} Before every memory access, bitwise AND/OR operations mask the computed address into the tenant’s partition range, guaranteeing that out-of-bounds addresses wrap harmlessly within the correct domain.
-  \item \textbf{Client–Server Enforcement:} Inspired by Guardian’s client–server model, all CUDA calls (allocations, copies, launches) are intercepted and forwarded to a trusted Manager. This server maintains the partition bounds table and rejects any operation that would violate domain isolation.
+  \item \textbf{Dynamic Partitioning:} At initialization, \sys{} uses one partition of entire GPU memory. Each instrumentation snippet is tagged with its owner's partition ID.
+  \item \textbf{PTX-Level Bounds Fencing:} Before every memory access, bitwise AND/OR operations mask the computed address into the tenant's partition range, guaranteeing that out-of-bounds addresses wrap harmlessly within the correct domain.
+  \item \textbf{Client–Server Enforcement:} Inspired by Guardian's client–server model, all CUDA calls (allocations, copies, launches) are intercepted and forwarded to a trusted Manager. This server maintains the partition bounds table and rejects any operation that would violate domain isolation.
 \end{itemize}
 
-\paragraph{Runtime Sandbox Integration}  
+\paragraph{Runtime Sandbox Integration}
 During JIT compilation, \sys{} wraps each PTX snippet in a minimal prologue/epilogue sequence that:
 %\begin{itemize}[leftmargin=*,itemsep=0pt]
   %\item
@@ -214,4 +159,4 @@ During JIT compilation, \sys{} wraps each PTX snippet in a minimal prologue/epil
   c) Restores registers and resumes normal kernel execution.
 %\end{itemize}
 
-By combining Guardian’s dynamic, PTX-level fencing with \sys{}’s trampoline-based patching and shared-memory synchronization, we ensure complete isolation of instrumentation code, preventing any accidental or malicious interference with application kernels.  
+Combining Guardian-style fencing with trampolines and shared-memory coordination ensures injected code remains isolated from application kernels.

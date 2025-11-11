@@ -1,43 +1,25 @@
-\section{Representative Use Case}
+\section{Use Case}
 \xiangyu{We should give a summary sentence in the beginning of this section. (e.g.,\sys{} is not limited to a single application type but is designed to address a diverse range of use cases. We discuss three representative ones in this section.)}
+
 \subsection{GPU Memory Tracer}\label{sec:use_case_gpu_memory_tracer}
-
-
-The GPU Memory Tracer demonstrates how \sys{} can provide fine‐grained, real‐time insight into memory access behavior inside running kernels. 
-By instrumenting the core load (LD) and store (ST) instructions in GPU code—via PTX trampolines injected at compile time—our tracer records each memory operation’s address, size, warp ID, SM ID, and timestamp directly into a shared eBPF map. 
-In practice, a developer enables MemTrace by specifying the target kernel and mapping expression; at runtime, \sys{} patches in lightweight PTX stubs that log metadata into a shared memory region. 
-A user‐space analysis callback then consumes these events with sub‐microsecond latency, computing metrics such as instantaneous bandwidth
-\[
-  \mathrm{BW}(t)=\frac{\sum_{i: t_i\in[t-\Delta,t]}\mathrm{Bytes}_i}{\Delta},
-\]
-as well as coalescing ratios and per‐SM contention levels. 
-This capability proves invaluable when tuning memory‐bound kernels—developers can, for example, spot unexpected bank conflicts or uncoalesced accesses in a tiled convolution, experiment with varying tile sizes, and immediately observe the impact on conflict rates and throughput without restarting the application.
+\noindent \sys instruments LD/ST sites via PTX trampolines and logs address, size, warp/SM IDs, and timestamps into a shared eBPF map. A user-space consumer derives bandwidth, coalescing, and contention metrics with sub-\(\mu\)s latency, enabling quick diagnosis of bank conflicts or uncoalesced accesses without relaunching kernels.
 
 \subsection{Fair Share Scheduling}\label{sec:use_case_fair_share}
-
-The Fair Share Scheduling leverages \sys{}’s block‐level instrumentation to achieve proportional resource allocation among concurrently running GPU workloads. 
-In a shared cluster environment, multiple tenants may submit kernels with heterogeneous characteristics—some compute‐bound, others memory‐bound, and still others exhibiting irregular control flow. 
-To prevent any single tenant from monopolizing SM occupancy or memory bandwidth, \sys{} injects PTX trampolines at each CUDA block’s entry and exit, logging per‐block execution durations into the same shared eBPF map used by MemTrace. 
-A host‐side scheduler reads these timings at fixed intervals, computes each tenant’s relative progress, and adjusts future block‐launch quotas to equalize effective throughput. 
-The result is a near‐ideal fairness index (Jain’s \(F\approx0.96\)) with less than 2 \% scheduling overhead, ensuring that slower kernels no longer penalize other tenants and that overall GPU utilization remains high. 
-This dynamic, instrumentation‐driven approach requires no changes to application source code and operates transparently alongside existing CUDA streams and memory management.  
+\noindent Block-level entry/exit probes report per-block runtimes into shared maps. A host scheduler adjusts future block quotas to equalize progress across tenants, yielding near-ideal Jain's fairness with \(<2\%\) overhead while remaining transparent to application code and CUDA streams.
 
 \subsection{ML Green: CPU–GPU Collaborative Inference}
+\noindent Modern Large Language Models often exceed the capacity of on-chip GPU memory\xiangyu{Why do we need to mention energy generation timing here? If it is necessary, we should separate it into 2 sentences. The first sentence says that LLM requires more memory than on-chip GPU limit; the second sentence mentions that the energy generation time varies because of the sunlight and wind is unstable; the third maybe say that this cause some miss match between energy demand in LLM and the energy supply from various energy generation sources}. For models that exceed on-device memory or under renewable-aware power budgets, \sys traces tensor access patterns to guide split execution akin to Neuro-Surgeon~\cite{neurosurgeon}.
 
-Modern Large Language Models often exceed the capacity of on-chip GPU memory and we have energy generation timing of the sunlight and wind\xiangyu{Why do we need to mention energy generation timing here? If it is necessary, we should separate it into 2 sentences. The first sentence says that LLM requires more memory than on-chip GPU limit; the second sentence mentions that the energy generation time varies because of the sunlight and wind is unstable; the third maybe say that this cause some miss match between energy demand in LLM and the energy supply from various energy generation sources}, so we adopt a split–execution approach—akin to the Neuro-Surgeon framework\cite{neurosurgeon}—that dynamically partitions work and data between CPU and GPU. 
-\xiangyu{The central challenge is three-fold --> Realizing this goal faces three typical challenges}: first, determining which model state (parameters, activations, attention caches) should remain resident in the faster GPU memory versus which can be evicted to CPU RAM to leverage CPU computation; 
-second, prefetching evicted data back to the GPU just in time for its use. A well-tuned collaborative cache must therefore both evict intelligently and prefetch proactively; 
-and third, when GPU energy consumption overflows the current energy status, say at night, there's no solar power generation, we could put more computation onto CPU to meet the low energy requirement.
+\xiangyu{The central challenge is three-fold --> Realizing this goal faces three typical challenges}: determining which model state should remain in GPU memory versus CPU RAM; prefetching evicted data just in time; and shifting computation to CPU when GPU energy consumption exceeds available renewable power (e.g., at night without solar).
 
-Our tool, \sys, probe memory accesses to reveal exactly when and how often each tensor is accessed. 
-Armed with these access traces, engineers can emulate Neuro-Surgeon’s partitioning logic on a single machine: layers or attention heads that dominate runtime are pinned in GPU memory, while lower-priority elements live in CPU memory until invoked. 
-By logging cache hit rates and transfer volumes, \sys quantifies the impact of different eviction policies in real time.
+\sys{} probes memory accesses to reveal when and how often each tensor is accessed. Armed with these traces, engineers can emulate Neuro-Surgeon's partitioning logic: high-priority layers stay in GPU memory while lower-priority elements live in CPU memory until needed.
 
 We compare three \xiangyu{typical} eviction strategies under this CPU–GPU split:
 \begin{itemize}[leftmargin=*,itemsep=0pt]
-\item \textbf{LRU (Least Recently Used):} evict the tensor that has gone longest without use, a default in many frameworks;
-\item \textbf{LFU (Least Frequently Used):} retain the most–accessed tensors, which can outperform LRU when a small subset of weights is “hot”;
-\item \textbf{Full CPU, Full GPU offloading:} dynamically keep the entire model in CPU RAM and stream each tensor on demand to the GPU (Full CPU), or inject the entire model into GPU memory up front with no eviction (Full GPU).  
+\item \textbf{LRU (Least Recently Used):} evict the tensor that has gone longest without use;
+\item \textbf{LFU (Least Frequently Used):} retain the most–accessed tensors, which can outperform LRU when a small subset is hot;
+\item \textbf{Full CPU, Full GPU offloading:} dynamically stream each tensor on demand (Full CPU), or inject the entire model into GPU memory (Full GPU).
 \end{itemize}
-A Neuro-Surgeon style profiler would choose the split point by estimating compute, timing versus transfer, frequency scaling cost; similarly, we use \sys’s fine-grained energy and caching log to tune our cache so that transfer overhead is hidden behind GPU compute as much as possible under the requirement of the solar and wind energy.
+
+Policies such as LRU/LFU and full-CPU/full-GPU offload are evaluated online; access and energy traces steer eviction and prefetch so transfers overlap compute under varying power availability. \sys's fine-grained energy and caching logs help tune the cache to hide transfer overhead behind GPU compute under renewable energy constraints.
 
