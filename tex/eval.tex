@@ -2,15 +2,15 @@
 \section{Evaluation}
 \label{sec:evaluation}
 
-We evaluated \sys{} on \xiangyu{one cluster consisting of }three machines. Server A is a dual-socket Intel Gold 6138 processor (80 cores, 2.0 GHz, 55 MB LLC) equipped with 256 GB DDR3 RAM and an NVIDIA P40 GPU. Server B is a single socket Intel Xeon 6787p (86 cores, 2.0 GHz, 336MB LLC) with 768 GB DDR5 RAM(512GB CXL Module) and an NVIDIA H100 GPU. Server C is a Grace Hopper Machine. Unless otherwise mentioned, each metric is the average of 10 trials on server A.\xiangyu{Why do we choose 10? Is 10 sufficient to prove the effectiveness? May be worthwhile to say it.}  We report averages using geometric mean for \xiangyu{metrics such as the average speedup and arithmetic mean for the rest}.
+We evaluated \sys{} on three machines. Server A is a dual-socket Intel Gold 6138 processor (80 cores, 2.0 GHz, 55 MB LLC) equipped with 256 GB DDR3 RAM and an NVIDIA P40 GPU. Server B is a single socket Intel Xeon 6787p (86 cores, 2.0 GHz, 336MB LLC) with 768 GB DDR5 RAM(512GB CXL Module) and an NVIDIA H100 GPU. Server C is a Grace Hopper Machine. Unless otherwise mentioned, each metric is the average of 10 trials on server A.  We report averages using geometric mean when that is appropriate (\eg when calculating an average speedup).
 
-\xiangyu{I like your description in the eval section. To highlight our results, I suggest highlighting 1 sentence in each subsection.}
+
 
 \subsection{Micro-benchmark Performance}
 
-We quantify instrumentation overhead with a latency micro-benchmark that measures GPU load/store latency under \sys{} vs. NVBit (gpumemtrace~\cite{villa2019nvbit}) across varying access sizes. As shown in Figure~\ref{fig:end_to_end_latency}, \sys{} adds substantially less latency than NVBit, staying low and stable below 128 KB and rising modestly thereafter. \xiangyu{Do we need to say some numeric values? (e.g., A's latency is x times lower than B's)} \Cref{fig:latency1} compares with the PyTorch profiler (CUPTI+NVTX): p10 and mean latencies are slightly better under \sys{}. Lightweight PTX injection at runtime is the key enabler of the lower overhead.
+We quantify instrumentation overhead with a latency micro-benchmark that measures GPU load/store latency under \sys{} vs. NVBit (gpumemtrace~\cite{villa2019nvbit}) across varying access sizes. As shown in Figure~\ref{fig:end_to_end_latency}, \sys{} adds substantially less latency than NVBit, staying low and stable below 128 KB and rising modestly thereafter. \Cref{fig:latency1} compares with the PyTorch profiler (CUPTI+NVTX): p10 and mean latencies are slightly better under \sys{}. Lightweight PTX injection at runtime is the key enabler of the lower overhead.
 
-\begin{figure} \centering \includegraphics[width=0.5\textwidth]{img/end_to_end_latency.pdf} \caption{Runtime Overhead\xiangyu{Add more description to the figure?}} \label{fig:end_to_end_latency} \end{figure}
+\begin{figure} \centering \includegraphics[width=0.5\textwidth]{img/end_to_end_latency.pdf} \caption{Runtime Overhead} \label{fig:end_to_end_latency} \end{figure}
 
 \begin{figure} \centering \includegraphics[width=0.5\textwidth]{img/latency_comparison.pdf} \caption{Resnet Inference Latency Overhead} \label{fig:latency1} \end{figure}
 
@@ -61,8 +61,6 @@ For online optimization, \sys collects per-layer times, transfer latencies, and 
 
 \paragraph{Full CPU Full GPU offloading}
 \Cref{fig:power_vs_throughput} overlays renewable generation and token throughput for two pipelines (Tok1: full-CPU/full-GPU offloading; Tok2: GPU frequency scaling). Throughput tracks solar/wind availability, peaking at ~1.35–1.40 tok/s and returning to ~0.8 tok/s overnight; Tok2 maintains a small advantage (\(~0.05\) tok/s). This illustrates energy-aware scheduling benefits without exceeding power budgets.
-
-\xiangyu{Is it possible for us to expand the impact of \sys{} by mentioning its potential to target more use cases.}
 
 \begin{figure}
 \centering

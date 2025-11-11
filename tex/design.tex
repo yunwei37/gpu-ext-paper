@@ -1,7 +1,6 @@
 
 \section{\sys Design}
 \subsection{\sys and Curetprobe}\label{sec:curetprobe}
-\xiangyu{Is this name for the subsection better? From \sys{} to Curetprobe}
 
 \noindent Cuprobe provides eBPF-style uprobe/uretprobe hooks for GPU functions at user level. The example below traces a tiled matrix multiply (\texttt{matMulTiled}), counting calls and measuring total time with standard eBPF maps:
 
@@ -47,7 +46,7 @@ int curetprobe_matMulTiled(struct pt_regs *ctx) {
 \label{fig:system-design}
 \end{figure}
 
-Figure~\ref{fig:system-design} shows a unified user-space eBPF runtime that keeps verification, JIT, and maps in user space by default. \xiangyu{Source eBPF programs are compiled to standard bytecode} using \xiangyu{existing} tools such as \texttt{clang}, \texttt{bpftool}, or \texttt{bpftrace}. Programs compiled with \texttt{clang}/\texttt{libbpf} write to maps in a shared-memory region (e.g., \texttt{boost::managed\_shared\_memory}) visible to CPU threads and GPU kernels. \xiangyu{Instead of} loading directly into the kernel, this bytecode is handed off to a user‐space runtime (e.g., via \texttt{libbpf}) that includes a user‐space verifier and JIT compiler (\texttt{bpftime‐syscall.so}), enabling safety checks and transformations without requiring elevated privileges. On demand, eBPF bytecode is translated to PTX and injected at GPU hook points so device-side probes write into the same maps, yielding real-time, low-overhead cross CPU–GPU observability.
+Figure~\ref{fig:system-design} shows a unified user-space eBPF runtime that keeps verification, JIT, and maps in user space by default. Programs compiled with \texttt{clang}/\texttt{libbpf} write to maps in a shared-memory region (e.g., \texttt{boost::managed\_shared\_memory}) visible to CPU threads and GPU kernels. On demand, eBPF bytecode is translated to PTX and injected at GPU hook points so device-side probes write into the same maps, yielding real-time, low-overhead cross CPU–GPU observability.
 
 \begin{figure}[ht]
   \centering
@@ -72,19 +71,19 @@ Trampolines are patched atomically at JIT time and confined to the protected dom
 
 
 \section{\sys{} Implementation}
-In this section, we will talk about the \sys implementation.\xiangyu{Suggest removing this sentence.}
+In this section, we will talk about the \sys implementation.
 \label{sec:design}
 
 % [Removed: Self‐Modifying Code / POS / checkpoint & restore / record & replay]
 
 \subsection{Shared Memory}
 
-We place maps and coordination buffers in \texttt{managed\_shared\_memory} for zero-copy CPU/GPU access, reducing marshaling and latency. Coherent platforms (e.g., Grace Hopper) further scale capacity and minimize synchronization costs via fabric-managed coherence. Emerging architectures such as NVIDIA's Grace Hopper \xiangyu{promise --> offers} hardware‐coherent, large‐scale memory pools over high‐speed interconnects.
+We place maps and coordination buffers in \texttt{managed\_shared\_memory} for zero-copy CPU/GPU access, reducing marshaling and latency. Coherent platforms (e.g., Grace Hopper) further scale capacity and minimize synchronization costs via fabric-managed coherence.
 
 
 \subsection{Cross‐Domain Memory Synchronization}
 
-On non-coherent systems, cross-domain visibility requires explicit barriers (device \_\_threadfence\_system and host stream sync). \xiangyu{The reason is that }to transfer writes from the GPU to the CPU, the device must execute \_\_threadfence\_system() to flush any outstanding writes into system‐visible memory, followed by a host-side cudaStreamSynchronize() to wait for the GPU to complete. We encapsulate these as a simple device/host pair to centralize tuning and reduce boilerplate:
+On non-coherent systems, cross-domain visibility requires explicit barriers (device \_\_threadfence\_system and host stream sync). We encapsulate these as a simple device/host pair to centralize tuning and reduce boilerplate:
 \begin{minted}[highlightlines=false,fontsize=\small]{c}
 // Ensure GPU writes become visible to the CPU
 __device__ inline void memsys_bar_gpu() {
@@ -96,7 +95,7 @@ static inline void memsys_bar_cpu(cudaStream_t stream =
     cudaStreamSynchronize(stream);
 }
 \end{minted}
-In a persistent kernel, call the GPU fence before reading shared state; after host updates, synchronize the stream to ensure visibility. This two-call barrier hides cross-domain complexity. On the host side, memsys\_bar\_cpu() calls cudaStreamSynchronize() on a specified stream to wait for the GPU to finish its pending commands, including memory writes. This wrapper simplifies code, clarifies intent, and centralizes performance tuning. \xiangyu{I have one suggestion. If we have supporting results for these statements in the eval section, we should point them to relevant sections}
+In a persistent kernel, call the GPU fence before reading shared state; after host updates, synchronize the stream to ensure visibility. This two-call barrier hides cross-domain complexity.
 \begin{minted}[highlightlines=false,fontsize=\small]{c}
 using namespace boost::interprocess;
 __device__ int *shared_flag;
@@ -137,7 +136,7 @@ These trampolines are linked into the device's code image via in-place patching 
 
 \subsection{Isolation Requirement}\label{sec:isolation}
 
-Dynamic PTX injection and trampoline-based instrumentation introduce new code into live GPU kernels, which \xiangyu{must be prevented from --> might bring the risk of} corrupting application state or violating memory safety. \sys therefore runs injected snippets in a protected domain.
+Dynamic PTX injection must not corrupt application state. \sys therefore runs injected snippets in a protected domain.
 
 \paragraph{Guardian-inspired GPU Partition}
 Drawing on Guardian~\cite{pavlidakis2024guardian}, \sys partitions GPU address space at runtime and fences every load/store with lightweight masking:

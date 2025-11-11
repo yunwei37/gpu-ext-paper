@@ -1,0 +1,29 @@
+# LaTeX generated files
+*.aux
+*.log
+*.out
+*.pdf
+*.pyg
+*.bbl
+*.blg
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.nav
+*.snm
+*.vrb
+
+# Minted
+_minted-*/
+
+# Backup files
+*~
+*.backup
+*.bak
+
+# OS files
+.DS_Store
+Thumbs.db
