@@ -1,5 +1,34 @@
 
-\section{\sys Design}
+\section{gBPF Overview}
+
+\subsection{Design Goals}
+
+\sys is designed to address the critical limitations of existing GPU policy management through four key design goals:
+
+\begin{itemize}[leftmargin=*,itemsep=0pt]
+  \item \textbf{GPU kernel-level programmability:} Enable intra-kernel customization by allowing verified eBPF programs to execute directly within GPU kernels, providing fine-grained control over memory management, scheduling, and observability at the points where decisions naturally occur.
+
+  \item \textbf{Safety:} Ensure that all injected code is verifiable and bounded through eBPF verification, preventing corruption of application state, resource exhaustion, and security vulnerabilities while maintaining system stability.
+
+  \item \textbf{Efficiency:} Achieve minimal overhead and low-latency execution through lightweight instrumentation mechanisms, sub-microsecond decision latencies, and optimized cross-domain state synchronization.
+
+  \item \textbf{Unified Programmability:} Provide coherent CPU--GPU policy management through shared eBPF maps and coordinated execution across both domains, enabling policies that span the entire GPU-centric system stack.
+\end{itemize}
+
+\subsection{High-Level Architecture}
+
+\begin{figure}
+\centering
+\fbox{\parbox{0.8\columnwidth}{\centering [Figure: \sys Design]}}
+\vspace{-.5ex}
+\caption{\sys Design}
+\label{fig:system-design}
+\end{figure}
+
+Figure~\ref{fig:system-design} shows the high-level architecture of \sys, clearly illustrating the CPU--GPU boundary, driver module extension, and GPU kernel-level runtime integration points. \sys provides a unified user-space eBPF runtime that keeps verification, JIT, and maps in user space by default. Source eBPF programs are compiled to standard bytecode using existing tools such as \texttt{clang}, \texttt{bpftool}, or \texttt{bpftrace}. Programs compiled with \texttt{clang}/\texttt{libbpf} write to maps in a shared-memory region (e.g., \texttt{boost::managed\_shared\_memory}) visible to CPU threads and GPU kernels. Instead of loading directly into the kernel, this bytecode is handed off to a user-space runtime (e.g., via \texttt{libbpf}) that includes a user-space verifier and JIT compiler (\texttt{bpftime-syscall.so}), enabling safety checks and transformations without requiring elevated privileges. On demand, eBPF bytecode is translated to PTX and injected at GPU hook points so device-side probes write into the same maps, yielding real-time, low-overhead cross CPU--GPU observability and control.
+
+\section{gBPF Design}
+
 \subsection{\sys and Curetprobe}\label{sec:curetprobe}
 
 \noindent Cuprobe provides eBPF-style uprobe/uretprobe hooks for GPU functions at user level. The example below traces a tiled matrix multiply (\texttt{matMulTiled}), counting calls and measuring total time with standard eBPF maps:
@@ -36,44 +65,80 @@ int curetprobe_matMulTiled(struct pt_regs *ctx) {
 }
 \end{minted}
 
-\noindent Curetprobe lifts the same semantics onto the device by JIT–translating probe handlers into PTX and injecting them into running kernels. Entry/exit trampolines record per‐warp timestamps and update shared eBPF maps, preserving map semantics and enabling function-level profiling without kernel reloads.
+\noindent Curetprobe lifts the same semantics onto the device by JIT--translating probe handlers into PTX and injecting them into running kernels. Entry/exit trampolines record per-warp timestamps and update shared eBPF maps, preserving map semantics and enabling function-level profiling without kernel reloads.
 
-\subsection{Userspace eBPF integration}
-\begin{figure}
-\centering
-\fbox{\parbox{0.8\columnwidth}{\centering [Figure: \sys Design]}}
-\vspace{-.5ex}
-\caption{\sys Design}
-\label{fig:system-design}
+\begin{figure}[ht]
+  \centering
+  \fbox{\parbox{0.82\linewidth}{\centering [Figure: \sys Gate design]}}
+  \vspace{-.5ex}
+  \caption{\sys Gate design for CPU--GPU communication, showing the MPK+CFI-protected shared memory region, trampoline hooks, and PTX injector within the isolation boundary.}
+  \label{fig:mpk_gate}
 \end{figure}
 
-Figure~\ref{fig:system-design} shows a unified user-space eBPF runtime that keeps verification, JIT, and maps in user space by default. Programs compiled with \texttt{clang}/\texttt{libbpf} write to maps in a shared-memory region (e.g., \texttt{boost::managed\_shared\_memory}) visible to CPU threads and GPU kernels. On demand, eBPF bytecode is translated to PTX and injected at GPU hook points so device-side probes write into the same maps, yielding real-time, low-overhead cross CPU–GPU observability.
+\subsection{\sys Gate}
 
-\subsection{GPU Trampoline}\label{sec:gpu_trampoline}
+\Cref{fig:mpk_gate} summarizes isolation and coordination. The runtime runs in an MPK/CFI-protected domain and mediates all updates to a shared region mapped by CPU and GPU. A persistent kernel jumps via trampolines into a PTX injector to execute the latest snippet from shared memory, then resumes. Static bound checks prevent access outside the protected region, enabling safe, live instrumentation.
 
+\subsection{Extending GPU Driver Modules (CPU-side)}
+
+\sys safely extends GPU driver modules on the CPU side by adding attach points within critical policy decision paths, including UVM memory management logic and GPU kernel scheduler logic. These extensions follow the struct\_ops-style callback approach used successfully in CPU-side eBPF systems, allowing developers to register verified eBPF programs at well-defined hook points without modifying core driver logic.
+
+The eBPF verifier ensures that all attached programs are safe, bounded, and cannot corrupt driver state. CPU-side BPF maps provide efficient state coordination between the driver and user-space policy logic, enabling adaptive decisions based on system-wide state while maintaining the safety guarantees of the eBPF verification framework.
+
+\subsection{GPU-side eBPF Runtime Execution}
+
+To enable fine-grained policy control within GPU kernels, \sys offloads verified eBPF programs to execute directly on the GPU device. This is achieved through a PTX-level JIT injection approach that translates verified eBPF bytecode into optimized PTX instructions and injects them into running GPU kernels.
+
+The GPU runtime sandbox provides strong safety guarantees through bounded execution, careful register management, and memory access restrictions. Each injected program operates within a protected domain that prevents interference with application kernels while providing the flexibility needed for adaptive policy decisions.
+
+\paragraph{GPU Trampoline}\label{sec:gpu_trampoline}
 To instrument long-running kernels in place, \sys{} uses tiny PTX trampolines at entry/exit or hot sites. When reached, execution briefly diverts to our snippet and then resumes. Each trampoline:
 \begin{itemize}[leftmargin=*,itemsep=0pt]
   \item \textbf{Save:} store minimal live state to a per‐warp scratch buffer.
   \item \textbf{Probe:} jump to the injected PTX (from eBPF) to read/update maps or record events.
   \item \textbf{Restore:} reload state and resume the original control flow.
 \end{itemize}
-Trampolines are patched atomically at JIT time and confined to the protected domain (\S\ref{sec:isolation}); we observe sub–\(1\,\mu\)s overhead per invocation in practice.
+Trampolines are patched atomically at JIT time and confined to the protected domain (\S\ref{sec:isolation}); we observe sub--\(1\,\mu\)s overhead per invocation in practice.
 
+\subsection{Unified CPU--GPU State Abstraction}
+
+A key innovation in \sys is the unified state abstraction that spans CPU and GPU execution contexts. Shared eBPF maps are pinned in unified memory, providing a coherent view of policy-relevant state across both domains. This enables policies to make informed decisions based on global system state rather than being limited to local, domain-specific information.
+
+\sys implements efficient synchronization and coherency management across the CPU-GPU boundary, with optimized paths for both PCIe-based systems (requiring explicit memory barriers) and NVLink-based coherent systems (leveraging hardware cache coherence). This careful design ensures that cross-domain state updates are visible with minimal latency while preserving correctness guarantees.
 
 \section{\sys{} Implementation}
-In this section, we will talk about the \sys implementation.
-\label{sec:design}
 
-% [Removed: Self‐Modifying Code / POS / checkpoint & restore / record & replay]
+In this section, we describe the key implementation details of \sys, including kernel modifications, GPU runtime implementation, and interaction with existing GPU frameworks.
+\label{sec:implementation}
+
+\subsection{Kernel Modifications}
+
+\sys requires minimal but carefully placed modifications to GPU driver modules to expose programmable hook points without compromising system stability or performance.
+
+\paragraph{Specific hooks and patches:}
+We add specific hooks within the NVIDIA UVM module at critical memory management decision points, including page fault handlers, prefetch logic, and eviction paths. Similarly, we extend kernel-scheduler entry points to enable custom admission control and resource allocation policies. These modifications are designed to be minimal, non-intrusive, and compatible with existing driver functionality.
+
+All hook points follow the struct\_ops-style callback pattern, where verified eBPF programs can be dynamically attached and detached without requiring driver recompilation or system restarts. The hooks provide access to relevant context (e.g., fault address, process ID, memory pressure metrics) while maintaining safety through the eBPF verifier.
+
+\subsection{GPU Runtime Implementation Details}
+
+\paragraph{PTX JIT compiler integration:}
+\sys integrates a PTX Just-In-Time (JIT) compiler that translates verified eBPF bytecode into optimized PTX instructions. PTX (Parallel Thread Execution) is an intermediate representation for NVIDIA GPUs that provides better performance than binary-level instrumentation frameworks. The JIT compiler produces architecture-specific code optimized for the target GPU, enabling dynamic instrumentation with minimal overhead.
+
+\paragraph{Runtime resource bounding:}
+The GPU runtime enforces strict resource bounds to prevent injected code from interfering with application kernels. This includes limiting instruction counts per invocation, bounding register usage to avoid spilling, and restricting memory access to designated shared regions. These bounds are verified at load time and enforced at runtime through hardware mechanisms and software checks.
+
+\paragraph{Interaction with existing GPU frameworks:}
+\sys is designed to be compatible with existing GPU programming frameworks and tools. It works seamlessly with CUDA applications and can coexist with CUPTI and NVBit instrumentation when needed. The trampoline mechanism and shared memory infrastructure are transparent to application code, requiring no modifications to existing GPU kernels.
 
 \subsection{Shared Memory}
 
 We place maps and coordination buffers in \texttt{managed\_shared\_memory} for zero-copy CPU/GPU access, reducing marshaling and latency. Coherent platforms (e.g., Grace Hopper) further scale capacity and minimize synchronization costs via fabric-managed coherence.
 
 
-\subsection{Cross‐Domain Memory Synchronization}
+\subsection{Cross-Domain Memory Synchronization}
 
-On non-coherent systems, cross-domain visibility requires explicit barriers (device \_\_threadfence\_system and host stream sync). We encapsulate these as a simple device/host pair to centralize tuning and reduce boilerplate:
+On non-coherent systems (PCIe-based), cross-domain visibility requires explicit barriers (device \_\_threadfence\_system and host stream sync). The reason is that to transfer writes from the GPU to the CPU, the device must execute \_\_threadfence\_system() to flush any outstanding writes into system-visible memory, followed by a host-side cudaStreamSynchronize() to wait for the GPU to complete. We encapsulate these as a simple device/host pair to centralize tuning and reduce boilerplate:
 \begin{minted}[highlightlines=false,fontsize=\small]{c}
 // Ensure GPU writes become visible to the CPU
 __device__ inline void memsys_bar_gpu() {
@@ -85,7 +150,7 @@ static inline void memsys_bar_cpu(cudaStream_t stream =
     cudaStreamSynchronize(stream);
 }
 \end{minted}
-In a persistent kernel, call the GPU fence before reading shared state; after host updates, synchronize the stream to ensure visibility. This two-call barrier hides cross-domain complexity.
+In a persistent kernel, call the GPU fence before reading shared state; after host updates, synchronize the stream to ensure visibility. This two-call barrier hides cross-domain complexity. On the host side, memsys\_bar\_cpu() calls cudaStreamSynchronize() on a specified stream to wait for the GPU to finish its pending commands, including memory writes. This wrapper simplifies code, clarifies intent, and centralizes performance tuning.
 \begin{minted}[highlightlines=false,fontsize=\small]{c}
 using namespace boost::interprocess;
 __device__ int *shared_flag;
@@ -126,7 +191,7 @@ These trampolines are linked into the device's code image via in-place patching 
 
 \subsection{Isolation Requirement}\label{sec:isolation}
 
-Dynamic PTX injection must not corrupt application state. \sys therefore runs injected snippets in a protected domain through eBPF verification and runtime sandboxing.
+Dynamic PTX injection and trampoline-based instrumentation introduce new code into live GPU kernels, which might bring the risk of corrupting application state or violating memory safety. \sys therefore runs injected snippets in a protected domain.
 
 \paragraph{Runtime Sandbox Integration}
 During JIT compilation, \sys{} wraps each PTX snippet in a minimal prologue/epilogue sequence that:
@@ -134,9 +199,9 @@ During JIT compilation, \sys{} wraps each PTX snippet in a minimal prologue/epil
   %\item
   a) Saves a live register state to a safe context.
   %\item
-  b) Executes the verified instrumentation logic within bounded memory regions.
+  b) Applies bitwise partition masking and invokes the instrumentation logic.
   %\item
   c) Restores registers and resumes normal kernel execution.
 %\end{itemize}
 
-The eBPF verifier ensures injected code operates only on designated shared memory regions, preventing corruption of application state. Combined with trampolines and shared-memory coordination, this approach ensures injected code remains isolated from application kernels.
+Combining Guardian-style fencing with trampolines and shared-memory coordination ensures injected code remains isolated from application kernels.

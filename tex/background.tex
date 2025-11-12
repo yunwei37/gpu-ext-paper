@@ -1,21 +1,24 @@
-\section{Background}
+\section{Background and Motivation}
 
-\subsection{User Space eBPF Extensions}
-The eBPF ecosystem, originally a kernel packet filter, now provides unified infrastructure for observability, security, and networking. While kernel-space eBPF offers low-level access, instrumenting user-level code incurs context-switch overhead. To mitigate this, user-space eBPF relocates probes and maps into the application process, avoiding kernel transitions, reducing privilege requirements, and simplifying multi-process coordination through shared memory. This allows developers to deploy sophisticated logic without kernel modifications, as shown in \Cref{fig:bpf}.
+\subsection{GPU-Centric Workloads and Systems}
 
-\begin{figure}
-\centering
-\fbox{\parbox{\columnwidth}{\centering [Figure: Userspace BPF Diagram]}}
-\caption{Userspace BPF Diagram}\label{fig:bpf}
-\end{figure}
+GPUs have become indispensable in modern datacenters, supporting an increasingly diverse and demanding set of workloads---from large-scale deep learning training and latency-sensitive inference to irregular computations like graph analytics and graphics rendering. The importance of GPUs spans ML, analytics, and HPC applications, where they work in concert with CPUs and high-speed interconnects (PCIe, NVLink) to deliver high throughput and low latency.
 
-\subsection{PTX Just-In-Time Compilation}
-PTX (Parallel Thread Execution) is an intermediate representation for NVIDIA GPUs that is faster than tools like NVBit~\cite{villa2019nvbit,kamath2021iguard}. PTX Just-In-Time (JIT) compilation~\cite{huang2024parallelgpuos,han2024microsecond} converts PTX to machine code at runtime, enabling dynamic instrumentation by intercepting and modifying PTX instructions. This allows embedding profiling or analytics logic with minimal overhead. Operating at a higher-level IR, PTX JIT achieves better performance than binary-level frameworks by producing optimized, architecture-specific code.
+\subsection{Limitations of Existing GPU Policies}
 
-\subsection{GPU Scheduling and Security}
-Confidential computing for GPUs aims to protect model workloads. Soter~\cite{shen2022soter} uses a CPU enclave but incurs high latency. Honeycomb~\cite{mai2023honeycomb} adds a trusted software layer with runtime checks, also impacting performance. Other approaches like microsecond-scale scheduling~\cite{han2022microsecond} involve kernel modifications. In contrast, PipeLLM~\cite{tan2025pipellm} uses speculative pipelining of encryption and data transfers to reduce confidentiality overhead without code or hardware changes.
+\paragraph{UVM Memory Management}
+Unified Virtual Memory (UVM) greatly simplifies programming by abstracting memory management across CPUs and GPUs. However, current UVM implementations rely on fixed heuristics that cannot adapt policies for prefetching, thrashing mitigation, or eviction based on workload characteristics. These rigid policies lead to suboptimal performance, especially for memory-intensive workloads with diverse access patterns.
 
-\subsection{Motivation}\label{sec:motivation}
-Existing GPU instrumentation tools like CUPTI~\cite{cupti} and NVBit~\cite{villa2019nvbit} often have high overhead. eBPF is a lightweight alternative for CPU-centric tasks~\cite{ghigoff2021bmc,zhong2022xrp,yang2023lambda}, but it lacks direct GPU insight. Modern GPU workloads require real-time, on-the-fly instrumentation without halting kernels. As shown in \Cref{fig:latency}, current tools cannot inject logic into running kernels. To address this, we introduce \sys, a framework that extends eBPF to GPUs via runtime PTX injection. \sys{} compiles eBPF to PTX, injects it into active kernels, and uses user-space probes and shared memory for low-overhead instrumentation, enabling dynamic observability for GPU workloads.
+\paragraph{GPU Kernel Scheduling}
+Existing GPU admission and resource allocation policies remain rigid and coarse-grained, using fixed timeslices and inflexible GPU admission and isolation policies. These limitations prevent fine-grained control over kernel scheduling, making it difficult to prioritize latency-sensitive workloads or dynamically adjust resource allocation in multi-tenant environments.
+
+\paragraph{Observability}
+Current GPU observability tools like CUPTI~\cite{cupti} and NVBit~\cite{villa2019nvbit} provide detailed monitoring data but often have high overhead. More critically, they provide data without actionable control---developers can observe what is happening but cannot dynamically inject custom instrumentation or adapt policies based on runtime observations. As shown in \Cref{fig:latency}, current tools cannot inject logic into running kernels without halting execution.
 
 \begin{figure} \centering \fbox{\parbox{0.5\textwidth}{\centering [Figure: Null Tool Runtime and Instrumentation Overhead Breakdown]}} \caption{Null Tool Runtime and Instrumentation Overhead Breakdown} \label{fig:latency} \end{figure}
+
+\subsection{Programmability Policy Runtimes}
+
+The broader systems community has demonstrated significant benefits from externalizing and customizing OS policies through frameworks like extended Berkeley Packet Filter (eBPF). Examples such as sched\_ext for Linux scheduling, cache\_ext for page-cache eviction, and struct\_ops for TCP congestion control have illustrated substantial performance and adaptability gains when policies can be dynamically loaded, safely verified, and executed directly within kernel contexts. The eBPF ecosystem, originally a kernel packet filter, now provides unified infrastructure for observability, security, and networking.
+
+However, while these successes illustrate the potential of policy programmability on CPUs, directly extending these ideas to GPU systems poses significant new challenges. CPU-side programmability alone is insufficient, as critical GPU management decisions are fundamentally embedded in GPU device execution contexts inaccessible from the CPU host. Conversely, GPU-side programmability alone is not enough either, as isolated GPU-only policies lack visibility into broader system state and coordination essential for coherent end-to-end policy decisions. This clear contrast demonstrates why CPU-side programmability alone doesn't solve GPU policy problems---a unified approach spanning both CPU and GPU contexts is essential.
