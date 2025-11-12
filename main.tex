@@ -111,12 +111,6 @@
 
 \maketitle
 
-\begin{abstract}
-
-  Modern GPU workloads in machine learning and HPC present complex behaviors that are challenging to observe, optimize and customize. An ideal GPU extension framework requires four key characteristics: (1) intra-kernel programmability to observe and modify running kernels at the instruction level, (2) safety to prevent crashes and memory corruption, (3) efficiency to minimize runtime overhead, and (4) unified programmability to coherently manage logic across the host CPU and GPU. We analyze existing approaches and find they fall short: host-side tools treat the GPU as a black box, failing on intra-kernel programmability; vendor-specific libraries like CUPTI and NVBit are GPU specific, lacking a unified programming model to control system-wide behavior and often introducing substantial overhead. This paper presents \sys, the first framework that extends the eBPF paradigm for general-purpose, programmable extensions directly into GPU kernels. \sys defines GPU-specific attach points for memory operations and synchronization primitives, verifies and JIT-compiles eBPF bytecode to PTX/SPIR-V with runtime injection, and provides on-device helper calls, plus shared CPU-GPU maps. By executing eBPF programs safely within GPU contexts, our framework enables a suite of bcc-style observability tools, programmable UVM management, and custom scheduling policies with 10× lower overhead than existing binary instrumentation. We demonstrate \sys's effectiveness through bcc-style GPU profiling tools (kernelretsnoop, threadhist, launchlate, mem\_trace) averaging 2-3\% overhead, UVM prefetching reducing page faults by 50-65\%, and fine-grain scheduling with sub-microsecond decision latency.
-\end{abstract}
-
-
 \input{tex/intro}
 \input{tex/background}
 %\input{tex/security}

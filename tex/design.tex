@@ -49,17 +49,6 @@ int curetprobe_matMulTiled(struct pt_regs *ctx) {
 
 Figure~\ref{fig:system-design} shows a unified user-space eBPF runtime that keeps verification, JIT, and maps in user space by default. Programs compiled with \texttt{clang}/\texttt{libbpf} write to maps in a shared-memory region (e.g., \texttt{boost::managed\_shared\_memory}) visible to CPU threads and GPU kernels. On demand, eBPF bytecode is translated to PTX and injected at GPU hook points so device-side probes write into the same maps, yielding real-time, low-overhead cross CPU–GPU observability.
 
-\begin{figure}[ht]
-  \centering
-  \fbox{\parbox{.82\linewidth}{\centering [Figure: \sys Gate Design]}}
-  \vspace{-.5ex}
-  \caption{\sys Gate design for CPU–GPU communication, showing the MPK+CFI‐protected shared memory region, trampoline hooks, and PTX injector within the isolation boundary.}
-  \label{fig:mpk_gate}
-\end{figure}
-\subsection{\sys Gate}
-
-\Cref{fig:mpk_gate} summarizes isolation and coordination. The runtime runs in an MPK/CFI-protected domain and mediates all updates to a shared region mapped by CPU and GPU. A persistent kernel jumps via trampolines into a PTX injector to execute the latest snippet from shared memory, then resumes. Static bound checks prevent access outside the protected region, enabling safe, live instrumentation.
-
 \subsection{GPU Trampoline}\label{sec:gpu_trampoline}
 
 To instrument long-running kernels in place, \sys{} uses tiny PTX trampolines at entry/exit or hot sites. When reached, execution briefly diverts to our snippet and then resumes. Each trampoline:
