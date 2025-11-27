@@ -1,59 +1,30 @@
-\documentclass[letterpaper, twocolumn, 10pt]{article}
+\documentclass[letterpaper,twocolumn,10pt]{article}
+
+
 \usepackage{usenix}
 
-% Optional: Comment out the CCS concepts and keywords.
-\usepackage{tikz}
+% === 你原来的功能性宏包（按依赖顺序稍作整理） ===
 \usepackage{float}
 \usepackage{amsmath}
 \usepackage{xspace}
-\usepackage{cleveref}
-\usepackage{balance}
-\usepackage{url}
 \usepackage{siunitx}
-\usepackage{comment}
 \usepackage{enumitem}
-\usepackage{listings}
+\usepackage{listings}   % 虽然你主要用 minted，但保留无妨
 \usepackage{minted}
 \usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning,fit}
 \usepackage{subcaption}
+\usepackage{balance}
+\usepackage{url}
+\usepackage{comment}
+
+% 超链接务必尽量靠后加载
 \usepackage{hyperref}
 
-\usetikzlibrary{shapes,arrows,positioning,fit}
+% cleveref 在 hyperref 之后加载更稳妥
+\usepackage{cleveref}
 
-\setminted{xleftmargin=10pt} % what a hack.
-\setminted{fontsize=\footnotesize}
-\setminted{frame=lines}
-\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
-            \node[shape=circle,draw=black!80,line width=0.2mm,inner sep=0.1pt] (char) {#1};}}
-
-\newcommand{\sys}{gbpf\xspace}
-\newcommand{\tech}{GPU eBPF Extension Framework\xspace}
-\newcommand{\speedup}{10\%}
-
-\newcommand{\eg}{e.g.,\xspace}
-\newcommand{\ie}{i.e.,\xspace}
-\newcommand{\etc}{etc.\xspace}
-
-% Cleveref formatting
-\crefname{algocf}{algorithm}{algorithms}
-\Crefname{algocf}{Algorithm}{Algorithms}
-\crefformat{section}{\S#2#1#3}
-\Crefformat{section}{Section~#2#1#3}
-\crefformat{subsection}{\S#2#1#3}
-\Crefformat{subsection}{Section~#2#1#3}
-\crefformat{subsubsection}{\S#2#1#3}
-\Crefformat{subsubsection}{Section~#2#1#3}
-\crefformat{figure}{figure~#2#1#3}
-\Crefformat{figure}{Figure~#2#1#3}
-
-
-% Numbers
-\newcommand{\numcases}{7\xspace}
-\newcommand{\speedupAccel}{xxx\xspace}
-\newcommand{\eBPFSlowdownAccel}{xxx\xspace}
-\newcommand{\speedupMonitor}{xxx\xspace}
-
-
+% === minted 设置 ===
 \newlength{\mintednumbersep}
 \AtBeginDocument{%
   \sbox0{\tiny00}%
@@ -67,8 +38,37 @@
 \setminted{linenos}
 \setminted{fontsize=\small}
 
+% === 你的命令 ===
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
+  \node[shape=circle,draw=black!80,line width=0.2mm,inner sep=0.1pt] (char) {#1};}}
 
-%%% for AQ's itemizations:
+\newcommand{\sys}{gbpf\xspace}
+\newcommand{\tech}{GPU eBPF Extension Framework\xspace}
+\newcommand{\speedup}{10\%}
+
+\newcommand{\eg}{e.g.,\xspace}
+\newcommand{\ie}{i.e.,\xspace}
+\newcommand{\etc}{etc.\xspace}
+
+% Cleveref 格式
+\crefname{algocf}{algorithm}{algorithms}
+\Crefname{algocf}{Algorithm}{Algorithms}
+\crefformat{section}{\S#2#1#3}
+\Crefformat{section}{Section~#2#1#3}
+\crefformat{subsection}{\S#2#1#3}
+\Crefformat{subsection}{Section~#2#1#3}
+\crefformat{subsubsection}{\S#2#1#3}
+\Crefformat{subsubsection}{Section~#2#1#3}
+\crefformat{figure}{figure~#2#1#3}
+\Crefformat{figure}{Figure~#2#1#3}
+
+% Numbers
+\newcommand{\numcases}{7\xspace}
+\newcommand{\speedupAccel}{xxx\xspace}
+\newcommand{\eBPFSlowdownAccel}{xxx\xspace}
+\newcommand{\speedupMonitor}{xxx\xspace}
+
+%%% 紧凑的枚举环境
 \newenvironment{smenumerate}%
   {\begin{enumerate}[itemsep=-0pt, parsep=0pt, topsep=0pt, leftmargin=2pc]}
   {\end{enumerate}}
@@ -81,8 +81,7 @@
       \setlength{\itemsep}{1pt}}}
   {\end{list}}
 
-
-
+% 内部批注（提交版记得全部注释掉）
 \newcommand{\grumbler}[3]{\noindent{\color{#1}{\bf \fbox{#2}} {\it #3}}}
 \newcommand{\arq}[1]{\grumbler{red}{ARQ}{#1}}
 \newcommand{\yy}[1]{\grumbler{blue}{YY}{#1}}
@@ -90,41 +89,34 @@
 \newcommand{\xiangyu}[1]{\grumbler{orange}{XG}{#1}}
 \newcommand{\todo}[1]{\grumbler{olive}{todo}{#1}}
 
-
-\title{Safe and Efficient Extensions Runtime for GPU}
-
-
-% \copyrightyear{2025}
-% \acmYear{2025}
-% \setcopyright{rightsretained}
-% \acmConference[HCDS '25]{4th Workshop on Heterogeneous Composable and Disaggregated Systems}{March 30, 2025}{Rotterdam, Netherlands}
-% \acmBooktitle{4th Workshop on Heterogeneous Composable and Disaggregated Systems (HCDS '25), March 30, 2025, Rotterdam, Netherlands}
-% \acmPrice{}
-% \acmDOI{10.1145/3723851.3726984}
-% \acmISBN{979-8-4007-  1470-2/25/03}
-% \author{
-% Anonymous Authors
-% }
-
-
+% === 正文开始 ===
 \begin{document}
+
+
+\pagestyle{plain}
+
+% 不打印日期
+\date{}
+
+
+\title{ Safe and Efficient Extensions Runtime for GPU}
+
+
+\author{
+}
 
 \maketitle
 
+% === 你原来的结构 ===
 \input{tex/intro}
 \input{tex/background}
-%\input{tex/security}
-% \input{tex/technique}
 \input{tex/design}
 \input{tex/usecase}
 \input{tex/eval}
-%\input{tex/suggestion}
 \input{tex/related-work}
 \input{tex/conclusion}
-% \section{Acknowledgment}
 
-% The authors wish to acknowledge the use of Claude in the writing of this paper. This tool was used to assist with improving the language in the paper and providing translations on implementations section.
-
+% 参考文献：USENIX 模板通常用 plain 或 abbrvnat 等
 \bibliographystyle{plain}
 \bibliography{cite}
 
