@@ -59,38 +59,56 @@ To enable coherent policy decisions across the CPU-GPU boundary, \sys provides a
 
 A \sys policy also includes a dedicated user-space control-plane component responsible for lifecycle management, dynamic reconfiguration, and policy introspection. This component loads compiled eBPF bytecode into the OS kernel, instantiates and manages eBPF maps, and attaches policy sections to defined host and GPU device hook points exposed by \sysdriver and GPU-side runtime. It enables dynamic reconfiguration of deployed policies at runtime by updating parameters (e.g., thresholds, sampling rates, eviction aggressiveness, power caps) stored in shared maps, and facilitates atomic swapping or updating of attached policy logic without restarting applications or kernels. Furthermore, the control-plane application continuously monitors policy operation by reading metrics and state from maps—such as memory hotness counters, per-tenant scheduling metrics, and queueing latencies—and exports this information to external observability frameworks or adaptation controllers. Thus, from a developer’s perspective, a complete \sys policy application comprises policy logic for both CPU and GPU execution contexts along with a complementary control-plane component orchestrating policy behavior and evolution over time.
 
-\subsection{Safety Model and Verification}
+\subsection{Safety Model and Optimization}
 \label{sec:safety}
 
 \sys enforces a unified safety model for all policy code running in \sysdriver and
 inside GPU kernels. Policies must pass static verification before deployment and
-remain within strict runtime bounds when executed on the GPU.
+execute within strict runtime bounds when running on the GPU. On the host, \sys
+reuses the standard eBPF verifier to ensure that programs are memory-safe, free of
+unbounded loops, and respect limits on stack depth and helper usage. The verifier
+only allows access to approved helper functions and supported map types, and rejects
+programs that could corrupt driver state or violate kernel invariants. For device-side
+execution, \sys applies the same verifier to the eBPF bytecode before any translation
+to PTX, so the control-flow and memory-safety properties proven by the verifier hold
+for both host and device instantiations of a policy.
 
-\paragraph{Static verification.}
-On the host, \sys reuses the standard eBPF verifier to ensure that programs are
-memory-safe, free of unbounded loops, and respect limits on stack depth and helper
-usage. The verifier only allows calls to approved helper functions and access to
-supported map types, and rejects programs that could corrupt driver state or violate
-kernel invariants.
-
-For device-side execution, \sys applies the same verifier to the eBPF bytecode
-before any translation to PTX. This ensures that the control-flow and memory-safety
-properties proven by the verifier hold for both host and device instantiations of
-the policy.
-
-\paragraph{GPU sandbox and bounded execution.}
 After verification, device-side policy code is translated to PTX and executed in a
-sandboxed runtime. The GPU sandbox bounds the number of instructions per invocation,
-constrains register allocation to a reserved set to avoid clobbering application
+sandboxed GPU runtime. The sandbox bounds the number of instructions per invocation,
+constrains register allocation to a reserved set so as not to clobber application
 state, and restricts memory accesses to designated shared regions such as eBPF maps
 and per-warp scratch buffers. Lightweight PTX trampolines save and restore only the
-minimal live register and predicate state around calls into the translated eBPF code.
-
-Together, static verification and the GPU sandbox guarantee that injected policy
+minimal live register and predicate state around calls into translated \sys code.
+Taken together, static verification and the sandbox guarantee that injected policy
 logic is bounded, deterministic, and cannot hang the GPU, corrupt kernel or application
-state, or impose unbounded latency on performance-critical paths such as memory
-fault handling or kernel admission. This makes it safe to execute policy code
-directly at the points where GPU resource management decisions are made.
+state, or impose unbounded latency on performance-critical paths such as memory fault
+handling or kernel admission.
+
+Safety is also a prerequisite for efficiency: by proving properties once in the
+verifier and enforcing strict isolation in the sandbox, \sys can aggressively optimize
+device-side execution without weakening its guarantees. The PTX JIT leverages
+verifier results to remove redundant bounds checks and zeroing, specialize programs
+per hook type, and map common eBPF idioms (such as map lookup-and-increment or
+``lookup-or-initialize'' patterns) to short, GPU-friendly instruction sequences.
+\sys further adopts a warp-centric execution model for device-side policies: when a
+device hook fires, a single designated lane per warp typically runs the scalar
+\sys snippet and updates shared maps on behalf of the warp, while other lanes
+provide their local inputs via warp-synchronous operations or remain idle. This
+approach preserves the simple scalar programming model of eBPF, but reduces the
+number of instructions executed for policy logic by up to a warp factor and avoids
+warp divergence inside policy code.
+
+Finally, \sys optimizes map access and instrumentation overhead to respect GPU memory
+hierarchy and contention patterns. For simple counters and histograms, the runtime
+aggregates updates in warp-local or SM-local accumulators in registers or shared
+memory and periodically flushes them to global eBPF maps, preventing global atomics while preserving logical map semantics. Context structures
+passed to device-side policies are minimized and packed on a per-program basis,
+materializing only the fields that the verifier proves may be read and precomputing
+derived identifiers in the trampoline. For observability-heavy policies, trampolines
+also support configurable sampling: a per-warp counter and a sampling parameter
+stored in a control map allow \sys to invoke device-side policy code only every
+$N$-th event. These optimizations, combined with the safety model above, ensure that
+\sys can execute policy code directly on GPU hot paths with low, predictable overhead.
 
 
 \subsection{Policy Interface for Memory}
@@ -136,16 +154,6 @@ such as access counts, approximate working-set membership, or simple stride or
 locality signatures. To bound overhead, \sys supports sampling (e.g., one in every
 $N$ accesses) and per-warp aggregation before updating maps.
 
-\paragraph{Example usage: programmable prefetch and eviction.}
-Together, these host and device interfaces let \sys support programmable prefetch
-and eviction without changing the underlying memory subsystem. Device-side probes
-track working sets and access frequencies in shared maps; host-side miss and
-prefetch hooks consult this state to prefetch regions that are predicted to be
-accessed soon, and eviction hooks select cold regions proactively. Because these
-policies are expressed entirely in eBPF over generic hooks and maps, operators can
-deploy multiple algorithms (e.g., threshold-based hotness, recency-biased eviction,
-tenant-aware placement) and evolve them without modifying driver code or GPU
-kernels.
 
 \subsection{Policy Interface for Scheduling}
 \label{sec:design-sched}
@@ -188,15 +196,3 @@ such as ``memory-bound'' or ``compute-bound'' to shared maps. Device-side probes
 are restricted to bounded, lightweight operations and cannot directly manipulate
 hardware queues; instead, they communicate hints and progress information that host
 policies consume at the next scheduling hook.
-
-\paragraph{Example usage: fine-grained priority and power-aware scheduling.}
-Using these interfaces, \sys supports a variety of scheduling policies. A priority
-scheduler maintains per-tenant priorities and latency statistics in maps keyed by
-tenant ID. Submit and admit hooks tag and order kernels based on these priorities,
-while preempt hooks consult device-side progress signals to preempt long-running
-low-priority kernels at synchronization points when high-priority work arrives.
-Similarly, a power-aware scheduler combines host-visible power and temperature
-readings with device-side activity counters to throttle or reschedule kernels as
-the GPU approaches configured power or thermal limits. These policies are expressed
-entirely in eBPF and built over generic scheduling hooks, allowing operators to
-deploy and evolve them without modifying GPU applications or vendor schedulers.
