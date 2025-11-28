@@ -6,7 +6,7 @@ In this section, we describe the key implementation details of \sys, including k
 
 \subsection{Kernel Modifications}
 
-\sys requires minimal but carefully placed modifications to GPU driver modules to expose programmable hook points without compromising system stability or performance.
+\sys requires minimal but carefully placed modifications to \sysdriver to expose programmable hook points without compromising system stability or performance.
 
 \sys leverages the NVIDIA Open GPU Kernel Modules, which have become the recommended default for modern datacenter GPUs (Turing, Ampere, Hopper, and newer) and are mandatory for platforms like Grace Hopper. By building upon this open-source foundation, \sys avoids brittle binary patching of proprietary drivers. Instead, it introduces standard, maintainable extension points within the open source driver code, aligning with the vendor's shift towards open kernel interfaces while maintaining compatibility with the closed-source user-space CUDA runtime.
 
