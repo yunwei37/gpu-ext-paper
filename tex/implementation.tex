@@ -49,6 +49,50 @@ The device-side runtime implements a lightweight sandbox to safely execute verif
 \paragraph{SIMT-specific Optimizations.}
 To fully exploit the GPU's SIMT architecture, policy execution is aggregated at warp granularity, executing scalar eBPF logic primarily on lane zero of each warp. Non-active lanes within a warp either remain idle or efficiently synchronize minimal state via warp-level primitives (e.g., warp shuffle instructions), drastically reducing warp divergence and redundant computation. Updates to global eBPF maps employ warp-local and SM-local accumulators placed in GPU registers or shared memory, periodically aggregating and batching updates to global memory, significantly reducing global atomic contention. Context structures passed to device-side policies are carefully minimized based on static analysis, packing only the fields identified as relevant during verification and precomputing frequently used identifiers directly within the trampoline code. Lastly, configurable sampling counters implemented in registers allow runtime overhead adjustments by invoking policy handlers at configurable event intervals, enabling low-overhead adaptive instrumentation suitable for diverse workloads.
 
+\subsection{Scheduling Implementation}
+\label{sec:impl-sched}
+
+\paragraph{Host-side driver extensions.}
+We realize the host-side scheduling interface by modifying the open-source GPU
+kernel modules to export struct\_ops-style callbacks along the kernel lifecycle.
+Specifically, we add callback vectors at kernel submission, admission, preemption,
+and completion sites in the driver code that manages GPU contexts and hardware
+queues. Each callback receives a compact context structure containing kernel
+configuration, tenant identifiers, per-tenant statistics, and current queue state.
+When a scheduling event occurs, the driver invokes the attached \sys program with
+this context and applies the returned decision by reordering ready queues, delaying
+admission, updating kernel priorities, or initiating a cooperative preemption if the
+hardware supports it. These hooks are implemented as small, isolated patches to the
+driver and do not alter the core mechanisms for context management, which simplifies
+maintenance across driver versions.
+
+\paragraph{Device-side block scheduler and cluster launch control.}
+On the device, we implement the thread-block scheduler using a combination of
+persistent worker blocks and hardware support for dynamically assigning work units.
+Conceptually, each kernel is expressed as a set of work units (for example, tiles or
+logical block indices), and the GPU runs a pool of worker blocks that repeatedly
+acquire and execute these units until the kernel completes. In our implementation on
+recent NVIDIA GPUs, we map this abstraction onto the cluster launch control facility,
+which allows a grid of blocks to be treated as a collection of cancellable work units
+that can be reassigned to active workers. The worker code executes in a loop: it
+processes its current work unit, invokes a device-side \sys handler to select or
+approve the next work unit, and uses the cluster launch control API to claim or
+cancel block indices accordingly. The handler runs in a single lane per warp and
+consults shared maps that encode per-tenant priorities, global queue state, and
+per-block progress, returning either the next work identifier or a signal that no
+work remains.
+
+In parallel, we implement progress and behavior probes by inserting \sys trampolines
+at kernel entry and at explicitly annotated synchronization or phase boundaries.
+These trampolines record per-warp or per-block iteration counts, phase identifiers,
+and simple classification signals such as memory-bound versus compute-bound phases,
+and update shared maps that are visible to both device-side and host-side schedulers.
+Policies can use this information to mark blocks or phases as preemptible, to detect
+stragglers, or to adapt admission decisions on the host. All device-side scheduling
+logic is executed under the same sandbox and bounded-execution constraints described
+in Section~\ref{sec:safety}, and interacts with the driver only through the existing
+kernel and block control interfaces exposed by the hardware and driver.
+
 
 \subsection{Cross-Domain Memory Synchronization}
 

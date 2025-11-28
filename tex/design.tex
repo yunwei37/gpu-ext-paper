@@ -108,45 +108,73 @@ such as access counts, approximate working-set membership, or simple stride or
 locality signatures. To bound overhead, \sys supports sampling (e.g., one in every
 $N$ accesses) and per-warp aggregation before updating maps.
 
-
 \subsection{Policy Interface for Scheduling}
 \label{sec:design-sched}
 
-GPU schedulers typically provide fixed, coarse-grained policies (e.g., FIFO queues
-with limited priority control), which are insufficient in multi-tenant environments
-with mixed latency-sensitive and batch workloads or power constraints. \sys exposes
-scheduling interfaces on both host and device so that policies can implement
-fine-grained priority, deadline-aware, or power-aware scheduling.
+GPU schedulers today typically implement fixed, coarse-grained policies such as FIFO
+queues with limited priority control, which are insufficient in multi-tenant settings
+with mixed latency-sensitive and batch workloads or tight power constraints. In such
+environments, operators need policies that can shape both \emph{which kernels reach
+the GPU} and \emph{how work is consumed inside those kernels} at the granularity of
+thread blocks or tiles. \sys exposes scheduling interfaces on both host and device
+so that policies can implement fine-grained priority, deadline-aware, and power-aware
+scheduling while respecting the GPU SIMT execution model.
 
 \paragraph{Host-side scheduling hooks.}
-On the host, \sys extends the GPU kernel lifecycle with attach points at:
+On the host, \sys extends the GPU kernel lifecycle with attach points that allow
+policies to control admission, ordering, and preemption of kernels. The interface
+provides hooks at the following events:
 
 \begin{itemize}[leftmargin=*]
   \item \emph{Submit}, when a kernel is enqueued by a framework or runtime. The
-        context includes kernel metadata (e.g., grid and block size), tenant or
-        stream identifier, and any priority hints.
+        context includes kernel metadata (for example, grid and block size), tenant
+        or stream identifiers, and any priority hints.
   \item \emph{Admit}, when the scheduler is about to dispatch a ready kernel to
         a GPU context or hardware queue. The policy can re-order ready kernels,
-        defer admission, or adjust effective priorities.
+        defer admission, or adjust effective priorities based on per-tenant state.
   \item \emph{Preempt}, when a preemption opportunity arises, for example at a
         cooperative yield point or at a scheduling quantum boundary. The policy
-        can decide whether to continue or preempt a kernel based on its progress
-        and the presence of higher-priority work.
+        can decide whether to continue or preempt a kernel based on its observed
+        progress and the presence of higher-priority work.
   \item \emph{Complete}, when a kernel finishes. Policies use this hook to update
         per-tenant statistics, virtual time, or longer-term admission control state.
 \end{itemize}
 
-Attached eBPF schedulers read these contexts and shared maps (e.g., per-tenant
-latency and throughput statistics, outstanding work across queues) and return
-compact scheduling decisions such as which kernel to run next, whether to throttle
-a tenant, or whether to allow preemption.
+Attached eBPF schedulers read these contexts and shared maps (for example, per-tenant
+latency and throughput statistics, outstanding work across queues) and return compact
+decisions such as which kernel to run next, whether to throttle a tenant, or whether
+to allow preemption. The host-side interface thus controls which kernels occupy GPU
+contexts and how they are multiplexed in multi-tenant scenarios.
 
-\paragraph{Device-side scheduling signals.}
-On the GPU, \sys injects probes at kernel entry and at selected synchronization or
-phase boundaries within kernels. These probes can record per-warp or per-block
-progress (e.g., iterations completed in a loop, entry into a barrier-heavy phase),
-mark when a kernel enters a phase that is safe to preempt, or export simple signals
-such as ``memory-bound'' or ``compute-bound'' to shared maps. Device-side probes
-are restricted to bounded, lightweight operations and cannot directly manipulate
-hardware queues; instead, they communicate hints and progress information that host
-policies consume at the next scheduling hook.
+\paragraph{Device-side thread-block scheduler and signals.}
+Inside the GPU, \sys exposes a complementary interface that operates at the level of
+thread blocks or tiles, aligning with the SIMT execution model. Rather than treating
+each kernel as a monolithic unit, \sys models a kernel as a collection of work units
+that can be dynamically assigned to \emph{worker} thread blocks. Policies interact
+with this internal scheduler through two mechanisms:
+
+\begin{itemize}[leftmargin=*]
+  \item \emph{Block scheduling callbacks}, where a worker block periodically invokes
+        a device-side \sys handler to select its next work unit. The context includes
+        the kernel or phase identifier, tenant information, and local progress
+        metrics. The handler consults shared maps and returns a work descriptor
+        (for example, a tile index or logical block identifier) or an indication
+        that no further work is available. This enables policies to implement
+        priority-aware or tenant-aware work stealing and load balancing at the
+        thread-block level.
+  \item \emph{Progress and behavior signals}, where \sys injects lightweight probes
+        at kernel entry and at selected synchronization or phase boundaries to
+        record per-warp or per-block progress (for example, iterations completed
+        in a loop, entry into a barrier-heavy phase) and simple behavioral signals
+        such as whether a block is currently memory-bound or compute-bound. These
+        probes write into shared maps and can mark when a block or phase is safe
+        to preempt.
+\end{itemize}
+
+Device-side probes and block scheduling callbacks are restricted to bounded,
+lightweight operations and cannot directly manipulate hardware queues. Instead,
+they communicate hints, progress information, and per-block decisions that host
+policies can consume at the next host-side scheduling hook. Together, the host-side
+and device-side interfaces allow \sys policies to coordinate decisions across the
+full scheduling pipeline: from kernel admission and preemption on the host to
+fine-grained block-level work distribution inside GPU kernels.
