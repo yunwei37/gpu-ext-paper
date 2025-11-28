@@ -33,7 +33,7 @@ We place maps and coordination buffers in \texttt{managed\_shared\_memory} for z
 
 \subsection{Cross-Domain Memory Synchronization}
 
-On non-coherent systems (PCIe-based), cross-domain visibility requires explicit barriers (device \_\_threadfence\_system and host stream sync). The reason is that to transfer writes from the GPU to the CPU, the device must execute \_\_threadfence\_system() to flush any outstanding writes into system-visible memory, followed by a host-side cudaStreamSynchronize() to wait for the GPU to complete. We encapsulate these as a simple device/host pair to centralize tuning and reduce boilerplate:
+Cross-domain visibility requires explicit barriers (device \_\_threadfence\_system and host stream sync). To transfer writes from the GPU to the CPU, the device must execute \_\_threadfence\_system() to flush any outstanding writes into system-visible memory, followed by a host-side cudaStreamSynchronize() to wait for the GPU to complete. We encapsulate these as a simple device/host pair to centralize tuning and reduce boilerplate:
 \begin{minted}[highlightlines=false,fontsize=\small]{c}
 // Ensure GPU writes become visible to the CPU
 __device__ inline void memsys_bar_gpu() {
