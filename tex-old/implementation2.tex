@@ -20,17 +20,6 @@ All hook points follow the struct\_ops-style callback pattern, where verified eB
 \paragraph{PTX JIT compiler integration:}
 \sys integrates a PTX Just-In-Time (JIT) compiler that translates verified eBPF bytecode into optimized PTX instructions. PTX (Parallel Thread Execution) is an intermediate representation for NVIDIA GPUs that provides better performance than binary-level instrumentation frameworks. The JIT compiler produces architecture-specific code optimized for the target GPU, enabling dynamic instrumentation with minimal overhead.
 
-
-\paragraph{GPU Trampoline}\label{sec:gpu_trampoline}
-To instrument kernels transparently, \sys{} uses tiny PTX trampolines at entry/exit or hot sites. When reached, execution briefly diverts to our snippet and then resumes. Each trampoline:
-\begin{itemize}[leftmargin=*,itemsep=0pt]
-  \item \textbf{Save:} store minimal live state to a per‐warp scratch buffer.
-  \item \textbf{Probe:} jump to the injected PTX (from eBPF) to read/update maps or record events.
-  \item \textbf{Restore:} reload state and resume the original control flow.
-\end{itemize}
-Trampolines are patched at JIT time and confined to the protected domain (\S\ref{sec:isolation}); we observe sub--\(1\,\mu\)s overhead per invocation in practice.
-
-
 \paragraph{Runtime resource bounding:}
 The GPU runtime enforces strict resource bounds to prevent injected code from interfering with application kernels. This includes limiting instruction counts per invocation, bounding register usage to avoid spilling, and restricting memory access to designated shared regions. These bounds are verified at load time and enforced at runtime through hardware mechanisms and software checks.
 
@@ -57,64 +46,24 @@ static inline void memsys_bar_cpu(cudaStream_t stream =
 }
 \end{minted}
 In a persistent kernel, call the GPU fence before reading shared state; after host updates, synchronize the stream to ensure visibility. This two-call barrier hides cross-domain complexity. On the host side, memsys\_bar\_cpu() calls cudaStreamSynchronize() on a specified stream to wait for the GPU to finish its pending commands, including memory writes. This wrapper simplifies code, clarifies intent, and centralizes performance tuning.
-
-\subsection{\sysdevice Mechanism}\label{sec:gbpf_device}
-
-\noindent \sysdevice provides eBPF-style uprobe/uretprobe hooks for GPU functions at user level. The example below traces a tiled matrix multiply (\texttt{matMulTiled}), counting calls and measuring total time with standard eBPF maps:
-
 \begin{minted}[highlightlines=false,fontsize=\small]{c}
-SEC("gbpf_device/_Z11matMulTiledPKfS0_Pf")
-int gbpf_device_matMulTiled(struct pt_regs *ctx) {
-    u32 pid = bpf_get_current_pid_tgid() >> 32;
-    u64 ts  = bpf_ktime_get_ns();
-    bpf_map_update_elem(&start_ts, &pid, &ts, BPF_ANY);
-    u64 one = 1, *cnt = bpf_map_lookup_elem(&call_count,
-        &pid);  // increment call count
-    if (cnt) *cnt += 1;
-    else    bpf_map_update_elem(&call_count, &pid, &one,
-        BPF_ANY);
+using namespace boost::interprocess;
+__device__ int *shared_flag;
+__global__ void persistent_kernel() {
+    memsys_bar_gpu();// Ensure CPU writes are visible
+    int cmd = *shared_flag;
+    // Jump into PTX injector...
 }
-SEC("gbpf_device_ret/_Z11matMulTiledPKfS0_Pf")
-int gbpf_device_ret_matMulTiled(struct pt_regs *ctx) {
-    u32 pid = bpf_get_current_pid_tgid() >> 32;
-    u64 *tsp = bpf_map_lookup_elem(&start_ts, &pid);
-    if (!tsp) return 0;
-    u64 delta = bpf_ktime_get_ns() - *tsp;
-    bpf_map_delete_elem(&start_ts, &pid);
-    u64 *total = bpf_map_lookup_elem(&total_time_ns,
-            &pid); // accumulate execution time
-    if (total) {
-        *total += delta;
-        bpf_map_update_elem(&total_time_ns, &pid,
-            total, BPF_EXIST);
-    } else {
-        bpf_map_update_elem(&total_time_ns, &pid,
-            &delta, BPF_NOEXIST);
-    }
+int main() {
+    managed_shared_memory shm(open_or_create, "MyShm"
+        , 1 << 20);
+    int *flag = shm.construct<int>("Flag")(0)[1];
+    *flag = 42;              // Write command
+    memsys_bar_cpu(0);       // Ensure GPU sees update
+    persistent_kernel<<<grid, block>>>();
+    cudaDeviceSynchronize();
 }
 \end{minted}
-
-\noindent \sysdevice lifts the same semantics onto the device by JIT--translating probe handlers into PTX and injecting them at kernel launch time. Entry/exit trampolines record per-warp timestamps and update shared eBPF maps, preserving map semantics and enabling function-level profiling without application restarts.
-
-
-% \begin{minted}[highlightlines=false,fontsize=\small]{c}
-% using namespace boost::interprocess;
-% __device__ int *shared_flag;
-% __global__ void persistent_kernel() {
-%     memsys_bar_gpu();// Ensure CPU writes are visible
-%     int cmd = *shared_flag;
-%     // Jump into PTX injector...
-% }
-% int main() {
-%     managed_shared_memory shm(open_or_create, "MyShm"
-%         , 1 << 20);
-%     int *flag = shm.construct<int>("Flag")(0)[1];
-%     *flag = 42;              // Write command
-%     memsys_bar_cpu(0);       // Ensure GPU sees update
-%     persistent_kernel<<<grid, block>>>();
-%     cudaDeviceSynchronize();
-% }
-% \end{minted}
 
 \subsection{Synchronization}
 We use host atomics/interprocess primitives and device CUDA atomics/fences over well-defined layouts in shared memory. To reduce contention, only a subset of threads performs atomics while others proceed in parallel.
