@@ -8,7 +8,7 @@ In this section, we describe the key implementation details of \sys, including k
 
 \sys requires minimal but carefully placed modifications to \sysdriver to expose programmable hook points without compromising system stability or performance.
 
-\sys leverages the NVIDIA Open GPU Kernel Modules, which have become the recommended default for modern datacenter GPUs (Turing, Ampere, Hopper, and newer) and are mandatory for platforms like Grace Hopper. By building upon this open-source foundation, \sys avoids brittle binary patching of proprietary drivers. Instead, it introduces standard, maintainable extension points within the open source driver code, aligning with the vendor's shift towards open kernel interfaces while maintaining compatibility with the closed-source user-space CUDA runtime.
+\sys leverages the NVIDIA Open GPU Kernel Modules, which have become the recommended default for modern datacenter GPUs (Turing, Ampere, Hopper, and newer). By building upon this open-source foundation, \sys avoids brittle binary patching of proprietary drivers. Instead, it introduces standard, maintainable extension points within the open source driver code, aligning with the vendor's shift towards open kernel interfaces while maintaining compatibility with the closed-source user-space CUDA runtime.
 
 \paragraph{Specific hooks and patches:}
 We add specific hooks within the NVIDIA UVM module at critical memory management decision points, including page fault handlers, prefetch logic, and eviction paths. Similarly, we extend kernel-scheduler entry points to enable custom admission control and resource allocation policies. These modifications are designed to be minimal, non-intrusive, and compatible with existing driver functionality.
@@ -28,7 +28,7 @@ The GPU runtime enforces strict resource bounds to prevent injected code from in
 
 \subsection{Shared Memory}
 
-We place maps and coordination buffers in \texttt{managed\_shared\_memory} for zero-copy CPU/GPU access, reducing marshaling and latency. Coherent platforms (e.g., Grace Hopper) further scale capacity and minimize synchronization costs via fabric-managed coherence.
+We place maps and coordination buffers in \texttt{managed\_shared\_memory} for zero-copy CPU/GPU access, reducing marshaling and latency.
 
 
 \subsection{Cross-Domain Memory Synchronization}
@@ -64,14 +64,13 @@ int main() {
     cudaDeviceSynchronize();
 }
 \end{minted}
-Looking into systems like NVIDIA's Grace Hopper, which support hardware cache coherence across CPU and GPU, these explicit barriers will become unnecessary. Under a coherent interconnect such as NVLink/CXL, cache lines are automatically propagated and merged at the L2/L3 levels, eliminating the need for manual \_\_threadfence\_system() or stream synchronizations. Early measurements indicate that cross-domain latency on such platforms can shrink from tens of microseconds to just hundreds of nanoseconds, reducing synchronization overhead by an order of magnitude and enabling truly low-latency shared-memory coordination.
 
 \subsection{Synchronization}
 We use host atomics/interprocess primitives and device CUDA atomics/fences over well-defined layouts in shared memory. To reduce contention, only a subset of threads performs atomics while others proceed in parallel.
 
 \subsection{PTX Generation \& Injection}\label{sec:ptx_injection}
 
-User/eBPF logic triggers JIT generation of PTX snippets that are installed via in-place patching ("PTX injection"). Snippets interoperate with eBPF maps and shared buffers to support flexible, low-latency instrumentation without relaunching kernels.
+User/eBPF logic triggers JIT generation of PTX snippets that are installed via launch-time patching ("PTX injection"). Snippets interoperate with eBPF maps and shared buffers to support flexible, low-latency instrumentation without restarting the application.
 
 \paragraph{Trampoline Mechanism}
 At runtime we patch candidate sites (entry, memory access, barriers) with a tiny PTX stub that:
@@ -80,13 +79,13 @@ At runtime we patch candidate sites (entry, memory access, barriers) with a tiny
   \item Jumps into the injected instrumentation snippet.
   \item Restores the original state and resumes normal execution.
 \end{itemize}
-These trampolines are linked into the device's code image via in-place patching of branch targets, enabling fine-grained hooking without requiring kernel relaunch or full recompilation. Our trampoline generator handles label resolution, register allocation, and insertion of necessary synchronization primitives to avoid hazards.
+These trampolines are linked into the device's code image via launch-time patching of branch targets, enabling fine-grained hooking without requiring application restart or full recompilation. Our trampoline generator handles label resolution, register allocation, and insertion of necessary synchronization primitives to avoid hazards.
 
 
 
 \subsection{Isolation Requirement}\label{sec:isolation}
 
-Dynamic PTX injection and trampoline-based instrumentation introduce new code into live GPU kernels, which might bring the risk of corrupting application state or violating memory safety. \sys therefore runs injected snippets in a protected domain.
+Launch-time PTX injection and trampoline-based instrumentation introduce new code into GPU kernels, which might bring the risk of corrupting application state or violating memory safety. \sys therefore runs injected snippets in a protected domain.
 
 \paragraph{Runtime Sandbox Integration}
 During JIT compilation, \sys{} wraps each PTX snippet in a minimal prologue/epilogue sequence that:

@@ -79,7 +79,7 @@ int gbpf_device_ret_matMulTiled(struct pt_regs *ctx) {
 }
 \end{minted}
 
-\noindent \sysdevice lifts the same semantics onto the device by JIT--translating probe handlers into PTX and injecting them into running kernels. Entry/exit trampolines record per-warp timestamps and update shared eBPF maps, preserving map semantics and enabling function-level profiling without kernel reloads.
+\noindent \sysdevice lifts the same semantics onto the device by JIT--translating probe handlers into PTX and injecting them at kernel launch time. Entry/exit trampolines record per-warp timestamps and update shared eBPF maps, preserving map semantics and enabling function-level profiling without application restarts.
 
 \subsection{Extending \sysdriver (CPU-side)}
 
@@ -89,21 +89,21 @@ The eBPF verifier ensures that all attached programs are safe, bounded, and cann
 
 \subsection{GPU-side eBPF Runtime Execution}
 
-To enable fine-grained policy control within GPU kernels, \sys offloads verified eBPF programs to execute directly on the GPU device. This is achieved through a PTX-level JIT injection approach that translates verified eBPF bytecode into optimized PTX instructions and injects them into running GPU kernels.
+To enable fine-grained policy control within GPU kernels, \sys offloads verified eBPF programs to execute directly on the GPU device. This is achieved through a PTX-level JIT injection approach that translates verified eBPF bytecode into optimized PTX instructions and injects them at kernel launch.
 
 The GPU runtime sandbox provides strong safety guarantees through bounded execution, careful register management, and memory access restrictions. Each injected program operates within a protected domain that prevents interference with application kernels while providing the flexibility needed for adaptive policy decisions.
 
 \paragraph{GPU Trampoline}\label{sec:gpu_trampoline}
-To instrument long-running kernels in place, \sys{} uses tiny PTX trampolines at entry/exit or hot sites. When reached, execution briefly diverts to our snippet and then resumes. Each trampoline:
+To instrument kernels transparently, \sys{} uses tiny PTX trampolines at entry/exit or hot sites. When reached, execution briefly diverts to our snippet and then resumes. Each trampoline:
 \begin{itemize}[leftmargin=*,itemsep=0pt]
   \item \textbf{Save:} store minimal live state to a per‐warp scratch buffer.
   \item \textbf{Probe:} jump to the injected PTX (from eBPF) to read/update maps or record events.
   \item \textbf{Restore:} reload state and resume the original control flow.
 \end{itemize}
-Trampolines are patched atomically at JIT time and confined to the protected domain (\S\ref{sec:isolation}); we observe sub--\(1\,\mu\)s overhead per invocation in practice.
+Trampolines are patched at JIT time and confined to the protected domain (\S\ref{sec:isolation}); we observe sub--\(1\,\mu\)s overhead per invocation in practice.
 
 \subsection{Unified CPU--GPU State Abstraction}
 
 A key innovation in \sys is the unified state abstraction that spans CPU and GPU execution contexts. Shared eBPF maps are pinned in unified memory, providing a coherent view of policy-relevant state across both domains. This enables policies to make informed decisions based on global system state rather than being limited to local, domain-specific information.
 
-\sys implements efficient synchronization and coherency management across the CPU-GPU boundary, with optimized paths for both PCIe-based systems (requiring explicit memory barriers) and NVLink-based coherent systems (leveraging hardware cache coherence). This careful design ensures that cross-domain state updates are visible with minimal latency while preserving correctness guarantees.
+\sys implements efficient synchronization and coherency management across the CPU-GPU boundary, with optimized paths for PCIe-based systems (requiring explicit memory barriers). This careful design ensures that cross-domain state updates are visible with minimal latency while preserving correctness guarantees.

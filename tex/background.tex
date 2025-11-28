@@ -13,7 +13,7 @@ Unified Virtual Memory (UVM) greatly simplifies programming by abstracting memor
 Existing GPU admission and resource allocation policies remain rigid and coarse-grained, using fixed timeslices and inflexible GPU admission and isolation policies. These limitations prevent fine-grained control over kernel scheduling, making it difficult to prioritize latency-sensitive workloads or dynamically adjust resource allocation in multi-tenant environments.
 
 \paragraph{Observability}
-Current GPU observability tools like CUPTI~\cite{cupti} and NVBit~\cite{villa2019nvbit} provide detailed monitoring data but often have high overhead. More critically, they provide data without actionable control---developers can observe what is happening but cannot dynamically inject custom instrumentation or adapt policies based on runtime observations. As shown in \Cref{fig:latency}, current tools cannot inject logic into running kernels without halting execution.
+Current GPU observability tools like CUPTI~\cite{cupti} and NVBit~\cite{villa2019nvbit} provide detailed monitoring data but often have high overhead. More critically, they provide data without actionable control---developers can observe what is happening but cannot dynamically inject custom instrumentation or adapt policies based on runtime observations. As shown in \Cref{fig:latency}, current tools cannot inject logic without restarting the application.
 
 \begin{figure} \centering \fbox{\parbox{0.5\textwidth}{\centering [Figure: Null Tool Runtime and Instrumentation Overhead Breakdown]}} \caption{Null Tool Runtime and Instrumentation Overhead Breakdown} \label{fig:latency} \end{figure}
 
