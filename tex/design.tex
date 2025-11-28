@@ -1,8 +1,3 @@
-
-\section{gBPF Overview}
-
-\subsection{Design Principles}
-
 \sys follows three key design principles to address the limitations of existing GPU stacks:
 
 \paragraph{Principle 1: Decouple stable mechanisms from dynamic programmable policies}
@@ -49,8 +44,6 @@ In our design, the unified CPU--GPU policy programmability framework explicitly 
     \item \textbf{Unified verification model and centralized policy control plane.}
     \sys implements a unified verification and safety model, ensuring that policy logic running on CPU and GPU sides is safe, bounded, and deterministic. A single verifier analyzes policy correctness, resource consumption, and execution guarantees before deployment. Additionally, \sys provides a centralized policy control plane that supports dynamic policy lifecycle management (loading, unloading, updating), adaptive parameter configuration, auxiliary computations, and runtime diagnostics. Together, this unified safety verification and centralized operational control enable developers to confidently deploy sophisticated policies onto latency-critical GPU and kernel paths with guaranteed safety and minimal overhead.
 \end{itemize}
-
-\section{gBPF Design}
 
 \subsection{\sys and Curetprobe}\label{sec:curetprobe}
 
