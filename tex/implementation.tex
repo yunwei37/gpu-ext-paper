@@ -41,6 +41,14 @@ The GPU runtime enforces strict resource bounds to prevent injected code from in
 
 We place maps and coordination buffers in \texttt{managed\_shared\_memory} for zero-copy CPU/GPU access, reducing marshaling and latency.
 
+\subsection{GPU Runtime Implementation and Optimization}
+
+\paragraph{GPU Sandbox and PTX JIT.}
+The device-side runtime implements a lightweight sandbox to safely execute verified eBPF programs translated to GPU-executable code. Specifically, verified eBPF bytecode is translated into optimized PTX via a custom JIT compiler integrated within the \sys kernel driver. The sandboxed runtime strictly enforces execution constraints by bounding per-invocation instruction counts and reserving dedicated registers to prevent interference with application kernels. Minimal PTX trampolines inserted at kernel entry and instrumentation points save only essential predicate and register state, invoke the policy code, and restore GPU state with negligible overhead, typically less than a microsecond per invocation.
+
+\paragraph{SIMT-specific Optimizations.}
+To fully exploit the GPU's SIMT architecture, policy execution is aggregated at warp granularity, executing scalar eBPF logic primarily on lane zero of each warp. Non-active lanes within a warp either remain idle or efficiently synchronize minimal state via warp-level primitives (e.g., warp shuffle instructions), drastically reducing warp divergence and redundant computation. Updates to global eBPF maps employ warp-local and SM-local accumulators placed in GPU registers or shared memory, periodically aggregating and batching updates to global memory, significantly reducing global atomic contention. Context structures passed to device-side policies are carefully minimized based on static analysis, packing only the fields identified as relevant during verification and precomputing frequently used identifiers directly within the trampoline code. Lastly, configurable sampling counters implemented in registers allow runtime overhead adjustments by invoking policy handlers at configurable event intervals, enabling low-overhead adaptive instrumentation suitable for diverse workloads.
+
 
 \subsection{Cross-Domain Memory Synchronization}
 
