@@ -90,18 +90,6 @@ int curetprobe_matMulTiled(struct pt_regs *ctx) {
 
 \noindent Curetprobe lifts the same semantics onto the device by JIT--translating probe handlers into PTX and injecting them into running kernels. Entry/exit trampolines record per-warp timestamps and update shared eBPF maps, preserving map semantics and enabling function-level profiling without kernel reloads.
 
-\begin{figure}[ht]
-  \centering
-  \fbox{\parbox{0.82\linewidth}{\centering [Figure: \sys Gate design]}}
-  \vspace{-.5ex}
-  \caption{\sys Gate design for CPU--GPU communication, showing the MPK+CFI-protected shared memory region, trampoline hooks, and PTX injector within the isolation boundary.}
-  \label{fig:mpk_gate}
-\end{figure}
-
-\subsection{\sys Gate}
-
-\Cref{fig:mpk_gate} summarizes isolation and coordination. The runtime runs in an MPK/CFI-protected domain and mediates all updates to a shared region mapped by CPU and GPU. A persistent kernel jumps via trampolines into a PTX injector to execute the latest snippet from shared memory, then resumes. Static bound checks prevent access outside the protected region, enabling safe, live instrumentation.
-
 \subsection{Extending GPU Driver Modules (CPU-side)}
 
 \sys safely extends GPU driver modules on the CPU side by adding attach points within critical policy decision paths, including UVM memory management logic and GPU kernel scheduler logic. These extensions follow the struct\_ops-style callback approach used successfully in CPU-side eBPF systems, allowing developers to register verified eBPF programs at well-defined hook points without modifying core driver logic.
