@@ -1,6 +1,10 @@
 \section{Background and Motivation}
 
-\subsection{GPU-Centric Workloads and Systems Architecture}
+\subsection{GPU-Centric Workloads}
+
+Modern datacenters run a heterogeneous mix of GPU workloads with conflicting resource requirements. \textbf{LLM Inference} services are highly latency-sensitive, demanding strict tail-latency guarantees (SLOs) and the ability to preempt low-priority maintenance tasks at the microsecond scale. In contrast, \textbf{Graph Neural Network (GNN)} training is throughput-oriented but exhibits highly irregular, data-dependent memory access patterns (e.g., random walks) that defy standard contiguous prefetching heuristics, leading to severe thrashing in Unified Virtual Memory (UVM) systems. Furthermore, \textbf{Vector Search} and multi-tenant consolidation scenarios require strict resource isolation to prevent "noisy neighbor" interference, where a bandwidth-heavy batch job degrades the performance of co-located latency-critical queries. Meeting these diverse requirements necessitates a system stack capable of adapting memory, scheduling, and isolation policies to the specific semantic needs of each workload.
+
+\subsection{GPU Systems Architecture}
 
 \paragraph{User-Space Logic (Applications \& Runtimes)}
 High-level frameworks (e.g., PyTorch, TensorFlow) and middleware (e.g., CUDA runtime) operate in user space, managing operation graphs, tensor layouts, and command submission. While they possess rich semantic information---such as the structure of a neural network or the latency target of an inference query---they lack the privileges to enforce these requirements at the hardware level. For instance, a framework might attempt to prioritize a critical stream, but the underlying runtime's opaque heuristics for stream-to-queue mapping can blindly serialize it behind a background job. Similarly, user-space allocators can manage virtual memory pools but cannot control physical page placement or handle page fault interrupts, preventing precise overlapping of data transfer and computation.
