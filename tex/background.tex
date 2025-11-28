@@ -2,25 +2,17 @@
 
 \subsection{GPU-Centric Workloads and Systems Architecture}
 
+\paragraph{User-Space Logic (Applications \& Runtimes)}
+High-level frameworks (e.g., PyTorch, TensorFlow) and middleware (e.g., CUDA runtime) operate in user space, managing operation graphs, tensor layouts, and command submission. While they possess rich semantic information---such as the structure of a neural network or the latency target of an inference query---they lack the privileges to enforce these requirements at the hardware level. For instance, a framework might attempt to prioritize a critical stream, but the underlying runtime's opaque heuristics for stream-to-queue mapping can blindly serialize it behind a background job. Similarly, user-space allocators can manage virtual memory pools but cannot control physical page placement or handle page fault interrupts, preventing precise overlapping of data transfer and computation.
+
+\paragraph{The Monolithic Kernel Driver}
+The OS driver serves as the central authority for physical resource arbitration, holding exclusive control over the Memory Management Unit (MMU), hardware interrupts, and global context scheduling. Despite this privileged position, modern drivers are typically monolithic and ossified, enforcing static, coarse-grained policies. For Unified Virtual Memory (UVM), the driver uses generic algorithms (e.g., LRU eviction) that ignore workload-specific access patterns. For scheduling, it employs simple time-slicing (e.g., Round-Robin) to arbitrate between processes. This "blind" management disconnects the driver's powerful mechanisms from the application's semantic needs, acting as a primary bottleneck for tail latency and efficiency.
+
+\paragraph{Device-Side Execution}
+Actual computation occurs on the GPU device, managed by a combination of user-written kernels (Device Code) and proprietary firmware/hardware schedulers. Device code defines precise thread-level logic but is typically compiled into static binaries that cannot adapt to runtime conditions like cache thrashing. Meanwhile, the hardware scheduler manages the execution of thousands of threads (warps) but offers no programmable interface for prioritization. This creates a "context silo": the device knows exactly which threads are stalling or consuming bandwidth, but this information is trapped on the chip, inaccessible to the host driver's policy engine.
+
 \paragraph{Decoupling Mechanisms from Policies}
-Modern GPU stacks suffer from tight coupling between resource management mechanisms (e.g., Unified Virtual Memory page migration, kernel execution lifecycle management, performance event collection) and embedded, hard-coded policy logic within kernel modules, closed-source vendor libraries or GPU device code. This tight coupling severely restricts the ability to adapt policies to diverse and evolving workloads, inhibits rapid experimentation, and fundamentally limits the adaptability of GPU infrastructure in production datacenters.
-
-\paragraph{Application Logic}
-High-level frameworks (e.g., PyTorch, TensorFlow) manage operation graphs and tensor layouts. They make semantic decisions based on static assumptions, for example, fixing a global batch size or memory pool limit at startup. However, they lack visibility into real-time contention from other tenants or system-wide memory pressure. This static configuration prevents applications from dynamically scaling their resource usage or yielding to higher-priority tasks during congestion.
-
-\paragraph{User-Space Runtime}
-Middleware such as the CUDA runtime or user-space drivers manages command queues, memory allocation, and kernel launches. It employs opaque heuristics, such as rigid stream-to-hardware-queue mapping or aggressive aggressive caching of memory allocations. While these heuristics optimize for average-case throughput, they often hide hardware concurrency limits and prevent fine-grained prioritization. For instance, a high-priority inference stream may be blocked behind a long-running training kernel because the runtime's static scheduling logic blindly serializes them onto the same hardware queue.
-
-\paragraph{Kernel Mode Driver}
-The OS driver controls physical resources, including interrupts, page tables, and power states. It enforces coarse-grained policies for Unified Virtual Memory (UVM) eviction and global context switching, typically using generic algorithms (e.g., LRU) that ignore workload-specific latency constraints. For example, the driver treats all page faults equally, failing to prioritize pages critical for the next inference token over background data. The inability to inject custom prefetching or eviction logic at this layer is a primary source of unpredictable tail latency.
-
-\paragraph{Device Architecture}
-The GPU hardware and firmware manage the execution of thousands of threads. Thread block scheduling and warp-level memory coalescing are handled by fixed-function hardware schedulers or proprietary firmware. These components offer no programmable interface for prioritizing critical tasks or mitigating interference between co-located workloads, treating all runnable warps as equal. This hardware opacity forces software to rely on inefficient workaround like padding or partitioning to achieve isolation.
-
-\paragraph{Device Kernel Code}
-Developers write GPU kernels (e.g., in CUDA or Triton) that define the precise thread-level execution logic. While highly optimized, these kernels are typically compiled into static binaries with fixed control flow and resource usage patterns. A kernel designed for isolation cannot dynamically adapt its thread block dimensions or memory access strides at runtime in response to cache thrashing or thermal throttling events. This necessitates a mechanism to inject dynamic logic into running kernels to alter their behavior without recompilation.
-
-This lack of \textbf{cross-layer mechanism-policy separation} forces workloads to conform to rigid behaviors defined independently at each layer, preventing holistic optimization.
+In summary, modern GPU stacks suffer from tight coupling between resource management mechanisms (e.g., Unified Virtual Memory page migration, kernel execution lifecycle management, performance event collection) and embedded, hard-coded policy logic within kernel modules, closed-source vendor libraries or GPU device code. This tight coupling severely restricts the ability to adapt policies to diverse and evolving workloads, inhibits rapid experimentation, and fundamentally limits the adaptability of GPU infrastructure in production datacenters.
 
 \subsection{Limitations of Existing Extensibility Mechanisms}
 
@@ -39,5 +31,4 @@ GPU-centric workloads increasingly demand adaptive, fine-grained resource manage
 
 \subsection{Safety in Critical Paths}
 
-\paragraph{Safety in Critical Paths}
 Allowing programmable policies to execute within critical GPU kernel paths and Linux kernel drivers poses significant risks: faulty or unsafe policy logic can cause GPU hangs or kernel panics, potentially leading to cluster-wide failures, or incur unacceptable latency overhead on performance-sensitive paths such as GPU scheduling or memory fault handling. Existing solutions like nvbit or user-space policy framework either impose substantial performance overhead, making them impractical for latency-critical GPU datacenter workloads, or provide insufficient isolation to contain faults effectively.
