@@ -43,13 +43,13 @@ In our design, the unified CPU--GPU policy programmability framework explicitly 
     \sys implements a unified verification and safety model, ensuring that policy logic running on CPU and GPU sides is safe, bounded, and deterministic. A single verifier analyzes policy correctness, resource consumption, and execution guarantees before deployment. Additionally, \sys provides a centralized policy control plane that supports dynamic policy lifecycle management (loading, unloading, updating), adaptive parameter configuration, auxiliary computations, and runtime diagnostics. Together, this unified safety verification and centralized operational control enable developers to confidently deploy sophisticated policies onto latency-critical GPU and kernel paths with guaranteed safety and minimal overhead.
 \end{itemize}
 
-\subsection{\sys and Curetprobe}\label{sec:curetprobe}
+\subsection{\sysdevice Mechanism}\label{sec:gbpf_device}
 
-\noindent Cuprobe provides eBPF-style uprobe/uretprobe hooks for GPU functions at user level. The example below traces a tiled matrix multiply (\texttt{matMulTiled}), counting calls and measuring total time with standard eBPF maps:
+\noindent \sysdevice provides eBPF-style uprobe/uretprobe hooks for GPU functions at user level. The example below traces a tiled matrix multiply (\texttt{matMulTiled}), counting calls and measuring total time with standard eBPF maps:
 
 \begin{minted}[highlightlines=false,fontsize=\small]{c}
-SEC("cuprobe/_Z11matMulTiledPKfS0_Pf")
-int cuprobe_matMulTiled(struct pt_regs *ctx) {
+SEC("gbpf_device/_Z11matMulTiledPKfS0_Pf")
+int gbpf_device_matMulTiled(struct pt_regs *ctx) {
     u32 pid = bpf_get_current_pid_tgid() >> 32;
     u64 ts  = bpf_ktime_get_ns();
     bpf_map_update_elem(&start_ts, &pid, &ts, BPF_ANY);
@@ -59,8 +59,8 @@ int cuprobe_matMulTiled(struct pt_regs *ctx) {
     else    bpf_map_update_elem(&call_count, &pid, &one,
         BPF_ANY);
 }
-SEC("curetprobe/_Z11matMulTiledPKfS0_Pf")
-int curetprobe_matMulTiled(struct pt_regs *ctx) {
+SEC("gbpf_device_ret/_Z11matMulTiledPKfS0_Pf")
+int gbpf_device_ret_matMulTiled(struct pt_regs *ctx) {
     u32 pid = bpf_get_current_pid_tgid() >> 32;
     u64 *tsp = bpf_map_lookup_elem(&start_ts, &pid);
     if (!tsp) return 0;
@@ -79,7 +79,7 @@ int curetprobe_matMulTiled(struct pt_regs *ctx) {
 }
 \end{minted}
 
-\noindent Curetprobe lifts the same semantics onto the device by JIT--translating probe handlers into PTX and injecting them into running kernels. Entry/exit trampolines record per-warp timestamps and update shared eBPF maps, preserving map semantics and enabling function-level profiling without kernel reloads.
+\noindent \sysdevice lifts the same semantics onto the device by JIT--translating probe handlers into PTX and injecting them into running kernels. Entry/exit trampolines record per-warp timestamps and update shared eBPF maps, preserving map semantics and enabling function-level profiling without kernel reloads.
 
 \subsection{Extending GPU Driver Modules (CPU-side)}
 
