@@ -8,6 +8,8 @@ In this section, we describe the key implementation details of \sys, including k
 
 \sys requires minimal but carefully placed modifications to GPU driver modules to expose programmable hook points without compromising system stability or performance.
 
+\sys leverages the NVIDIA Open GPU Kernel Modules, which have become the recommended default for modern datacenter GPUs (Turing, Ampere, Hopper, and newer) and are mandatory for platforms like Grace Hopper. By building upon this open-source foundation, \sys avoids brittle binary patching of proprietary drivers. Instead, it introduces standard, maintainable extension points within the open source driver code, aligning with the vendor's shift towards open kernel interfaces while maintaining compatibility with the closed-source user-space CUDA runtime.
+
 \paragraph{Specific hooks and patches:}
 We add specific hooks within the NVIDIA UVM module at critical memory management decision points, including page fault handlers, prefetch logic, and eviction paths. Similarly, we extend kernel-scheduler entry points to enable custom admission control and resource allocation policies. These modifications are designed to be minimal, non-intrusive, and compatible with existing driver functionality.
 
