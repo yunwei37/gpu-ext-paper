@@ -1,35 +1,43 @@
 \section{Background and Motivation}
 
-\subsection{GPU-Centric Workloads and Systems}
-
-GPUs have become indispensable in modern datacenters, supporting an increasingly diverse and demanding set of workloads---from large-scale deep learning training and latency-sensitive inference to irregular computations like graph analytics and graphics rendering. The importance of GPUs spans ML, analytics, and HPC applications, where they work in concert with CPUs and high-speed interconnects (PCIe, NVLink) to deliver high throughput and low latency.
-
-\subsection{Limitations of Existing GPU Policies}
-
-\paragraph{UVM Memory Management}
-Unified Virtual Memory (UVM) greatly simplifies programming by abstracting memory management across CPUs and GPUs. However, current UVM implementations rely on fixed heuristics that cannot adapt policies for prefetching, thrashing mitigation, or eviction based on workload characteristics. These rigid policies lead to suboptimal performance, especially for memory-intensive workloads with diverse access patterns.
-
-\paragraph{GPU Kernel Scheduling}
-Existing GPU admission and resource allocation policies remain rigid and coarse-grained, using fixed timeslices and inflexible GPU admission and isolation policies. These limitations prevent fine-grained control over kernel scheduling, making it difficult to prioritize latency-sensitive workloads or dynamically adjust resource allocation in multi-tenant environments.
-
-\paragraph{Observability}
-Current GPU observability tools like CUPTI~\cite{cupti} and NVBit~\cite{villa2019nvbit} provide detailed monitoring data but often have high overhead. More critically, they provide data without actionable control---developers can observe what is happening but cannot dynamically inject custom instrumentation or adapt policies based on runtime observations. As shown in \Cref{fig:latency}, current tools cannot inject logic without restarting the application.
-
-\begin{figure} \centering \fbox{\parbox{0.5\textwidth}{\centering [Figure: Null Tool Runtime and Instrumentation Overhead Breakdown]}} \caption{Null Tool Runtime and Instrumentation Overhead Breakdown} \label{fig:latency} \end{figure}
-
-\subsection{Programmability Policy Runtimes}
-
-The broader systems community has demonstrated significant benefits from externalizing and customizing OS policies through frameworks like extended Berkeley Packet Filter (eBPF). Examples such as sched\_ext for Linux scheduling, cache\_ext for page-cache eviction, and struct\_ops for TCP congestion control have illustrated substantial performance and adaptability gains when policies can be dynamically loaded, safely verified, and executed directly within kernel contexts. The eBPF ecosystem, originally a kernel packet filter, now provides unified infrastructure for observability, security, and networking.
-
-However, while these successes illustrate the potential of policy programmability on CPUs, directly extending these ideas to GPU systems poses significant new challenges. CPU-side programmability alone is insufficient, as critical GPU management decisions are fundamentally embedded in GPU device execution contexts inaccessible from the CPU host. Conversely, GPU-side programmability alone is not enough either, as isolated GPU-only policies lack visibility into broader system state and coordination essential for coherent end-to-end policy decisions. This clear contrast demonstrates why CPU-side programmability alone doesn't solve GPU policy problems---a unified approach spanning both CPU and GPU contexts is essential.
-
-\subsection{Systemic Challenges in GPU Programmability}
+\subsection{GPU-Centric Workloads and Systems Architecture}
 
 \paragraph{Decoupling Mechanisms from Policies}
 Modern GPU stacks suffer from tight coupling between resource management mechanisms (e.g., Unified Virtual Memory page migration, kernel execution lifecycle management, performance event collection) and embedded, hard-coded policy logic within kernel modules, closed-source vendor libraries or GPU device code. This tight coupling severely restricts the ability to adapt policies to diverse and evolving workloads, inhibits rapid experimentation, and fundamentally limits the adaptability of GPU infrastructure in production datacenters.
 
-\paragraph{Unified Cross-Layer Coordination}
+\paragraph{Application Logic}
+High-level frameworks (e.g., PyTorch, TensorFlow) manage operation graphs and tensor layouts. They make semantic decisions based on static assumptions, for example, fixing a global batch size or memory pool limit at startup. However, they lack visibility into real-time contention from other tenants or system-wide memory pressure. This static configuration prevents applications from dynamically scaling their resource usage or yielding to higher-priority tasks during congestion.
+
+\paragraph{User-Space Runtime}
+Middleware such as the CUDA runtime or user-space drivers manages command queues, memory allocation, and kernel launches. It employs opaque heuristics, such as rigid stream-to-hardware-queue mapping or aggressive aggressive caching of memory allocations. While these heuristics optimize for average-case throughput, they often hide hardware concurrency limits and prevent fine-grained prioritization. For instance, a high-priority inference stream may be blocked behind a long-running training kernel because the runtime's static scheduling logic blindly serializes them onto the same hardware queue.
+
+\paragraph{Kernel Mode Driver}
+The OS driver controls physical resources, including interrupts, page tables, and power states. It enforces coarse-grained policies for Unified Virtual Memory (UVM) eviction and global context switching, typically using generic algorithms (e.g., LRU) that ignore workload-specific latency constraints. For example, the driver treats all page faults equally, failing to prioritize pages critical for the next inference token over background data. The inability to inject custom prefetching or eviction logic at this layer is a primary source of unpredictable tail latency.
+
+\paragraph{Device Architecture}
+The GPU hardware and firmware manage the execution of thousands of threads. Thread block scheduling and warp-level memory coalescing are handled by fixed-function hardware schedulers or proprietary firmware. These components offer no programmable interface for prioritizing critical tasks or mitigating interference between co-located workloads, treating all runnable warps as equal. This hardware opacity forces software to rely on inefficient workaround like padding or partitioning to achieve isolation.
+
+\paragraph{Device Kernel Code}
+Developers write GPU kernels (e.g., in CUDA or Triton) that define the precise thread-level execution logic. While highly optimized, these kernels are typically compiled into static binaries with fixed control flow and resource usage patterns. A kernel designed for isolation cannot dynamically adapt its thread block dimensions or memory access strides at runtime in response to cache thrashing or thermal throttling events. This necessitates a mechanism to inject dynamic logic into running kernels to alter their behavior without recompilation.
+
+This lack of \textbf{cross-layer mechanism-policy separation} forces workloads to conform to rigid behaviors defined independently at each layer, preventing holistic optimization.
+
+\subsection{Limitations of Existing Extensibility Mechanisms}
+
+To mitigate this rigidity, developers currently resort to fragmented extensibility approaches. However, these existing methods suffer from fundamental architectural limitations.
+
+\paragraph{User-Space Runtimes and Libraries}
+To bypass driver and runtime limitations, systems like vLLM~\cite{kwon2023efficient} or custom allocators implement complex management logic entirely in user space. While this allows for algorithm-specific optimizations, it creates a ``User-Space Trap.'' These solutions are \textbf{invasive}, requiring significant application rewrites. More critically, they are \textbf{unprivileged}: they cannot intervene at the granularity of hardware interrupts or directly manipulate physical memory mappings, preventing precise compute-transfer overlapping and true preemption.
+
+\paragraph{Binary Instrumentation and Profiling Tools}
+Tools like NVBit~\cite{villa2019nvbit} or sanitizer frameworks allow for the injection of logic directly into GPU binaries. While offering high visibility, these tools are primarily designed for offline profiling rather than online policy enforcement. They incur prohibitive runtime overheads, lack safety guarantees (a bug crashes the application), and typically operate in a read-only manner, unable to actively regulate system behavior such as memory placement or thread scheduling.
+
+\paragraph{Host-Based kernel Programmability (CPU eBPF)}
+The systems community has successfully used extended Berkeley Packet Filter (eBPF) to customize OS policies on CPUs (e.g., \texttt{sched\_ext}, \texttt{cache\_ext}). These frameworks allow safe, verified programs to redefine kernel behavior. However, directly extending this model to GPUs is insufficient. Host-based eBPF treats the GPU as an opaque peripheral; it can trace driver interactions but remains blind to the GPU's internal execution state (e.g., warp divergence, cache contention). Without this device-side context, and without the ability to inject logic into the device itself, host-side programmability cannot address the fine-grained, millisecond-scale resource management challenges of modern GPU workloads.
+
 GPU-centric workloads increasingly demand adaptive, fine-grained resource management decisions that span both host-side (CPU) and device-side (GPU) execution contexts. Current GPU stacks suffer from a fundamental fragmentation: host-side policies (e.g., UVM memory management, scheduling) lack visibility into GPU-internal runtime states, while device-side policy (e.g., memory sync, thread block management, trace instrumentation) are opaque, vendor-specific, and largely inaccessible to host-side management logic. This fundamental asymmetry in policy expression and execution severely constrains the programmability, observability, and adaptability of GPU datacenter resource management.
+
+\subsection{Safety in Critical Paths}
 
 \paragraph{Safety in Critical Paths}
 Allowing programmable policies to execute within critical GPU kernel paths and Linux kernel drivers poses significant risks: faulty or unsafe policy logic can cause GPU hangs or kernel panics, potentially leading to cluster-wide failures, or incur unacceptable latency overhead on performance-sensitive paths such as GPU scheduling or memory fault handling. Existing solutions like nvbit or user-space policy framework either impose substantial performance overhead, making them impractical for latency-critical GPU datacenter workloads, or provide insufficient isolation to contain faults effectively.
