@@ -28,6 +28,48 @@ NVIDIA's CUPTI and NVTX-based profiler stack, NVBit gpumemtrace, default UVM
 memory management, and the native GPU scheduler without \sys-based policies, as
 well as framework-managed offloading where applicable.
 
+\subsubsection{Application workloads}
+\label{sec:eval-app-workloads}
+
+We use four unmodified GPU applications to evaluate \sys under realistic
+end-to-end workloads. In all cases, \sys attaches via runtime and kernel driver
+instrumentation; we do not modify application or framework source code.
+
+\paragraph{PyTorch.}
+We use PyTorch for both inference and training workloads. For RQ1, we run a
+ResNet model on ImageNet-sized batches to measure end-to-end inference latency
+under \sys and the PyTorch profiler (CUPTI+NVTX). For RQ4, we use PyTorch-based
+GNN training under 1.5$\times$ GPU memory oversubscription to study the impact
+of programmable UVM policies on epoch time. \sys is loaded as a runtime
+extension and instruments CUDA kernels without changes to
+the PyTorch code, models, or training loops.
+
+\paragraph{\texttt{llama.cpp}.}
+We use the GPT-OSS-120B configuration in \texttt{llama.cpp} to evaluate expert
+offload policies (RQ4). The model is approximately 60~GB on an
+RTX~5090 with 32~GB of device memory, so inference runs in oversubscribed mode
+with UVM and the framework's built-in offload support. \sys attaches
+transparently at the driver level and via device-side handlers that tag expert
+regions as ``hot'' or ``cold''. We do not modify \texttt{llama.cpp} itself or
+its model implementation.
+
+\paragraph{vLLM.}
+We evaluate vLLM on a 30B FP8 MoE model to study KV-cache placement and
+offloading policies (RQ4) under realistic serving loads. We use a ShareGPT
+benchmark with 100 requests and around 30 concurrent requests to stress KV-cache
+growth and reuse. \sys runs alongside vLLM with UVM enabled and implements
+sequential prefetch and eviction policies for KV-cache segments via callbacks
+and GPU handlers. vLLM's source code and serving pipeline are left unchanged.
+
+\paragraph{Faiss.}
+We integrate \sys with the GPU backend of Faiss to evaluate vector search with
+oversubscribed indices (RQ4). We consider both index build and query workloads
+where the index does not fit in device memory and UVM migrates index pages over
+PCIe. \sys observes and steers index-segment placement by instrumenting GPU
+memory operations and monitoring PCIe traffic, keeping frequently accessed
+centroids and posting lists resident while demoting cold segments. The Faiss
+library and application code are not modified.
+
 \subsection{RQ1: Runtime Overhead vs Existing Tools}
 
 We first quantify the overhead of the \sys runtime itself, independent of any
@@ -88,19 +130,19 @@ execution than interior threads, with timestamps within 10~ns of hardware
 performance counters and 2.1\% overhead. Refactoring boundary handling based on
 this insight improves overall kernel performance by 8\%. \texttt{threadhist}
 reveals load imbalance in a particle simulation with 1M particles across 256
-blocks: it identifies a bimodal distribution of iterations per thread; rebalancing
-particles based on this information yields an 18\% throughput improvement with
-1.8\% tool overhead.
+blocks: it identifies a bimodal distribution of iterations per thread;
+rebalancing particles based on this information yields an 18\% throughput
+improvement with 1.8\% tool overhead.
 
 \paragraph{Launch latency and memory behavior.}
 \texttt{launchlate} combines host and device hooks to measure kernel launch
 latency. On a pipeline of 50 small kernels (each around 100~µs execution time),
 default synchronous execution yields 150--550~µs launch latency per kernel, for
-a total runtime of 32~ms. Switching to CUDA graphs, guided by \texttt{launchlate},
-reduces this to 7.2~ms, with less than 0.5\% overhead. \texttt{mem\_trace}
-instruments sampled memory operations and recovers per-warp bank conflict rates
-within 2\% of hardware counters, with under 3\% end-to-end overhead across
-GEMM, SpMV and stencil kernels (\Cref{fig:obs-overhead}).
+a total runtime of 32~ms. Switching to CUDA graphs, guided by
+\texttt{launchlate}, reduces this to 7.2~ms, with less than 0.5\% overhead.
+\texttt{mem\_trace} instruments sampled memory operations and recovers per-warp
+bank conflict rates within 2\% of hardware counters, with under 3\% end-to-end
+overhead across GEMM, SpMV and stencil kernels (\Cref{fig:obs-overhead}).
 
 \begin{figure}
 \centering
@@ -125,9 +167,9 @@ live instrumentation without interrupting execution.
 
 \subsection{RQ4: Programmable Memory Management}
 
-We now evaluate \sys's memory policy interface on
-real applications, focusing on offloading setups where memory placement and
-prefetching dominate performance.
+We now evaluate \sys's memory policy interface on the application workloads
+introduced in Section~\ref{sec:eval-app-workloads}, focusing on offloading
+setups where memory placement and prefetching dominate performance.
 
 \paragraph{LLM inference: expert and KV-cache offload.}
 We next study large-model inference workloads where offloading model state and
