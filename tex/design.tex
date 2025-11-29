@@ -148,28 +148,18 @@ and maintains correct mappings, but delegates replacement and prefetch policy to
 
 \paragraph{Unified device-side memory events.}
 On the GPU, \sys exposes a single device-side memory event interface that kernels
-use both to report observed accesses and to express future-use hints. A compact
-device context is passed to each handler:
-
-\begin{verbatim}
-struct gpu_dev_mem_ctx {
-  __u64 region_id;   /* logical region (weights, KV shard, etc.) */
-  __u32 kernel_id;
-  __u32 warp_id;
-  __u32 sm_id;
-  __u32 event;       /* ACCESS or HINT */
-  __u32 hint_flags;  /* e.g., WILL_USE_SOON, COLD, ... */
-};
-\end{verbatim}
+use both to report observed accesses and to express future-use hints. Device-side
+handlers receive a compact context struct (not shown) with fields such as a logical
+region identifier, kernel, warp and SM identifiers, an event type (\emph{ACCESS}
+or \emph{HINT}), and optional hint flags.
 
 At selected memory operation sites, \sys injects lightweight hooks that operate at
 warp granularity and invoke a device-side \sys handler with an \emph{ACCESS} event:
-the handler receives metadata such as a logical region identifier, warp and SM
-identifiers, and a kernel or phase identifier, and updates shared maps with
-per-region statistics such as access counts, approximate working-set membership,
-and simple locality signatures. To bound overhead, \sys supports sampling (for
-example, only one in every $N$ accesses generates an event) and per-warp aggregation
-before these statistics are written to shared maps.
+the handler updates shared maps with per-region statistics such as access counts,
+approximate working-set membership, and simple locality signatures. To bound
+overhead, \sys supports sampling (for example, only one in every $N$ accesses
+generates an event) and per-warp aggregation before these statistics are written
+to shared maps.
 
 The same device-side interface also supports \emph{HINT} events, which kernels
 invoke explicitly when they have domain knowledge about future region usage. For
@@ -183,6 +173,7 @@ Device-side code never manipulates page tables or performs migration directly; i
 implements the sensing and hinting side of a closed-loop policy, while host-side
 \sys handlers implement the placement, prefetch, and eviction decisions over the
 GPU memory hierarchy.
+
 
 \subsection{Policy Interface for Scheduling}
 \label{sec:design-sched}
@@ -241,31 +232,18 @@ Inside the GPU, \sys exposes a complementary interface that operates at the leve
 thread blocks or tiles, aligning with the SIMT execution model. Rather than treating
 each kernel as a monolithic unit, \sys models a kernel as a collection of work units
 that can be dynamically assigned to \emph{worker} thread blocks. Device-side policies
-observe and steer this internal scheduler via a compact per-block context:
-
-\begin{verbatim}
-struct gpu_block_sched_ctx {
-  __u32 kernel_id;
-  __u32 tenant_id;
-  __u32 cluster_id;
-  __u32 sm_id;
-
-  __u32 prev_work_id;   /* last completed work unit (tile index) */
-  __u32 next_work_id;   /* chosen work unit, written by policy */
-};
-\end{verbatim}
+observe and steer this internal scheduler via a compact per-block context (not shown)
+that includes the kernel identifier, tenant identifier, and a logical work-unit or
+block identifier.
 
 Policies interact with this internal scheduler through two mechanisms:
 
 \begin{itemize}[leftmargin=*]
   \item \emph{Block scheduling callbacks}, where a worker block periodically invokes
-        a device-side \sys handler to select its next work unit. The context includes
-        the kernel or phase identifier, tenant information, and local progress
-        metrics. The handler consults shared maps and returns a work descriptor
-        (for example, a tile index or logical block identifier) or an indication
-        that no further work is available. This enables policies to implement
-        priority-aware or tenant-aware work stealing and load balancing at the
-        thread-block level.
+        a device-side \sys handler to select its next work unit or to decide whether
+        to request a new one from the hardware or a software queue. This enables
+        policies to implement priority-aware or tenant-aware work stealing and
+        load balancing at the thread-block level.
   \item \emph{Progress and behavior signals}, where \sys injects lightweight probes
         at kernel entry and at selected synchronization or phase boundaries to
         record per-warp or per-block progress (for example, iterations completed
@@ -278,7 +256,8 @@ Policies interact with this internal scheduler through two mechanisms:
 Device-side probes and block scheduling callbacks are restricted to bounded,
 lightweight operations and cannot directly manipulate hardware queues. Instead,
 they communicate hints, progress information, and per-block decisions that host
-policies can consume at the next host-side scheduling hook. Together, the host-side
-and device-side interfaces allow \sys policies to coordinate decisions across the
-full scheduling pipeline: from kernel admission and preemption on the host to
-fine-grained block-level work distribution inside GPU kernels.
+policies or the \sys runtime can consume at the next host-side scheduling hook or
+device scheduling point. Together, the host-side and device-side interfaces allow
+\sys policies to coordinate decisions across the full scheduling pipeline: from
+kernel admission and preemption on the host to fine-grained block-level work
+distribution inside GPU kernels.
