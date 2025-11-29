@@ -68,45 +68,77 @@ A key difficulty in deploying policy logic on GPUs is efficiently executing scal
 \subsection{Policy Interface for Memory}
 \label{sec:design-mem}
 
-Modern GPU memory subsystems migrate and evict data across device and host memory
-using fixed, internally implemented heuristics, often driven by page faults or
-simple recency-based policies. These heuristics can introduce latency spikes and
-fail to adapt to diverse access patterns. \sys exposes a bidirectional interface
-for memory policies: host-side hooks at key decision points and device-side probes
-that collect fine-grained access information.
+Modern GPU memory subsystems move data across device memory, host memory, and
+intermediate tiers using fixed, internally implemented heuristics, often tied to
+page faults or simple recency-based policies. These mechanisms neither expose their
+decisions nor exploit workload-specific structure, and they interact poorly with
+user-space caches that increasingly manage model weights, KV-cache segments, and
+expert parameters. \sys instead treats memory placement as a programmable region
+cache: it exposes a small set of region-level events for \emph{admission},
+\emph{access}, and \emph{removal}, together with a prefetch channel, and lets host
+and device cooperate on a unified policy.
 
-\paragraph{Host-side memory hooks.}
-On the host, \sys introduces attach points in the GPU memory management path at
-several stages:
+\paragraph{Host-side region events and removal.}
+On the host, \sys models memory as a set of logical regions (for example, weight
+shards, KV-cache segments, or embedding tables) and exposes attach points for three
+canonical cache events:
 
 \begin{itemize}[leftmargin=*]
-  \item \emph{Miss hooks}, triggered when the GPU issues a memory access that
-        requires the host to allocate, migrate, or otherwise service data for
-        a region.
-  \item \emph{Prefetch hooks}, triggered at safe points where a policy may suggest
-        regions to migrate proactively based on observed access patterns and
-        available capacity.
-  \item \emph{Eviction hooks}, triggered when device memory is under pressure and
-        the system must select one or more regions to evict or demote.
+  \item \emph{Add}, when a region is created or becomes eligible for device placement.
+        The context includes a region identifier, size, tenant identifier, and
+        optional semantic tags (for example, read-only, streaming, or shared).
+  \item \emph{Access}, when the memory subsystem observes use of a region and must
+        decide whether to treat it as a cache hit, trigger migration, or bypass
+        the cache altogether. Access events may be driven by hardware misses,
+        by explicit runtime calls, or by higher-level cache managers built on top
+        of \sys.
+  \item \emph{Remove}, when a region is about to leave the device-resident working
+        set. The context includes a cause flag and a candidate set. For the
+        \emph{lifetime} case, an upper layer has logically freed the region and
+        the candidate set is a singleton; the policy can discard any associated
+        state and reclaim capacity. For the \emph{pressure} case, the memory
+        subsystem has determined that some regions must be evicted under capacity
+        constraints and supplies a set of candidates; the policy ranks these
+        candidates and selects preferred victims to remove.
 \end{itemize}
 
-Each hook passes a context structure describing the event (e.g., the accessed
-virtual address or region identifier, access type, region size, current residency,
-and local memory pressure metrics) to an attached eBPF handler. The handler can
-consult shared maps (for example, per-region hotness and tenant budgets) and return
-a compact decision: \emph{migrate}, \emph{retain}, \emph{prefetch}, or a ranking
-score among candidates. The underlying memory subsystem remains responsible for
-correctness (e.g., ensuring some victim is chosen), but delegates policy choices to
-the eBPF program.
+In addition, \sys provides a \emph{prefetch hook} that runs at safe points where
+data can be moved proactively, for example between kernel launches or at explicit
+scheduler ticks. The prefetch context includes a snapshot of current region state,
+available capacity, and any device-generated hints, and the policy returns a ranked
+list of regions to promote to device memory. Together, these events realize a
+general region-cache interface: policies implemented as eBPF handlers maintain their
+own state in shared maps (for example, LRU lists, LFU counters, or tenant budgets),
+and respond to Add/Access/Remove and prefetch callbacks with compact decisions
+such as \emph{admit}, \emph{bypass}, \emph{pin}, \emph{evict}, or ordered lists
+of regions to migrate. The underlying memory subsystem enforces these decisions
+and maintains correct mappings, but delegates replacement and prefetch policy to
+\sys.
 
-\paragraph{Device-side memory instrumentation.}
-On the GPU, \sys injects lightweight probes around selected memory operation sites
-in target kernels. These probes operate at warp granularity, observing access
-metadata such as a logical region identifier, warp and SM IDs, and a kernel or
-phase identifier. Probes update per-region or per-object statistics in shared maps,
-such as access counts, approximate working-set membership, or simple stride or
-locality signatures. To bound overhead, \sys supports sampling (e.g., one in every
-$N$ accesses) and per-warp aggregation before updating maps.
+\paragraph{Unified device-side memory events.}
+On the GPU, \sys exposes a single device-side memory event interface that kernels
+use both to report observed accesses and to express future-use hints. At selected
+memory operation sites, \sys injects lightweight hooks that operate at warp
+granularity and invoke a device-side \sys handler with an \emph{ACCESS} event:
+the handler receives metadata such as a logical region identifier, warp and SM
+identifiers, and a kernel or phase identifier, and updates shared maps with
+per-region statistics such as access counts, approximate working-set membership,
+and simple locality signatures. To bound overhead, \sys supports sampling (for
+example, only one in every $N$ accesses generates an event) and per-warp aggregation
+before these statistics are written to shared maps.
+
+The same device-side interface also supports \emph{HINT} events, which kernels
+invoke explicitly when they have domain knowledge about future region usage. For
+example, a mixture-of-experts kernel can compute the identifiers of experts it
+will access for the next batch and call a \sys helper with HINT events that mark
+the corresponding regions as “will-use soon” with an optional priority or deadline;
+a KV-cache kernel can emit HINT events that mark segments as cold and suitable for
+demotion. Both ACCESS and HINT events are recorded in shared maps or small control
+queues that host-side \sys handlers consult at Access, Remove, and prefetch hooks.
+Device-side code never manipulates page tables or performs migration directly; it
+implements the sensing and hinting side of a closed-loop policy, while host-side
+\sys handlers implement the placement, prefetch, and eviction decisions over the
+GPU memory hierarchy.
 
 \subsection{Policy Interface for Scheduling}
 \label{sec:design-sched}
