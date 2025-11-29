@@ -70,17 +70,9 @@ to enable or disable instrumentation at runtime without relaunching applications
 
 \subsubsection{Code generation and trampolines}
 
-When an eBPF section is attached to a device-side hook type, \sys translates the
-verified bytecode into GPU-executable code using a userspace just-in-time compiler.
-This compiler is built on the infrastructure of bpftime~\cite{bpftime}, using its LLVM-based
-JIT libraries to generate target code (PTX in our prototype) from eBPF instructions.
-Critically, while we leverage bpftime's compilation components, \sys does not employ a
-userspace eBPF runtime for execution; instead, the userspace component acts purely as a loader
-and compiler. It prepares the GPU binaries and injects them, while the eBPF logic itself
-executes either in the kernel (host side) or on the GPU (device side).
-On our prototype systems we target PTX, which provides a stable virtual ISA and allows
-architecture-specific optimization; common eBPF idioms such as map lookups and
-updates are lowered to PTX sequences.
+We build the GPU-side PTX compiler on top of bpftime’s loader infrastructure. bpftime already interposes on eBPF-related system calls and reuses the kernel eBPF verifier as part of its trusted computing base. \sys reuses only bpftime’s front end: when a \sys program is loaded into the kernel and successfully verified, the bpftime-based loader intercepts the load, extracts the eBPF bytecode, symbol, and BTF type information, and invokes a user-space PTX backend that translates the verified bytecode into GPU-specific device code.
+
+Importantly, \sys does not execute eBPF in user space. We disable bpftime’s normal user-space eBPF runtime and use it solely as a loader and metadata extractor for GPU offload. All policy execution still happens either in the kernel (via the normal eBPF JIT) or on the GPU (via our PTX backend and sandbox). The PTX backend is therefore a trusted compiler from verified eBPF to device code; it cannot grant additional capabilities beyond what the verifier already allowed.
 
 To invoke translated code from kernels without recompilation, \sys inserts small
 trampolines at kernel entry, sampled memory operation sites, and selected
