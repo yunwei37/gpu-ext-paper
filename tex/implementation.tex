@@ -1,204 +1,174 @@
-
-\section{\sys{} Implementation}
-
-In this section, we describe the key implementation details of \sys, including kernel modifications, GPU runtime implementation, and interaction with existing GPU frameworks.
+\section{Implementation}
 \label{sec:implementation}
 
-\subsection{Kernel Modifications}
+\subsection{Components Overview}
 
-\sys requires minimal but carefully placed modifications to \sysdriver to expose programmable hook points without compromising system stability or performance.
+gbpf is implemented as a set of extensions to the NVIDIA Open GPU Kernel Modules
+and a device-side runtime that executes verified eBPF code inside GPU kernels.
+On the host, gbpf adds struct\_ops-style callbacks in the memory management and
+scheduling paths and exposes a user-space control-plane API and a gbpf-Device
+interface. In the GPU, gbpf integrates a JIT that translates verified eBPF
+bytecode to device code, a trampoline mechanism for invoking translated snippets
+from kernels, and a sandbox runtime that enforces bounded execution and resource
+isolation. Both sides access shared eBPF maps in memory visible to CPU and GPU.
 
-\sys leverages the NVIDIA Open GPU Kernel Modules, which have become the recommended default for modern datacenter GPUs (Turing, Ampere, Hopper, and newer). By building upon this open-source foundation, \sys avoids brittle binary patching of proprietary drivers. Instead, it introduces standard, maintainable extension points within the open source driver code, aligning with the vendor's shift towards open kernel interfaces while maintaining compatibility with the closed-source user-space CUDA runtime.
+\subsection{Host-side Integration}
+\label{sec:impl-host}
 
-\paragraph{Specific hooks and patches:}
-We add specific hooks within the NVIDIA UVM module at critical memory management decision points, including page fault handlers, prefetch logic, and eviction paths. Similarly, we extend kernel-scheduler entry points to enable custom admission control and resource allocation policies. These modifications are designed to be minimal, non-intrusive, and compatible with existing driver functionality.
+\subsubsection{Driver hooks for memory and scheduling}
 
-All hook points follow the struct\_ops-style callback pattern, where verified eBPF programs can be dynamically attached and detached without requiring driver recompilation or system restarts. The hooks provide access to relevant context (e.g., fault address, process ID, memory pressure metrics) while maintaining safety through the eBPF verifier.
+gbpf builds on the NVIDIA Open GPU Kernel Modules (Turing, Ampere, Hopper and
+newer) to avoid binary patching and to track vendor updates. In the UVM module,
+we insert callbacks at critical memory decision points: page fault handlers,
+prefetch logic, and reclamation paths. These implement the region-level
+Add/Access/Remove and prefetch events from Section~\ref{sec:design-mem}. Each
+callback constructs a compact context (for example region identifier or fault
+address, region size, process and tenant IDs, and local memory pressure) and
+invokes an attached eBPF handler. The handler consults eBPF maps that hold
+policy state (LRU or LFU metadata, tenant budgets, classification flags) and
+returns compact decisions such as admit, bypass, pin, evict, or a ranking over
+candidate regions. The driver applies these choices using its existing mechanisms
+for migration and mapping updates.
 
-\subsection{GPU Runtime Implementation Details}
+For scheduling, we extend the kernel lifecycle code that manages GPU contexts and
+hardware queues with struct\_ops callback vectors at kernel submission, admission,
+preemption, and completion, implementing the interface in
+Section~\ref{sec:design-sched}. Submission callbacks see kernel configuration
+(grid and block size), tenant or stream IDs, and priority hints. Admission
+callbacks run before dispatch and can re-order ready queues or delay admission.
+Preemption callbacks fire at cooperative yield points or at scheduling quanta and
+allow policies to decide whether to continue or preempt a kernel based on its
+progress and competing work. Completion callbacks update per-tenant statistics
+and virtual time. All callbacks can be attached and detached dynamically without
+driver recompilation or node restart.
 
-\paragraph{PTX JIT compiler integration:}
-\sys integrates a PTX Just-In-Time (JIT) compiler that translates verified eBPF bytecode into optimized PTX instructions. PTX (Parallel Thread Execution) is an intermediate representation for NVIDIA GPUs that provides better performance than binary-level instrumentation frameworks. The JIT compiler produces architecture-specific code optimized for the target GPU, enabling dynamic instrumentation with minimal overhead.
+On the host, gbpf reuses the standard kernel eBPF verifier to ensure memory
+safety, bounded loops, stack limits, and controlled helper and map usage. Where
+policies must trigger specific actions in the driver (such as committing a victim
+selection or marking a kernel for preemption), we expose small kfuncs that can be
+called from eBPF under verifier control.
 
+\subsubsection{gbpf-Device user-space interface}
 
-\paragraph{GPU Trampoline}\label{sec:gpu_trampoline}
-To instrument kernels transparently, \sys{} uses tiny PTX trampolines at entry/exit or hot sites. When reached, execution briefly diverts to our snippet and then resumes. Each trampoline:
-\begin{itemize}[leftmargin=*,itemsep=0pt]
-  \item \textbf{Save:} store minimal live state to a per‐warp scratch buffer.
-  \item \textbf{Probe:} jump to the injected PTX (from eBPF) to read/update maps or record events.
-  \item \textbf{Restore:} reload state and resume the original control flow.
-\end{itemize}
-Trampolines are patched at JIT time and confined to the protected domain (\S\ref{sec:isolation}); we observe sub--\(1\,\mu\)s overhead per invocation in practice.
+gbpf-Device provides eBPF-style uprobe and uretprobe hooks for GPU-related
+user-level functions, enabling bcc-style observability tools and higher-level
+policy logic without modifying applications. Developers attach eBPF programs to
+function entry and exit to collect metrics such as per-call latency, counts, or
+arguments, using standard eBPF maps.
 
+At kernel launch time, gbpf optionally JIT-translates these handlers to device
+code and injects entry and exit trampolines so that the same logic can run on
+the GPU, recording per-warp timestamps or counters directly into shared maps.
+This lifts the Linux uprobe semantics onto devices while retaining the ability
+to enable or disable instrumentation at runtime without relaunching applications.
 
-\paragraph{Runtime resource bounding:}
-The GPU runtime enforces strict resource bounds to prevent injected code from interfering with application kernels. This includes limiting instruction counts per invocation, bounding register usage to avoid spilling, and restricting memory access to designated shared regions. These bounds are verified at load time and enforced at runtime through hardware mechanisms and software checks.
+\subsection{GPU Runtime}
+\label{sec:impl-gpu}
 
-\paragraph{Interaction with existing GPU frameworks:}
-\sys is designed to be compatible with existing GPU programming frameworks and tools. It works seamlessly with CUDA applications and can coexist with CUPTI and NVBit instrumentation when needed. The trampoline mechanism and shared memory infrastructure are transparent to application code, requiring no modifications to existing GPU kernels.
+\subsubsection{Code generation and trampolines}
 
-\subsection{Shared Memory}
+When an eBPF section is attached to a device-side hook type, gbpf translates the
+verified bytecode into GPU-executable code using a just-in-time compiler. On our
+prototype systems we target PTX, which provides a stable virtual ISA and allows
+architecture-specific optimization; common eBPF idioms such as map lookups and
+updates are lowered to PTX sequences.
 
-We place maps and coordination buffers in \texttt{managed\_shared\_memory} for zero-copy CPU/GPU access, reducing marshaling and latency.
+To invoke translated code from kernels without recompilation, gbpf inserts small
+trampolines at kernel entry, sampled memory operation sites, and selected
+synchronization or phase boundaries. At launch time we patch branch targets so
+that, when execution reaches a hook site, control jumps to the trampoline. Each
+trampoline saves minimal live register and predicate state to a per-warp scratch
+buffer, builds the event context struct, calls the translated snippet, and
+restores state to resume the original control flow. The trampoline generator
+handles label resolution, register allocation, and necessary synchronization
+primitives. In our microbenchmarks, per-invocation overhead stays below one
+microsecond. The runtime is transparent to CUDA applications and can coexist
+with CUPTI and NVBit; all injected code is confined to the gbpf domain.
 
-\subsection{GPU Runtime Implementation and Optimization}
+\subsubsection{Sandbox and resource bounding}
 
-\paragraph{GPU Sandbox and PTX JIT.}
-The device-side runtime implements a lightweight sandbox to safely execute verified eBPF programs translated to GPU-executable code. Specifically, verified eBPF bytecode is translated into optimized PTX via a custom JIT compiler integrated within the \sys kernel driver. The sandboxed runtime strictly enforces execution constraints by bounding per-invocation instruction counts and reserving dedicated registers to prevent interference with application kernels. Minimal PTX trampolines inserted at kernel entry and instrumentation points save only essential predicate and register state, invoke the policy code, and restore GPU state with negligible overhead, typically less than a microsecond per invocation.
+All device-side gbpf code executes inside a lightweight sandbox. At load time,
+we derive bounds on instruction count, register usage, and stack depth per
+invocation from the host-side verifier and encode them into the generated code.
+The sandbox restricts memory accesses to designated shared regions (eBPF maps
+and per-warp scratch space) and inserts guards to prevent out-of-bounds accesses.
+During JIT, each snippet is wrapped in a minimal prologue and epilogue that save
+live registers to a safe context, optionally apply bitwise partition masking to
+enforce resource isolation, invoke the policy logic, and restore registers and
+predicates. This combination of static verification and runtime sandboxing
+ensures that injected code cannot hang the GPU, corrupt application kernels or
+driver state, or impose unbounded latency on performance-critical paths.
 
-\paragraph{SIMT-specific Optimizations.}
-To fully exploit the GPU's SIMT architecture, policy execution is aggregated at warp granularity, executing scalar eBPF logic primarily on lane zero of each warp. Non-active lanes within a warp either remain idle or efficiently synchronize minimal state via warp-level primitives (e.g., warp shuffle instructions), drastically reducing warp divergence and redundant computation. Updates to global eBPF maps employ warp-local and SM-local accumulators placed in GPU registers or shared memory, periodically aggregating and batching updates to global memory, significantly reducing global atomic contention. Context structures passed to device-side policies are carefully minimized based on static analysis, packing only the fields identified as relevant during verification and precomputing frequently used identifiers directly within the trampoline code. Lastly, configurable sampling counters implemented in registers allow runtime overhead adjustments by invoking policy handlers at configurable event intervals, enabling low-overhead adaptive instrumentation suitable for diverse workloads.
+\subsubsection{SIMT-specific optimizations}
 
-\subsection{Scheduling Implementation}
-\label{sec:impl-sched}
+To execute scalar policy logic efficiently on a SIMT architecture, gbpf aggregates
+execution at warp granularity. When a device hook fires, a designated lane (typically
+lane 0) in the warp executes the eBPF handler, while other lanes either remain idle
+or contribute minimal input via warp-level primitives such as shuffle instructions.
+This avoids intra-warp divergence inside policy code and reduces redundant work.
 
-\paragraph{Host-side driver extensions.}
-We realize the host-side scheduling interface by modifying the open-source GPU
-kernel modules to export struct\_ops-style callbacks along the kernel lifecycle.
-Specifically, we add callback vectors at kernel submission, admission, preemption,
-and completion sites in the driver code that manages GPU contexts and hardware
-queues. Each callback receives a compact context structure containing kernel
-configuration, tenant identifiers, per-tenant statistics, and current queue state.
-When a scheduling event occurs, the driver invokes the attached \sys program with
-this context and applies the returned decision by reordering ready queues, delaying
-admission, updating kernel priorities, or initiating a cooperative preemption if the
-hardware supports it. These hooks are implemented as small, isolated patches to the
-driver and do not alter the core mechanisms for context management, which simplifies
-maintenance across driver versions.
+Updates to global eBPF maps use warp-local and SM-local accumulators in registers
+or shared memory, which are periodically flushed to global memory, reducing atomic
+contention and global traffic. Context structures passed to handlers are minimized
+based on static analysis: only fields that may be read are materialized, and
+frequently used identifiers are precomputed in the trampoline. Configurable sampling
+counters implemented in registers let handlers run only every \(N\)-th event; sampling
+rates are stored in control-plane maps and can be tuned at runtime.
 
-\paragraph{Device-side block scheduler and cluster launch control.}
-On the device, we implement the thread-block scheduler using a combination of
-persistent worker blocks and hardware support for dynamically assigning work units.
-Conceptually, each kernel is expressed as a set of work units (for example, tiles or
-logical block indices), and the GPU runs a pool of worker blocks that repeatedly
-acquire and execute these units until the kernel completes. In our implementation on
-recent NVIDIA GPUs, we map this abstraction onto the cluster launch control facility,
-which allows a grid of blocks to be treated as a collection of cancellable work units
-that can be reassigned to active workers. The worker code executes in a loop: it
-processes its current work unit, invokes a device-side \sys handler to select or
-approve the next work unit, and uses the cluster launch control API to claim or
-cancel block indices accordingly. The handler runs in a single lane per warp and
-consults shared maps that encode per-tenant priorities, global queue state, and
-per-block progress, returning either the next work identifier or a signal that no
-work remains.
+For scheduling policies, we implement a thread-block scheduler that models each
+kernel as a collection of work units (for example tiles or logical block indices)
+consumed by persistent worker blocks. On recent NVIDIA GPUs we map this to cluster
+launch control, which treats a grid of blocks as cancellable work units. Each worker
+processes its current unit, invokes a device-side gbpf handler (running in one lane)
+to select or approve the next work unit based on shared maps encoding per-tenant
+priorities, global queue state, and per-block progress, and uses the cluster API to
+claim or release indices. Progress and behavior probes implemented with gbpf
+trampolines at kernel entry and annotated phase boundaries record per-warp or
+per-block iteration counts, phase identifiers, and simple classification signals
+(such as memory-bound versus compute-bound phases) into shared maps that are
+visible to both device and host schedulers. All device-side scheduling logic is
+subject to the same sandbox and bounded-execution constraints as other gbpf code.
 
-In parallel, we implement progress and behavior probes by inserting \sys trampolines
-at kernel entry and at explicitly annotated synchronization or phase boundaries.
-These trampolines record per-warp or per-block iteration counts, phase identifiers,
-and simple classification signals such as memory-bound versus compute-bound phases,
-and update shared maps that are visible to both device-side and host-side schedulers.
-Policies can use this information to mark blocks or phases as preemptible, to detect
-stragglers, or to adapt admission decisions on the host. All device-side scheduling
-logic is executed under the same sandbox and bounded-execution constraints described
-in Section~\ref{sec:safety}, and interacts with the driver only through the existing
-kernel and block control interfaces exposed by the hardware and driver.
+\subsection{Cross-domain State and Synchronization}
+\label{sec:impl-state}
 
+\subsubsection{Shared maps and allocation}
 
-\subsection{Cross-Domain Memory Synchronization}
+gbpf uses eBPF maps as the unified state abstraction across host and device. We
+allocate maps and coordination buffers in memory regions accessible to CPU and GPU,
+avoiding explicit marshalling. On our NVIDIA prototypes we use managed shared
+memory so that map contents are addressable in both contexts. Maps store policy
+state such as per-region hotness, per-tenant scheduling priorities, per-block
+progress, and counters for observability tools.
 
-Cross-domain visibility requires explicit barriers (device \_\_threadfence\_system and host stream sync). To transfer writes from the GPU to the CPU, the device must execute \_\_threadfence\_system() to flush any outstanding writes into system-visible memory, followed by a host-side cudaStreamSynchronize() to wait for the GPU to complete. We encapsulate these as a simple device/host pair to centralize tuning and reduce boilerplate:
-\begin{minted}[highlightlines=false,fontsize=\small]{c}
-// Ensure GPU writes become visible to the CPU
+Within each domain, we use standard atomics and interprocess primitives on the
+host and CUDA atomics and fences on the device over well-defined layouts in
+shared memory. To reduce contention, only a subset of threads (for example one
+lane per warp) performs atomic updates while other threads aggregate locally in
+registers or shared memory, and hot maps can be sharded by key when necessary.
+
+\subsubsection{CPU–GPU visibility and fences}
+
+Because CPU and GPU execute independently, cross-domain consistency requires
+explicit fences. To ensure GPU writes become visible to the host, device code
+calls a small wrapper around \texttt{\_\_threadfence\_system}:
+
+\begin{verbatim}
 __device__ inline void memsys_bar_gpu() {
-    __threadfence_system();
+  __threadfence_system();
 }
-// Wait for the GPU on the given stream
-static inline void memsys_bar_cpu(cudaStream_t stream =
-        0) {
-    cudaStreamSynchronize(stream);
+\end{verbatim}
+
+To ensure host writes are visible to the GPU, host code calls a companion wrapper
+around \texttt{cudaStreamSynchronize}:
+
+\begin{verbatim}
+static inline void memsys_bar_cpu(cudaStream_t stream = 0) {
+  cudaStreamSynchronize(stream);
 }
-\end{minted}
-In a persistent kernel, call the GPU fence before reading shared state; after host updates, synchronize the stream to ensure visibility. This two-call barrier hides cross-domain complexity. On the host side, memsys\_bar\_cpu() calls cudaStreamSynchronize() on a specified stream to wait for the GPU to finish its pending commands, including memory writes. This wrapper simplifies code, clarifies intent, and centralizes performance tuning.
+\end{verbatim}
 
-\subsection{\sysdevice Mechanism}\label{sec:gbpf_device}
-
-\noindent \sysdevice provides eBPF-style uprobe/uretprobe hooks for GPU functions at user level. The example below traces a tiled matrix multiply (\texttt{matMulTiled}), counting calls and measuring total time with standard eBPF maps:
-
-\begin{minted}[highlightlines=false,fontsize=\small]{c}
-SEC("gbpf_device/_Z11matMulTiledPKfS0_Pf")
-int gbpf_device_matMulTiled(struct pt_regs *ctx) {
-    u32 pid = bpf_get_current_pid_tgid() >> 32;
-    u64 ts  = bpf_ktime_get_ns();
-    bpf_map_update_elem(&start_ts, &pid, &ts, BPF_ANY);
-    u64 one = 1, *cnt = bpf_map_lookup_elem(&call_count,
-        &pid);  // increment call count
-    if (cnt) *cnt += 1;
-    else    bpf_map_update_elem(&call_count, &pid, &one,
-        BPF_ANY);
-}
-SEC("gbpf_device_ret/_Z11matMulTiledPKfS0_Pf")
-int gbpf_device_ret_matMulTiled(struct pt_regs *ctx) {
-    u32 pid = bpf_get_current_pid_tgid() >> 32;
-    u64 *tsp = bpf_map_lookup_elem(&start_ts, &pid);
-    if (!tsp) return 0;
-    u64 delta = bpf_ktime_get_ns() - *tsp;
-    bpf_map_delete_elem(&start_ts, &pid);
-    u64 *total = bpf_map_lookup_elem(&total_time_ns,
-            &pid); // accumulate execution time
-    if (total) {
-        *total += delta;
-        bpf_map_update_elem(&total_time_ns, &pid,
-            total, BPF_EXIST);
-    } else {
-        bpf_map_update_elem(&total_time_ns, &pid,
-            &delta, BPF_NOEXIST);
-    }
-}
-\end{minted}
-
-\noindent \sysdevice lifts the same semantics onto the device by JIT--translating probe handlers into PTX and injecting them at kernel launch time. Entry/exit trampolines record per-warp timestamps and update shared eBPF maps, preserving map semantics and enabling function-level profiling without application restarts.
-
-
-% \begin{minted}[highlightlines=false,fontsize=\small]{c}
-% using namespace boost::interprocess;
-% __device__ int *shared_flag;
-% __global__ void persistent_kernel() {
-%     memsys_bar_gpu();// Ensure CPU writes are visible
-%     int cmd = *shared_flag;
-%     // Jump into PTX injector...
-% }
-% int main() {
-%     managed_shared_memory shm(open_or_create, "MyShm"
-%         , 1 << 20);
-%     int *flag = shm.construct<int>("Flag")(0)[1];
-%     *flag = 42;              // Write command
-%     memsys_bar_cpu(0);       // Ensure GPU sees update
-%     persistent_kernel<<<grid, block>>>();
-%     cudaDeviceSynchronize();
-% }
-% \end{minted}
-
-\subsection{Synchronization}
-We use host atomics/interprocess primitives and device CUDA atomics/fences over well-defined layouts in shared memory. To reduce contention, only a subset of threads performs atomics while others proceed in parallel.
-
-\subsection{PTX Generation \& Injection}\label{sec:ptx_injection}
-
-User/eBPF logic triggers JIT generation of PTX snippets that are installed via launch-time patching ("PTX injection"). Snippets interoperate with eBPF maps and shared buffers to support flexible, low-latency instrumentation without restarting the application.
-
-\paragraph{Trampoline Mechanism}
-At runtime we patch candidate sites (entry, memory access, barriers) with a tiny PTX stub that:
-\begin{itemize}[leftmargin=*,itemsep=0pt]
-  \item Saves the minimal GPU register and predicate state.
-  \item Jumps into the injected instrumentation snippet.
-  \item Restores the original state and resumes normal execution.
-\end{itemize}
-These trampolines are linked into the device's code image via launch-time patching of branch targets, enabling fine-grained hooking without requiring application restart or full recompilation. Our trampoline generator handles label resolution, register allocation, and insertion of necessary synchronization primitives to avoid hazards.
-
-
-
-\subsection{Isolation Requirement}\label{sec:isolation}
-
-Launch-time PTX injection and trampoline-based instrumentation introduce new code into GPU kernels, which might bring the risk of corrupting application state or violating memory safety. \sys therefore runs injected snippets in a protected domain.
-
-\paragraph{Runtime Sandbox Integration}
-During JIT compilation, \sys{} wraps each PTX snippet in a minimal prologue/epilogue sequence that:
-%\begin{itemize}[leftmargin=*,itemsep=0pt]
-  %\item
-  a) Saves a live register state to a safe context.
-  %\item
-  b) Applies bitwise partition masking and invokes the instrumentation logic.
-  %\item
-  c) Restores registers and resumes normal kernel execution.
-%\end{itemize}
-
-Combining trampolines and shared-memory coordination ensures injected code remains isolated from application kernels.
+Persistent kernels invoke \texttt{memsys\_bar\_gpu()} before reading state that the
+host may have updated; host code invokes \texttt{memsys\_bar\_cpu()} after writing
+maps that device-side handlers will consume. These abstractions centralize tuning
+and simplify reasoning about CPU–GPU synchronization for gbpf policies.

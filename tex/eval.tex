@@ -1,104 +1,194 @@
-
 \section{Evaluation}
-\label{sec:evaluation}
+\label{sec:eval}
 
-We evaluated \sys{} on two machines. Server A is a single-socket Intel Core Ultra 9 285K processor (24 cores) equipped with 128 GB DDR5 RAM and an NVIDIA RTX 5090 GPU. Server B is a single socket Intel Xeon 6787p (86 cores, 2.0 GHz, 336MB LLC) with 768 GB DDR5 RAM(512GB CXL Module) and an NVIDIA H100 GPU. Unless otherwise mentioned, each metric is the average of 10 trials on server A.  We report averages using geometric mean when that is appropriate (\eg when calculating an average speedup).
+We evaluate \sys along five questions:
 
+\begin{itemize}[leftmargin=*]
+  \item \textbf{RQ1:} What is the runtime overhead of the \sys runtime compared
+        to existing GPU instrumentation frameworks?
+  \item \textbf{RQ2:} How efficiently can \sys maintain shared state across the
+        CPU–GPU boundary?
+  \item \textbf{RQ3:} Can \sys express practical GPU observability tools with
+        significantly lower overhead than CUPTI and NVBit?
+  \item \textbf{RQ4:} Can \sys-based memory policies improve performance over
+        default UVM behavior across different access patterns?
+  \item \textbf{RQ5:} Can \sys-based scheduling policies provide tangible gains
+        in tail latency, throughput, and power efficiency in mixed workloads?
+\end{itemize}
 
+\subsection{Methodology and Setup}
 
-\subsection{Micro-benchmark Performance}
+We evaluated \sys on two machines. Server~A is a single-socket Intel Core Ultra~9
+285K processor (24 cores) with 128~GB DDR5 RAM and an NVIDIA RTX~5090 GPU.
+Server~B is a single-socket Intel Xeon~6787P (86~cores, 2.0~GHz, 336~MB LLC)
+with 768~GB DDR5 RAM (512~GB CXL module) and an NVIDIA H100 GPU. Unless
+otherwise noted, we report results on Server~A and average each metric over
+10 trials; when averaging speedups we use geometric means. We compare against
+NVIDIA's CUPTI and NVTX-based profiler stack, NVBit gpumemtrace, default UVM
+memory management, and the native GPU scheduler without \sys-based policies.
 
-We quantify instrumentation overhead with a latency micro-benchmark that measures GPU load/store latency under \sys{} vs. NVBit (gpumemtrace~\cite{villa2019nvbit}) across varying access sizes. As shown in Figure~\ref{fig:end_to_end_latency}, \sys{} adds substantially less latency than NVBit, staying low and stable below 128 KB and rising modestly thereafter. \Cref{fig:latency1} compares with the PyTorch profiler (CUPTI+NVTX): p10 and mean latencies are slightly better under \sys{}. Lightweight PTX injection at launch time is the key enabler of the lower overhead.
+\subsection{RQ1: Runtime Overhead vs Existing Tools}
 
-\begin{figure} \centering \fbox{\parbox{0.5\textwidth}{\centering [Figure: Runtime Overhead]}} \caption{Runtime Overhead} \label{fig:end_to_end_latency} \end{figure}
+We first quantify the overhead of the \sys runtime itself, independent of any
+specific policy logic. We use two microbenchmarks:
 
-\begin{figure} \centering \fbox{\parbox{0.5\textwidth}{\centering [Figure: Resnet Inference Latency Overhead]}} \caption{Resnet Inference Latency Overhead} \label{fig:latency1} \end{figure}
+\begin{itemize}[leftmargin=*]
+  \item A load/store latency benchmark that issues controlled memory accesses
+        from GPU kernels, instrumented with \sys and with NVBit gpumemtrace.
+  \item A ResNet inference workload instrumented with \sys-based tracing and
+        with the PyTorch profiler (CUPTI+NVTX).
+\end{itemize}
 
-\subsection{\sys{} Performance}
-We compare end-to-end throughput and time-to-result against a native baseline (no persistent kernel, no PTX injection). For small batches, \sys{} pays modest startup/JIT cost but reduces launch frequency; for larger or irregular workloads, it matches or beats native by avoiding relaunches and sustaining higher utilization.
+\Cref{fig:runtime-overhead} shows the per-access latency slowdown under
+\sys and NVBit as access sizes increase. \sys adds substantially less latency
+than NVBit, remaining low and stable below 128~KB and increasing modestly
+thereafter. \Cref{fig:resnet-latency} compares end-to-end ResNet inference
+latency distributions: p10 and mean latencies are slightly better than under the PyTorch profiler, and p99 latency is comparable. In both
+cases, lightweight launch-time injection and warp-level execution of \sys
+handlers are key to keeping overhead low.
 
-\subsection{Shared Memory Performance}
-We benchmark shared-memory bandwidth and one-way latency on two servers using a 1 GiB region and both CPU-only and GPU access patterns (GPU-to-CPU and CPU-to-GPU). Servers A/B deliver 12–18 GB/s over PCIe with 8–15 µs cross-domain latencies.
+\begin{figure} \centering \fbox{\parbox{0.5\textwidth}{\centering [Figure: Runtime Overhead]}} \caption{Runtime Overhead} \label{fig:runtime-overhead} \end{figure}
 
-\subsection{Use Case Evaluation}\label{sec:usecase_evaluation}
+\begin{figure} \centering \fbox{\parbox{0.5\textwidth}{\centering [Figure: Resnet Inference Latency Overhead]}} \caption{Resnet Inference Latency Overhead} \label{fig:resnet-latency} \end{figure}
 
-\subsubsection{General GPU Observability Tools}\label{sec:eval_observability}
-We evaluate the suite of bcc-style observability tools across diverse workloads, measuring accuracy, overhead, and practical utility.
+\subsection{RQ2: Shared State and Cross-domain Overheads}
 
-\paragraph{kernelretsnoop - Thread Divergence Detection}
-We apply kernelretsnoop to a matrix multiply kernel with conditional boundary checks. The tool reveals that threads handling edge cases (5\% of total threads) exhibit 600-850ns longer execution times compared to interior threads. Per-thread timestamp accuracy is within 10ns of hardware performance counters. Overhead for timestamping all threads is 2.1\% on average. Armed with this insight, we refactor boundary handling to eliminate divergence, improving overall kernel performance by 8\%.
+Next, we measure the cost of maintaining shared state between CPU and GPU via
+\sys maps. We benchmark shared-memory bandwidth and one-way latency on both
+servers using a 1~GiB region and both GPU-to-CPU and CPU-to-GPU access patterns.
+Servers~A and~B deliver 12–18~GB/s over PCIe with 8–15~µs cross-domain latencies,
+which is sufficient for the policy state sizes we maintain. Our SIMT-aware
+aggregation and sampling strategies further reduce the frequency of cross-domain
+synchronization, as we validate in the use cases below.
 
-\paragraph{threadhist - Workload Balance Analysis}
-Running threadhist on a particle simulation with 1M particles across 256 thread blocks reveals significant imbalance: blocks processing dense regions execute 2.3× more iterations than sparse-region blocks. The histogram shows a bimodal distribution with peaks at 4K and 9K executions per thread. Redistributing particles based on spatial density (guided by threadhist data) reduces execution variance to 15\% and improves overall throughput by 18\%. Tool overhead is 1.8\% due to atomic increments on per-thread counters.
+\subsection{RQ3: Low-overhead GPU Observability}
 
-\paragraph{launchlate - Launch Latency Profiling}
-We measure launch latency across a pipeline of 50 small kernels (each 100 \(\mu\)s execution time). Default synchronous execution shows high variance in launch latency (150-550 \(\mu\)s per kernel) due to queue dependencies. Total pipeline time is 32ms (50 kernels × 100 \(\mu\)s + 50 launches × 440 \(\mu\)s average). After identifying this bottleneck with launchlate, we switch to CUDA graphs for batched launches, reducing total time to 7.2ms (5ms kernel execution + 2.2ms graph launch overhead). The tool adds negligible overhead (<0.5\%) as it only measures at kernel boundaries.
+We evaluate the suite of bcc-style observability tools built on \sys, measuring
+accuracy, overhead, and practical utility across diverse workloads.
 
-\paragraph{mem\_trace - Memory Access Pattern Analysis}
-We evaluate mem\_trace on synthetic and real kernels. A bank-conflict microbenchmark shows per-warp access patterns and conflict rates within 2\% of hardware counters. In \Cref{fig:observability}, instrumenting GEMM, SpMV, and a 1D stencil adds under 3\% end-to-end overhead; PTX injection remains below 50 \(\mu\)s. mem\_trace also pinpointed a convolution-bank conflict that a simple padding fix resolved for a 12\% gain.
+\paragraph{Thread divergence and workload balance.}
+\texttt{kernelretsnoop} attaches to kernel return paths and records per-thread
+timestamps, revealing divergence. Applied to a matrix multiply kernel with
+boundary checks, it shows that threads handling edge cases (5% of total) incur
+600–850~ns longer execution than interior threads, with timestamps within 10~ns
+of hardware performance counters and 2.1% overhead. Refactoring boundary
+handling based on this insight improves overall kernel performance by 8%.
+\texttt{threadhist} reveals load imbalance in a particle simulation, identifying
+a bimodal distribution of iterations per thread that, when corrected, yields an
+18% throughput improvement with 1.8% tool overhead.
+
+\paragraph{Launch latency and memory behavior.}
+\texttt{launchlate} combines host and device hooks to measure kernel launch
+latency. On a pipeline of 50 small kernels, default synchronous execution shows
+150–550~µs launch latency per kernel, leading to 32~ms total runtime; switching
+to CUDA graphs guided by \texttt{launchlate} reduces this to 7.2~ms. The tool
+adds less than 0.5% overhead. \texttt{mem_trace} instruments sampled memory
+operations and recovers per-warp bank conflict rates within 2% of hardware
+counters, with under 3% end-to-end overhead across GEMM, SpMV, and stencil
+kernels (\Cref{fig:obs-overhead}).
 
 \begin{figure}
 \centering
 \fbox{\parbox{\columnwidth}{\centering [Figure: GPU Observability Tools Overhead Comparison]}}
-\caption{Overhead comparison for bcc-style GPU observability tools across different workloads}\label{fig:observability}
+\caption{Overhead comparison for bcc-style GPU observability tools across different workloads}\label{fig:obs-overhead}
 \end{figure}
 
-\Cref{fig:tool_comparison} compares our eBPF-based tools against traditional approaches. CUPTI-based profiling incurs 15-25\% overhead and requires kernel restarts. NVBit binary instrumentation adds 30-45\% overhead for similar metrics. \sys tools average 2-3\% overhead and support live instrumentation without interrupting execution.
+
+\paragraph{Comparison to CUPTI and NVBit.}
+\Cref{fig:obs-comparison} compares \sys-based tools against CUPTI and
+NVBit for common profiling tasks. CUPTI-based profiling incurs 15–25% overhead
+and typically requires kernel restarts; NVBit adds 30–45% overhead for similar
+metrics. \sys tools average 2–3% overhead and support live instrumentation
+without interrupting execution.
 
 \begin{figure}
 \centering
 \fbox{\parbox{\columnwidth}{\centering [Figure: Observability Tool Comparison]}}
-\caption{Comparison of \sys observability tools vs. CUPTI and NVBit for common profiling tasks}\label{fig:tool_comparison}
+\caption{Comparison of \sys observability tools vs. CUPTI and NVBit for common profiling tasks}\label{fig:obs-comparison}
 \end{figure}
 
-\subsubsection{Programmable UVM Management}\label{sec:eval_uvm}
-We evaluate programmable UVM management on workloads with diverse memory access patterns: sequential (vector addition), strided (matrix transpose), and random (graph traversal). We compare three configurations: (1) default NVIDIA UVM with on-demand page migration, (2) static prefetching with manual hints, and (3) \sys with adaptive eBPF-based prefetching and eviction policies.
 
-\Cref{fig:uvm_performance} shows normalized execution time across workloads. For sequential access, \sys achieves 1.8$\times$ speedup over default UVM by prefetching consecutive pages. For strided patterns, \sys learns the stride and prefetches accordingly, achieving 1.4$\times$ speedup. Random access shows modest 1.2$\times$ improvement through working-set tracking and retention of hot pages.
+\subsection{RQ4: Programmable Memory Management}
 
-We measure page fault frequency in \Cref{fig:uvm_faults}. Default UVM incurs 15-30K page faults per second depending on workload. \sys reduces this to 5-12K faults/sec (50-65\% reduction) through predictive prefetching. The adaptive policy adds only 2-3\% instrumentation overhead while eliminating the majority of fault-induced stalls.
+We evaluate \sys's memory policy interface on workloads with diverse access
+patterns: sequential (vector addition), strided (matrix transpose), and random
+(graph traversal). We compare three configurations: (1) default NVIDIA UVM with
+on-demand page migration, (2) static prefetching with manual hints, and (3) \sys
+with adaptive region-based prefetch and eviction policies that use both host-side
+events and device-side memory events.
 
-Memory footprint remains comparable: \sys's prefetching increases GPU memory usage by 10-15\% on average, which is acceptable given the performance gains. For memory-constrained scenarios, we implement a hybrid policy that balances prefetch aggressiveness with available memory, maintaining performance within 5\% of unlimited-memory configuration.
+\Cref{fig:uvm-perf} shows normalized execution time across workloads.
+For sequential access, \sys achieves up to 1.8$\times$ speedup over default UVM
+by prefetching consecutive regions based on observed access and device hints.
+For strided patterns, \sys learns strides and prefetches accordingly, achieving
+1.4$\times$ speedup. Random access sees a modest 1.2$\times$ improvement from
+working-set tracking and retention of hot regions.
+
+\Cref{fig:page-faults} shows page fault rates. Default UVM incurs 15–30K
+faults per second depending on the workload; \sys reduces this to 5–12K~faults/s
+(50–65% reduction) through predictive prefetching and more selective eviction.
+The adaptive policy adds only 2–3% instrumentation overhead while eliminating
+the majority of fault-induced stalls. Average memory footprint increases by
+10–15%, which we bound using a hybrid policy that throttles prefetch aggressiveness
+under tight capacity constraints, keeping performance within 5% of an
+unbounded-memory configuration.
 
 \begin{figure}
 \centering
 \fbox{\parbox{\columnwidth}{\centering [Figure: UVM Performance Comparison]}}
-\caption{Normalized execution time for UVM management strategies across different access patterns}\label{fig:uvm_performance}
+\caption{Normalized execution time for UVM management strategies across different access patterns}\label{fig:uvm-perf}
 \end{figure}
 
 \begin{figure}
 \centering
 \fbox{\parbox{\columnwidth}{\centering [Figure: Page Fault Frequency]}}
-\caption{Page fault frequency comparison between default UVM and \sys programmable UVM}\label{fig:uvm_faults}
+\caption{Page fault frequency comparison between default UVM and \sys programmable UVM}\label{fig:page-faults}
 \end{figure}
 
-\subsubsection{Fine-grain GPU Scheduler}\label{sec:eval_scheduler}
-We evaluate fine-grain scheduling with two policies: priority-based preemption and power-aware throttling. Experiments run on mixed workloads combining high-priority latency-sensitive kernels (real-time video processing) with low-priority throughput-oriented tasks (batch ML training).
+\subsection{RQ5: Fine-grain Scheduling and Power-aware Control}
 
-\paragraph{Priority-based Preemption}
-We compare three approaches: (1) no prioritization (FIFO), (2) stream-level priorities (CUDA native), and (3) \sys warp-level preemption. \Cref{fig:scheduler_latency} plots tail latency (p99) for high-priority tasks. FIFO shows high variance (25-80 ms) due to blocking by long-running kernels. CUDA streams reduce p99 to 15-30 ms but still suffer head-of-line blocking. \sys achieves 5-12 ms p99 latency by preempting low-priority warps at barrier synchronization points, yielding GPU resources within microseconds.
+Finally, we evaluate \sys's scheduling interface using two classes of policies:
+priority-based preemption and power-aware throttling, on mixed workloads that
+combine high-priority latency-sensitive kernels (real-time video processing)
+with low-priority batch ML training jobs.
 
-Throughput impact on low-priority tasks is measured in \Cref{fig:scheduler_throughput}. \sys incurs 8-12\% throughput reduction compared to FIFO due to context-switching overhead, but maintains fairness better than CUDA streams (18-25\% reduction) which can starve low-priority work.
-
-\paragraph{Power-aware Throttling}
-We implement a thermal-aware scheduler that throttles thread blocks when GPU temperature exceeds thresholds. \Cref{fig:power_throttle} shows power consumption over time during sustained workload. Without throttling, power spikes to 320W with thermal violations. NVIDIA's frequency scaling reduces power to 280W but impacts performance by 20\%. \sys's selective thread throttling maintains 290W average power while reducing performance impact to only 8\%, achieving better performance-per-watt than frequency scaling.
-
-Scheduling decision latency is critical: \sys makes warp-level decisions in 0.3-0.8 \(\mu\)s with 4-6\% overhead. This sub-microsecond response enables fine-grain power management that reacts to thermal events before hardware protection mechanisms trigger.
+\paragraph{Priority-based preemption.}
+We compare three approaches: (1) no prioritization (FIFO), (2) CUDA stream-level
+priorities, and (3) \sys-based warp-level preemption. \Cref{fig:p99-latency}
+plots p99 latency for high-priority tasks. FIFO exhibits 25–80~ms p99 latency
+due to blocking behind long-running kernels. CUDA streams reduce p99 to 15–30~ms
+but still suffer head-of-line blocking. \sys cuts p99 latency to 5–12~ms by
+preempting low-priority warps at synchronization points and handing resources
+to high-priority work, with 4–6% overhead and 0.3–0.8~µs per scheduling decision.
+Low-priority throughput drops by 8–12%, but \sys maintains better fairness than
+CUDA streams, which incur 18–25% throughput reduction due to prolonged starvation
+(\Cref{fig:lowprio-throughput}).
 
 \begin{figure}
 \centering
 \fbox{\parbox{\columnwidth}{\centering [Figure: Priority Scheduler Tail Latency]}}
-\caption{P99 latency for high-priority tasks under different scheduling policies}\label{fig:scheduler_latency}
+\caption{P99 latency for high-priority tasks under different scheduling policies}\label{fig:p99-latency}
 \end{figure}
 
 \begin{figure}
 \centering
 \fbox{\parbox{\columnwidth}{\centering [Figure: Low-Priority Task Throughput]}}
-\caption{Throughput impact on low-priority tasks with different scheduling policies}\label{fig:scheduler_throughput}
+\caption{Throughput impact on low-priority tasks with different scheduling policies}\label{fig:lowprio-throughput}
 \end{figure}
+
+\paragraph{Power-aware throttling.}
+We implement a thermal-aware scheduler that throttles thread blocks when GPU
+temperature exceeds configured thresholds. \Cref{fig:power-throttle} shows
+power consumption and performance over time under sustained load. Without
+throttling, power spikes to 320~W and violates thermal limits. NVIDIA's frequency
+scaling reduces power to 280~W but lowers performance by 20%. \sys's selective
+thread throttling maintains 290~W average power while reducing performance by
+only 8%, improving performance-per-watt compared to frequency scaling. The
+sub-microsecond decision latency of \sys policies allows them to react to thermal
+events before hardware protection mechanisms trigger.
 
 \begin{figure}
 \centering
 \fbox{\parbox{\columnwidth}{\centering [Figure: Power-aware Throttling]}}
-\caption{Power consumption and performance under thermal-aware throttling policies}\label{fig:power_throttle}
+\caption{Power consumption and performance under thermal-aware throttling policies}\label{fig:power-throttle}
 \end{figure}
