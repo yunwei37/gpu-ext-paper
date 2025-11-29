@@ -37,7 +37,8 @@ Once verified, the same bytecode can be installed in two ways:
 
 A GPU-side sandbox runtime enforces strong safety guarantees: it bounds the number of instructions per invocation, carefully manages register usage to avoid corrupting application state, and restricts memory accesses to designated shared regions (e.g., eBPF maps and scratch space). Each injected program therefore operates in a protected domain that cannot interfere with application kernels, while still enabling adaptive policy decisions on critical GPU execution paths.
 
-Shared eBPF maps provide efficient state coordination between \sysdriver and eBPF policy logic on the host, and between host and GPU policies across the CPU--GPU boundary. This design yields real-time, low-overhead cross-layer observability and control while retaining the safety guarantees of the eBPF framework.
+Shared eBPF maps provide efficient state coordination between \sysdriver and eBPF policy logic on the host, and between host and GPU policies across the CPU--GPU boundary. This design yields real-time, low-overhead cross-layer observability and control while retaining the safety guarantees of the eBPF framework.  We focus on multi-tenant policy control on shared GPUs, not on providing virtual GPU abstractions or hardware partitioning. Hardware mechanisms such as MIG or SR-IOV are conceptually orthogonal and can, in principle, be deployed underneath \sys. while knowing that policy mistakes are confined to well-defined gBPF-managed state and cannot corrupt kernel or application memory outside that state.
+
 
 \subsection{\sys Programming Model}
 \label{sec:prog-model}
@@ -67,9 +68,12 @@ To enable coherent policy decisions across the CPU-GPU boundary, \sys provides a
 A \sys policy also includes a dedicated user-space control-plane component responsible for lifecycle management, dynamic reconfiguration, and policy introspection. This component loads compiled eBPF bytecode into the OS kernel, instantiates and manages eBPF maps, and attaches policy sections to defined host and GPU device hook points exposed by \sysdriver and GPU-side runtime. It enables dynamic reconfiguration of deployed policies at runtime by updating parameters (e.g., thresholds, sampling rates, eviction aggressiveness, power caps) stored in shared maps, and facilitates atomic swapping or updating of attached policy logic without restarting applications or kernels. Furthermore, the control-plane application continuously monitors policy operation by reading metrics and state from maps—such as memory hotness counters, per-tenant scheduling metrics, and queueing latencies—and exports this information to external observability frameworks or adaptation controllers. Thus, from a developer’s perspective, a complete \sys policy application comprises policy logic for both CPU and GPU execution contexts along with a complementary control-plane component orchestrating policy behavior and evolution over time.
 
 \paragraph{Safety Model.}
-A fundamental challenge of programmable GPU infrastructure is safely executing untrusted policy logic within latency-critical paths, given the absence of traditional OS-level isolation and the potential for severe consequences from faulty code (e.g., GPU hangs or memory corruption). To address this challenge, \sys adopts a unified safety model grounded in static verification and rigorously bounded runtime execution. Policies are expressed in a restricted subset of eBPF, verified statically to guarantee memory safety, bounded loops, deterministic termination, and controlled resource usage. At runtime, a sandboxed environment strictly enforces execution budgets and memory access constraints, preventing injected policy logic from interfering with GPU kernels, corrupting driver state, or causing unpredictable latency spikes. This approach provides strong isolation guarantees, enabling confident deployment of complex adaptive policies directly into sensitive GPU driver and kernel paths.
+The core challenge in programmable GPU policy is to run operator-supplied logic in privileged, latency-critical GPU driver and device paths without process-like isolation: even simple bugs can corrupt mappings, stall the device, or inflate tail latency. We assume the entity deploying gBPF policies (e.g., a cluster or system operator) is trusted but fallible: policies may contain logic bugs or misconfigurations, but are not written by active adversaries. Malicious kernel modules, vendor drivers, firmware, or hardware are out of scope. Under this model, operators want a way to express rich policies for memory placement, kernel scheduling, and observability directly where the decisions are made on the GPU, while knowing that policy mistakes are confined to well-defined state and cannot silently destabilize the system.
 
-For GPU-side execution, \sys does not re-verify policies. Instead, it treats the device code compiler (e.g., to PTX or SPIR-V) as a trusted translation of already-verified eBPF bytecode into device code. The GPU sandbox enforces an instruction bound derived from the verifier’s instruction-count budget and restricts memory accesses to addresses reachable via BPF map helpers; it cannot grant additional capabilities beyond those approved by the kernel verifier.
+Under our trusted-but-fallible operator model, we treat the eBPF verifier, gBPF’s kernel module, our device-code backend, and the GPU driver as part of the TCB: policy authors should only have to reason about eBPF and the gBPF API, not PTX or SASS, while still obtaining the verifier’s safety properties on both the host and GPU.
+gBPF’s safety model is built around a single verifier-backed IR that spans host and device. All policies are written in a restricted eBPF subset and pass through the in-kernel eBPF verifier, which enforces bounded loops, stack limits, and memory safety with respect to stack and map regions, and restricts gBPF programs to GPU-specific helpers and kfuncs. gBPF then reuses exactly this verified bytecode on the GPU: a trusted backend lowers it to device code, and a SIMT-aware runtime constrains execution to a single lane per warp, restricts all data-dependent accesses to gBPF-managed maps and per-warp scratch with explicit bounds checks. We also use conservative work budgets for execution instructions and memory access based on verifier bounds. This gives operators something prior GPU tools lack: a driver-anchored policy plane where the same verified program can run in the GPU driver and inside GPU kernels, with verifier-backed memory safety and bounded per-hook work for device-resident policy code. We do not run a separate device-side verifier; instead, the device-code backend is part of the TCB and is treated as a trusted translation of already-verified bytecode.
+
+
 
 \paragraph{Optimizing for GPU's SIMT Execution.}
 A key difficulty in deploying policy logic on GPUs is efficiently executing scalar decision-making code within the massively parallel Single Instruction Multiple Thread (SIMT) architecture. Naively executing scalar control logic directly across all GPU threads introduces prohibitive divergence and overhead, severely degrading GPU efficiency. To overcome this, \sys explicitly designs policy execution around SIMT execution characteristics: it aggregates scalar policy logic execution at warp granularity, typically executing decisions on a designated warp lane while efficiently synchronizing minimal input from other lanes. Frequent global state updates—common in observability and adaptive policy logic—are optimized through warp-level and SM-level local aggregation techniques, dramatically reducing contention and costly global memory operations. Moreover, context metadata passed to policy handlers is minimized through static analysis, passing only essential fields to reduce memory traffic and latency. Finally, adaptive sampling mechanisms allow policies to dynamically tune instrumentation frequency, achieving low overhead across diverse workloads. Collectively, these optimizations enable efficient, scalable, and minimally invasive GPU-side policy execution suitable for production deployment.
@@ -92,7 +96,7 @@ table with typed contexts:
 
 \begin{verbatim}
 // Host-side policy callbacks for GPU memory management.
-struct memsys_ops {
+struct gdrv_mem_ops {
   int (*region_add)(struct memsys_region_add_ctx *ctx);
   int (*region_access)(struct memsys_region_access_ctx *ctx);
   int (*region_remove)(struct memsys_region_remove_ctx *ctx);
@@ -100,12 +104,10 @@ struct memsys_ops {
   char name[MEMSYS_NAME_LEN];
 };
 
-// Example removal context with an eviction candidate set.
-struct memsys_region_remove_ctx {
-  __u32 tenant_id;
-  __u32 cause;        /* lifetime vs pressure */
-  __u32 nr_candidates;
-  __u64 candidates[MEMSYS_MAX_EVICT_CANDIDATES];  /* region_ids */
+// device-side memory callback interface
+struct gdev_mem_ops {
+    void (*memtrace)(...);
+    ...
 };
 \end{verbatim}
 
@@ -192,12 +194,18 @@ scheduling callbacks:
 
 \begin{verbatim}
 // Host-side policy callbacks for GPU kernel scheduling.
-struct gpusched_ops {
+struct gdrv_sched_ops {
   int  (*submit)(struct gpusched_submit_ctx *ctx);
   int  (*admit)(struct gpusched_admit_ctx *ctx);
   int  (*preempt)(struct gpusched_preempt_ctx *ctx);
   void (*complete)(struct gpusched_complete_ctx *ctx);
   char name[GPUSCHED_NAME_LEN];
+};
+// device-side block scheduling callback interface
+struct gdev_sched_ops {
+    void (*entry)(...);
+    void (*exit)(...);
+    bool (*should_try_steal)(...);
 };
 \end{verbatim}
 
