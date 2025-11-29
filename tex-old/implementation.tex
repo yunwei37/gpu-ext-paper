@@ -120,5 +120,27 @@ registers or shared memory, and hot maps can be sharded by key when necessary.
 
 \subsubsection{CPU–GPU visibility and fences}
 
-Because CPU and GPU execute independently, cross-domain consistency requires explicit fences. To ensure GPU writes become visible to the host, device code calls a thin wrapper around \texttt{\_\_threadfence\_system}; to ensure host writes are visible to the GPU, host code calls a companion wrapper around \texttt{cudaStreamSynchronize}. Persistent kernels invoke the device-side barrier before reading state that the host may have updated, while host code invokes the CPU-side barrier after writing maps that device-side handlers will consume. These abstractions centralize tuning and simplify reasoning about CPU--GPU synchronization for \sys policies.
+Because CPU and GPU execute independently, cross-domain consistency requires
+explicit fences. To ensure GPU writes become visible to the host, device code
+calls a small wrapper around \texttt{\_\_threadfence\_system}:
+
+\begin{verbatim}
+__device__ inline void memsys_bar_gpu() {
+  __threadfence_system();
+}
+\end{verbatim}
+
+To ensure host writes are visible to the GPU, host code calls a companion wrapper
+around \texttt{cudaStreamSynchronize}:
+
+\begin{verbatim}
+static inline void memsys_bar_cpu(cudaStream_t stream = 0) {
+  cudaStreamSynchronize(stream);
+}
+\end{verbatim}
+
+Persistent kernels invoke \texttt{memsys\_bar\_gpu()} before reading state that the
+host may have updated; host code invokes \texttt{memsys\_bar\_cpu()} after writing
+maps that device-side handlers will consume. These abstractions centralize tuning
+and simplify reasoning about CPU–GPU synchronization for \sys policies.
 
