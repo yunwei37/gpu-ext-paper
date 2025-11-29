@@ -87,6 +87,28 @@ cache: it exposes a small set of region-level events for \emph{admission},
 \emph{access}, and \emph{removal}, together with a prefetch channel, and lets host
 and device cooperate on a unified policy.
 
+On the host, these events are realized as a small \texttt{struct\_ops}-style policy
+table with typed contexts:
+
+\begin{verbatim}
+// Host-side policy callbacks for GPU memory management.
+struct memsys_ops {
+  int (*region_add)(struct memsys_region_add_ctx *ctx);
+  int (*region_access)(struct memsys_region_access_ctx *ctx);
+  int (*region_remove)(struct memsys_region_remove_ctx *ctx);
+  int (*prefetch)(struct memsys_prefetch_ctx *ctx);
+  char name[MEMSYS_NAME_LEN];
+};
+
+// Example removal context with an eviction candidate set.
+struct memsys_region_remove_ctx {
+  __u32 tenant_id;
+  __u32 cause;        /* lifetime vs pressure */
+  __u32 nr_candidates;
+  __u64 candidates[MEMSYS_MAX_EVICT_CANDIDATES];  /* region_ids */
+};
+\end{verbatim}
+
 \paragraph{Host-side region events and removal.}
 On the host, \sys models memory as a set of logical regions (for example, weight
 shards, KV-cache segments, or embedding tables) and exposes attach points for three
@@ -126,9 +148,22 @@ and maintains correct mappings, but delegates replacement and prefetch policy to
 
 \paragraph{Unified device-side memory events.}
 On the GPU, \sys exposes a single device-side memory event interface that kernels
-use both to report observed accesses and to express future-use hints. At selected
-memory operation sites, \sys injects lightweight hooks that operate at warp
-granularity and invoke a device-side \sys handler with an \emph{ACCESS} event:
+use both to report observed accesses and to express future-use hints. A compact
+device context is passed to each handler:
+
+\begin{verbatim}
+struct gpu_dev_mem_ctx {
+  __u64 region_id;   /* logical region (weights, KV shard, etc.) */
+  __u32 kernel_id;
+  __u32 warp_id;
+  __u32 sm_id;
+  __u32 event;       /* ACCESS or HINT */
+  __u32 hint_flags;  /* e.g., WILL_USE_SOON, COLD, ... */
+};
+\end{verbatim}
+
+At selected memory operation sites, \sys injects lightweight hooks that operate at
+warp granularity and invoke a device-side \sys handler with an \emph{ACCESS} event:
 the handler receives metadata such as a logical region identifier, warp and SM
 identifiers, and a kernel or phase identifier, and updates shared maps with
 per-region statistics such as access counts, approximate working-set membership,
@@ -161,6 +196,20 @@ thread blocks or tiles. \sys exposes scheduling interfaces on both host and devi
 so that policies can implement fine-grained priority, deadline-aware, and power-aware
 scheduling while respecting the GPU SIMT execution model.
 
+On the host, these lifecycle events are exported as a small struct-ops table of
+scheduling callbacks:
+
+\begin{verbatim}
+// Host-side policy callbacks for GPU kernel scheduling.
+struct gpusched_ops {
+  int  (*submit)(struct gpusched_submit_ctx *ctx);
+  int  (*admit)(struct gpusched_admit_ctx *ctx);
+  int  (*preempt)(struct gpusched_preempt_ctx *ctx);
+  void (*complete)(struct gpusched_complete_ctx *ctx);
+  char name[GPUSCHED_NAME_LEN];
+};
+\end{verbatim}
+
 \paragraph{Host-side scheduling hooks.}
 On the host, \sys extends the GPU kernel lifecycle with attach points that allow
 policies to control admission, ordering, and preemption of kernels. The interface
@@ -191,8 +240,22 @@ contexts and how they are multiplexed in multi-tenant scenarios.
 Inside the GPU, \sys exposes a complementary interface that operates at the level of
 thread blocks or tiles, aligning with the SIMT execution model. Rather than treating
 each kernel as a monolithic unit, \sys models a kernel as a collection of work units
-that can be dynamically assigned to \emph{worker} thread blocks. Policies interact
-with this internal scheduler through two mechanisms:
+that can be dynamically assigned to \emph{worker} thread blocks. Device-side policies
+observe and steer this internal scheduler via a compact per-block context:
+
+\begin{verbatim}
+struct gpu_block_sched_ctx {
+  __u32 kernel_id;
+  __u32 tenant_id;
+  __u32 cluster_id;
+  __u32 sm_id;
+
+  __u32 prev_work_id;   /* last completed work unit (tile index) */
+  __u32 next_work_id;   /* chosen work unit, written by policy */
+};
+\end{verbatim}
+
+Policies interact with this internal scheduler through two mechanisms:
 
 \begin{itemize}[leftmargin=*]
   \item \emph{Block scheduling callbacks}, where a worker block periodically invokes
