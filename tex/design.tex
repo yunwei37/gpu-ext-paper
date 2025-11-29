@@ -95,7 +95,7 @@ and device cooperate on a unified policy.
 On the host, these events are realized as a small \texttt{struct\_ops}-style policy
 table with typed contexts:
 
-\begin{verbatim}
+\begin{minted}[highlightlines=false,fontsize=\small]{c}
 // Host-side policy callbacks for GPU memory management.
 struct gdrv_mem_ops {
   int (*region_add)(struct memsys_region_add_ctx *ctx);
@@ -110,7 +110,7 @@ struct gdev_mem_ops {
     void (*memtrace)(...);
     ...
 };
-\end{verbatim}
+\end{minted}
 
 \paragraph{Host-side region events and removal.}
 On the host, \sys models memory as a set of logical regions (for example, weight
@@ -193,7 +193,7 @@ scheduling while respecting the GPU SIMT execution model.
 On the host, these lifecycle events are exported as a small struct-ops table of
 scheduling callbacks:
 
-\begin{verbatim}
+\begin{minted}[highlightlines=false,fontsize=\small]{c}
 // Host-side policy callbacks for GPU kernel scheduling.
 struct gdrv_sched_ops {
   // Called when a kernel is enqueued by a runtime.
@@ -219,7 +219,7 @@ struct gdev_sched_ops {
   // it should try to steal work and from which tenant/queue.
   bool (*should_try_steal)(struct gdev_block_ctx *ctx);
 };
-\end{verbatim}
+\end{minted}
 
 \paragraph{Host-side scheduling hooks.}
 On the host, \sys extends the GPU kernel lifecycle with attach points that allow
