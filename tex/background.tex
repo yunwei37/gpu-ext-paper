@@ -44,36 +44,48 @@ In summary, modern GPU stacks suffer from tight coupling between resource manage
 To mitigate this rigidity, developers currently resort to fragmented extensibility approaches:
 
 \paragraph{User-Space Runtimes and Libraries}
-Similar to DPDK for network, to bypass kernel driver limitations and envolve rapidly, modern systems like vLLM~\cite{kwon2023efficient}
-or custom runtimes implement complex management logic en-
-tirely in user space. Fine-grained sharing frameworks such as
-Salus~\cite{salus} and UVM-focused runtimes like PILOT~\cite{pilot}
-likewise centralize time-sharing and memory placement deci-
-sions above the driver. However, these solutions suffer from
-severe static rigidity and scope limitations. Because the under-
-lying OS abstractions (driver/firmware) provide no programm-
-able interface for dynamic resource arbitration and fine-grain
-control, user-space runtimes are forced to defensively “hoard’’
-resources; for example, applications statically pre-allocate GPU
-memory at startup to manage their KV-cache or model weights, preventing dynamic sharing with other processes, and require additional framework to handle that~\cite{lmcache}. Similarly,
-hardware partitioning techniques like MIG enforce fixed bound-
-aries that cannot adapt to bursty traffic. Furthermore, user-
-space schedulers are confined to \textit{intra-process} decisions;
-they cannot mitigate interference from “noisy neighbors’’ (other
-tenants) contending for global bandwidth. Even within a single
-process, they are unprivileged: they cannot intervene at the
-granularity of hardware interrupts or directly manipulate phys-
-ical memory mappings, preventing precise compute–transfer
-overlapping and true preemption, and may impose substantial
-performance overhead. Finally, deploying new policies often
-necessitates invasive source code modifications and service
-restarts, breaking transparency when deploying to different en-
-vironments. While recent research systems like 
-XSched propose cleaner abstractions for GPU device manage-
-ment~\cite{xsched}, they still hard-code their own sched-
-uling and placement policies rather than exposing a general,
-safe, programmable interface to trusted driver and device mech-
-anisms.
+Similar to DPDK for networks, to bypass kernel driver limitations and evolve
+rapidly, modern systems like vLLM~\cite{kwon2023efficient} or custom runtimes
+implement complex management logic entirely in user space. Fine-grained sharing
+frameworks such as Salus~\cite{salus} and UVM-focused runtimes like
+PILOT~\cite{pilot} likewise centralize time-sharing and memory placement
+decisions above the driver. More recent serving systems like Paella, Pie and
+KTransformers explicitly expose programmable interfaces: Paella provides
+software-defined GPU scheduling for model serving~\cite{paella}, Pie lets
+developers write “inferlets’’ that program the LLM generation loop and KV-cache
+management~\cite{pie}, and KTransformers offers a flexible CPU–GPU hybrid
+inference runtime with pluggable scheduling and expert-placement
+strategies~\cite{ktransformers}. XSched, although positioned as an XPU
+scheduling framework, also implements flexible, user-defined policies on top of
+its XQueue abstraction~\cite{xsched}. In this sense, many user-space systems
+are already programmable frameworks.
+
+However, all of these approaches share two fundamental limitations for GPU
+resource management. First, their programmability is \emph{framework-scoped}:
+policies are written against a particular serving system or runtime (e.g.,
+Pie, Paella, XSched, KTransformers), and cannot be reused across arbitrary
+applications or libraries without porting those applications onto the same
+stack. Second, they operate strictly above vendor drivers and firmware and thus
+lack a trusted, privileged interface to low-level mechanisms such as page
+fault handling, MMU updates, interrupt delivery, and device context
+management. As a result, user-space runtimes are forced to defensively
+“hoard’’ resources; for example, applications statically pre-allocate GPU
+memory at startup to manage their KV-cache or model weights, 
+preventing dynamic sharing with other processes, and require additional framework to handle that~\cite{lmcache}. Similarly,
+Hardware partitioning techniques like MIG enforce fixed boundaries that cannot
+adapt to bursty traffic. Furthermore, user-space schedulers are confined to
+\emph{intra-process} or \emph{intra-framework} decisions; they cannot mitigate
+interference from ``noisy neighbors’’ (other tenants or frameworks) contending
+for global bandwidth. Even within a single process, they are unprivileged:
+they cannot intervene at the granularity of hardware interrupts or directly
+manipulate physical memory mappings, preventing precise compute-transfer
+overlap and true preemption, and may impose substantial performance overhead.
+Finally, deploying new policies often necessitates invasive changes to the
+serving framework and service restarts. In contrast, \sys aims to provide a
+\emph{framework-agnostic}, verifier-backed policy substrate in the GPU driver
+and device execution layer that such user-space systems can target, rather
+than another standalone serving framework.
+
 
 
 \paragraph{Binary Instrumentation and Profiling Tools on device}
