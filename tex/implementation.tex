@@ -3,11 +3,11 @@
 
 \subsection{Components Overview}
 
-gbpf is implemented as a set of extensions to the NVIDIA Open GPU Kernel Modules
+\sys is implemented as a set of extensions to the NVIDIA Open GPU Kernel Modules
 and a device-side runtime that executes verified eBPF code inside GPU kernels.
-On the host, gbpf adds struct\_ops-style callbacks in the memory management and
-scheduling paths and exposes a user-space control-plane API and a gbpf-Device
-interface. In the GPU, gbpf integrates a JIT that translates verified eBPF
+On the host, \sys adds struct\_ops-style callbacks in the memory management and
+scheduling paths and exposes a user-space control-plane API and a \sysdevice
+interface. In the GPU, \sys integrates a JIT that translates verified eBPF
 bytecode to device code, a trampoline mechanism for invoking translated snippets
 from kernels, and a sandbox runtime that enforces bounded execution and resource
 isolation. Both sides access shared eBPF maps in memory visible to CPU and GPU.
@@ -17,7 +17,7 @@ isolation. Both sides access shared eBPF maps in memory visible to CPU and GPU.
 
 \subsubsection{Driver hooks for memory and scheduling}
 
-gbpf builds on the NVIDIA Open GPU Kernel Modules (Turing, Ampere, Hopper and
+\sys builds on the NVIDIA Open GPU Kernel Modules (Turing, Ampere, Hopper and
 newer) to avoid binary patching and to track vendor updates. In the UVM module,
 we insert callbacks at critical memory decision points: page fault handlers,
 prefetch logic, and reclamation paths. These implement the region-level
@@ -42,21 +42,24 @@ progress and competing work. Completion callbacks update per-tenant statistics
 and virtual time. All callbacks can be attached and detached dynamically without
 driver recompilation or node restart.
 
-On the host, gbpf reuses the standard kernel eBPF verifier to ensure memory
-safety, bounded loops, stack limits, and controlled helper and map usage. Where
-policies must trigger specific actions in the driver (such as committing a victim
-selection or marking a kernel for preemption), we expose small kfuncs that can be
-called from eBPF under verifier control.
+On the host, \sys reuses the standard kernel eBPF verifier to ensure memory
+safety, bounded loops, stack limits, and controlled helper and map usage. We implement
+a kernel module that extends the verification context to support our GPU-specific attach points
+and special kfuncs. This module leverages the kernel's annotation mechanisms (BTF and kfunc
+declarations) to enforce interface correctness and type safety, similar to the approach
+in the bpftime paper~\cite{bpftime}. Where policies must trigger specific actions in the driver
+(such as committing a victim selection or marking a kernel for preemption), we expose these
+interfaces as safe kfuncs that can be called from eBPF under verifier control.
 
-\subsubsection{gbpf-Device user-space interface}
+\subsubsection{\sysdevice user-space interface}
 
-gbpf-Device provides eBPF-style uprobe and uretprobe hooks for GPU-related
+\sysdevice provides eBPF-style uprobe and uretprobe hooks for GPU-related
 user-level functions, enabling bcc-style observability tools and higher-level
 policy logic without modifying applications. Developers attach eBPF programs to
 function entry and exit to collect metrics such as per-call latency, counts, or
 arguments, using standard eBPF maps.
 
-At kernel launch time, gbpf optionally JIT-translates these handlers to device
+At kernel launch time, \sys optionally JIT-translates these handlers to device
 code and injects entry and exit trampolines so that the same logic can run on
 the GPU, recording per-warp timestamps or counters directly into shared maps.
 This lifts the Linux uprobe semantics onto devices while retaining the ability
@@ -67,13 +70,19 @@ to enable or disable instrumentation at runtime without relaunching applications
 
 \subsubsection{Code generation and trampolines}
 
-When an eBPF section is attached to a device-side hook type, gbpf translates the
-verified bytecode into GPU-executable code using a just-in-time compiler. On our
-prototype systems we target PTX, which provides a stable virtual ISA and allows
+When an eBPF section is attached to a device-side hook type, \sys translates the
+verified bytecode into GPU-executable code using a userspace just-in-time compiler.
+This compiler is built on the infrastructure of bpftime~\cite{bpftime}, using its LLVM-based
+JIT libraries to generate target code (PTX in our prototype) from eBPF instructions.
+Critically, while we leverage bpftime's compilation components, \sys does not employ a
+userspace eBPF runtime for execution; instead, the userspace component acts purely as a loader
+and compiler. It prepares the GPU binaries and injects them, while the eBPF logic itself
+executes either in the kernel (host side) or on the GPU (device side).
+On our prototype systems we target PTX, which provides a stable virtual ISA and allows
 architecture-specific optimization; common eBPF idioms such as map lookups and
 updates are lowered to PTX sequences.
 
-To invoke translated code from kernels without recompilation, gbpf inserts small
+To invoke translated code from kernels without recompilation, \sys inserts small
 trampolines at kernel entry, sampled memory operation sites, and selected
 synchronization or phase boundaries. At launch time we patch branch targets so
 that, when execution reaches a hook site, control jumps to the trampoline. Each
@@ -83,11 +92,11 @@ restores state to resume the original control flow. The trampoline generator
 handles label resolution, register allocation, and necessary synchronization
 primitives. In our microbenchmarks, per-invocation overhead stays below one
 microsecond. The runtime is transparent to CUDA applications and can coexist
-with CUPTI and NVBit; all injected code is confined to the gbpf domain.
+with CUPTI and NVBit; all injected code is confined to the \sys domain.
 
 \subsubsection{Sandbox and resource bounding}
 
-All device-side gbpf code executes inside a lightweight sandbox. At load time,
+All device-side \sys code executes inside a lightweight sandbox. At load time,
 we derive bounds on instruction count, register usage, and stack depth per
 invocation from the host-side verifier and encode them into the generated code.
 The sandbox restricts memory accesses to designated shared regions (eBPF maps
@@ -101,7 +110,7 @@ driver state, or impose unbounded latency on performance-critical paths.
 
 \subsubsection{SIMT-specific optimizations}
 
-To execute scalar policy logic efficiently on a SIMT architecture, gbpf aggregates
+To execute scalar policy logic efficiently on a SIMT architecture, \sys aggregates
 execution at warp granularity. When a device hook fires, a designated lane (typically
 lane 0) in the warp executes the eBPF handler, while other lanes either remain idle
 or contribute minimal input via warp-level primitives such as shuffle instructions.
@@ -119,22 +128,22 @@ For scheduling policies, we implement a thread-block scheduler that models each
 kernel as a collection of work units (for example tiles or logical block indices)
 consumed by persistent worker blocks. On recent NVIDIA GPUs we map this to cluster
 launch control, which treats a grid of blocks as cancellable work units. Each worker
-processes its current unit, invokes a device-side gbpf handler (running in one lane)
+processes its current unit, invokes a device-side \sys handler (running in one lane)
 to select or approve the next work unit based on shared maps encoding per-tenant
 priorities, global queue state, and per-block progress, and uses the cluster API to
-claim or release indices. Progress and behavior probes implemented with gbpf
+claim or release indices. Progress and behavior probes implemented with \sys
 trampolines at kernel entry and annotated phase boundaries record per-warp or
 per-block iteration counts, phase identifiers, and simple classification signals
 (such as memory-bound versus compute-bound phases) into shared maps that are
 visible to both device and host schedulers. All device-side scheduling logic is
-subject to the same sandbox and bounded-execution constraints as other gbpf code.
+subject to the same sandbox and bounded-execution constraints as other \sys code.
 
 \subsection{Cross-domain State and Synchronization}
 \label{sec:impl-state}
 
 \subsubsection{Shared maps and allocation}
 
-gbpf uses eBPF maps as the unified state abstraction across host and device. We
+\sys uses eBPF maps as the unified state abstraction across host and device. We
 allocate maps and coordination buffers in memory regions accessible to CPU and GPU,
 avoiding explicit marshalling. On our NVIDIA prototypes we use managed shared
 memory so that map contents are addressable in both contexts. Maps store policy
@@ -171,4 +180,4 @@ static inline void memsys_bar_cpu(cudaStream_t stream = 0) {
 Persistent kernels invoke \texttt{memsys\_bar\_gpu()} before reading state that the
 host may have updated; host code invokes \texttt{memsys\_bar\_cpu()} after writing
 maps that device-side handlers will consume. These abstractions centralize tuning
-and simplify reasoning about CPU–GPU synchronization for gbpf policies.
+and simplify reasoning about CPU–GPU synchronization for \sys policies.
