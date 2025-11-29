@@ -3,14 +3,7 @@
 
 \subsection{Components Overview}
 
-\sys is implemented as a set of extensions to the NVIDIA Open GPU Kernel Modules
-and a device-side runtime that executes verified eBPF code inside GPU kernels.
-On the host, \sys adds struct\_ops-style callbacks in the memory management and
-scheduling paths and exposes a user-space control-plane API and a \sysdevice
-interface. In the GPU, \sys integrates a JIT that translates verified eBPF
-bytecode to device code, a trampoline mechanism for invoking translated snippets
-from kernels, and a sandbox runtime that enforces bounded execution and resource
-isolation. Both sides access shared eBPF maps in memory visible to CPU and GPU.
+Our prototype extends Linux 6.15 with a small \sys kernel module ($\sim$1 KLOC) and a lightweight integration into NVIDIA’s open GPU kernel modules ($\sim$100 LOC changed across UVM and scheduler code). These changes register new eBPF program types, hook contexts, and kfuncs, and wire struct\_ops tables into the GPU memory and scheduling paths (§4.1–§4.2). The userspace control plane and loader/JIT are substantially larger ($\sim$10 KLOC), implemented by extending bpftime’s loader infrastructure. We use bpftime only as a library to intercept eBPF program loads, extract verifier‑accepted bytecode and BTF metadata, and drive our GPU offload pipeline; we do not run a userspace eBPF runtime. Finally, our eBPF$\rightarrow$PTX/SPIR‑V backend, built on LLVM, consists of $\sim$1 KLOC of lowering code that translates the restricted \sys eBPF subset into device code.
 
 \subsection{Host-side Integration}
 \label{sec:impl-host}
