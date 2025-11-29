@@ -3,13 +3,13 @@
 
 \usepackage{usenix}
 
-% === 你原来的功能性宏包（按依赖顺序稍作整理） ===
+% === Functional packages (reordered by dependency) ===
 \usepackage{float}
 \usepackage{amsmath}
 \usepackage{xspace}
 \usepackage{siunitx}
 \usepackage{enumitem}
-\usepackage{listings}   % 虽然你主要用 minted，但保留无妨
+\usepackage{listings}
 \usepackage{minted}
 \usepackage{tikz}
 \usetikzlibrary{shapes,arrows,positioning,fit}
@@ -18,10 +18,10 @@
 \usepackage{url}
 \usepackage{comment}
 
-% 超链接务必尽量靠后加载
+% Hyperlinks should be loaded as late as possible
 \usepackage{hyperref}
 
-% cleveref 在 hyperref 之后加载更稳妥
+% cleveref is more stable when loaded after hyperref
 \usepackage{cleveref}
 
 % === minted 设置 ===
@@ -31,6 +31,7 @@
   \setlength\mintednumbersep{\parindent}%
   \addtolength\mintednumbersep{-\wd0}%
 }
+% Set width of line numbers to align code and line numbers
 
 \setminted{xleftmargin=\parindent}
 \setminted{numbersep=\mintednumbersep}
@@ -38,7 +39,7 @@
 \setminted{linenos}
 \setminted{fontsize=\small}
 
-% === 你的命令 ===
+% === Your commands ===
 \newcommand*\circled[1]{\tikz[baseline=(char.base)]{
   \node[shape=circle,draw=black!80,line width=0.2mm,inner sep=0.1pt] (char) {#1};}}
 
@@ -83,7 +84,7 @@
       \setlength{\itemsep}{1pt}}}
   {\end{list}}
 
-% 内部批注（提交版记得全部注释掉）
+% Internal annotations (comment out for submission)
 \newcommand{\grumbler}[3]{\noindent{\color{#1}{\bf \fbox{#2}} {\it #3}}}
 \newcommand{\arq}[1]{\grumbler{red}{ARQ}{#1}}
 \newcommand{\yy}[1]{\grumbler{blue}{YY}{#1}}
@@ -97,7 +98,7 @@
 
 \pagestyle{plain}
 
-% 不打印日期
+% Do not print date
 \date{}
 
 
@@ -109,17 +110,17 @@
 
 \maketitle
 
-% === 你原来的结构 ===
+% === Original structure ===
 \input{tex/intro}
 \input{tex/background}
 \input{tex/design}
 \input{tex/implementation}
-\input{tex/usecase}
+% \input{tex/usecase}
 \input{tex/eval}
 \input{tex/related-work}
 \input{tex/conclusion}
 
-% 参考文献：USENIX 模板通常用 plain 或 abbrvnat 等
+% References: USENIX templates usually use plain or abbrvnat etc.
 \bibliographystyle{plain}
 \bibliography{cite}
 
