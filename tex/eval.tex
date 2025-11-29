@@ -31,9 +31,9 @@ well as framework-managed offloading where applicable.
 \subsubsection{Application workloads}
 \label{sec:eval-app-workloads}
 
-We use four unmodified GPU applications to evaluate \sys under realistic
+We use four unmodified GPU applications from pre-release to evaluate \sys under realistic
 end-to-end workloads. In all cases, \sys attaches via runtime and kernel driver
-instrumentation; we do not modify application or framework source code.
+instrumentation; application and framework binaries are unchanged and does not require recompilation.
 
 \paragraph{PyTorch.}
 We use PyTorch for both inference and training workloads. For RQ1, we run a
@@ -41,17 +41,17 @@ ResNet model on ImageNet-sized batches to measure end-to-end inference latency
 under \sys and the PyTorch profiler (CUPTI+NVTX). For RQ4, we use PyTorch-based
 GNN training under 1.5$\times$ GPU memory oversubscription to study the impact
 of programmable UVM policies on epoch time. \sys is loaded as a runtime
-extension and instruments CUDA kernels without changes to
-the PyTorch code, models, or training loops.
+extension and instruments CUDA kernels without changes to the PyTorch code,
+models, or training loops.
 
 \paragraph{\texttt{llama.cpp}.}
 We use the GPT-OSS-120B configuration in \texttt{llama.cpp} to evaluate expert
-offload policies (RQ4). The model is approximately 60~GB on an
-RTX~5090 with 32~GB of device memory, so inference runs in oversubscribed mode
-with UVM and the framework's built-in offload support. \sys attaches
-transparently at the driver level and via device-side handlers that tag expert
-regions as ``hot'' or ``cold''. We do not modify \texttt{llama.cpp} itself or
-its model implementation.
+offload policies (RQ4). The model is approximately 60~GB on an RTX~5090 with
+32~GB of device memory, so inference runs in oversubscribed mode with UVM and
+the framework's built-in offload support. \sys attaches
+transparently at the driver level and
+via device-side handlers that tag expert regions as ``hot'' or ``cold'' and
+drive prefetch/eviction decisions.
 
 \paragraph{vLLM.}
 We evaluate vLLM on a 30B FP8 MoE model to study KV-cache placement and
@@ -59,7 +59,7 @@ offloading policies (RQ4) under realistic serving loads. We use a ShareGPT
 benchmark with 100 requests and around 30 concurrent requests to stress KV-cache
 growth and reuse. \sys runs alongside vLLM with UVM enabled and implements
 sequential prefetch and eviction policies for KV-cache segments via callbacks
-and GPU handlers. vLLM's source code and serving pipeline are left unchanged.
+and GPU handlers.
 
 \paragraph{Faiss.}
 We integrate \sys with the GPU backend of Faiss to evaluate vector search with
@@ -67,8 +67,7 @@ oversubscribed indices (RQ4). We consider both index build and query workloads
 where the index does not fit in device memory and UVM migrates index pages over
 PCIe. \sys observes and steers index-segment placement by instrumenting GPU
 memory operations and monitoring PCIe traffic, keeping frequently accessed
-centroids and posting lists resident while demoting cold segments. The Faiss
-library and application code are not modified.
+centroids and posting lists resident while demoting cold segments.
 
 \subsection{RQ1: Runtime Overhead vs Existing Tools}
 
@@ -168,43 +167,34 @@ live instrumentation without interrupting execution.
 \subsection{RQ4: Programmable Memory Management}
 
 We now evaluate \sys's memory policy interface on the application workloads
-introduced in Section~\ref{sec:eval-app-workloads}, focusing on offloading
+introduced in Section~\ref{sec:eval-app-workloads}, focusing on oversubscribed
 setups where memory placement and prefetching dominate performance.
 
 \paragraph{LLM inference: expert and KV-cache offload.}
-We next study large-model inference workloads where offloading model state and
-KV-cache drives performance.
+For the GPT-OSS-120B model in \texttt{llama.cpp}, a \sys policy that triggers a
+max-prefetch strategy on GPU-side memory events (prefetching additional experts
+when entering an expert region and evicting based on expert-level hotness)
+improves throughput by up to 5$\times$ compared to default UVM and the
+framework's own offloading, under the oversubscribed configuration described in
+Section~\ref{sec:eval-app-workloads}. This policy is expressed as eBPF callbacks
+in the driver plus device-side handlers that mark expert regions as
+``will-use soon'' or ``cold'' without modifying the application.
 
-For a GPT-OSS-120B model (approximately 60~GB) on an RTX~5090 (32~GB), we run
-\texttt{llama.cpp} under oversubscribed memory using UVM and its existing framework
-offload support as baselines. A simple \sys policy that triggers a max-prefetch
-strategy on GPU-side memory events (prefetching additional experts when entering
-an expert region and evicting based on expert-level hotness) improves throughput
-by up to 5$\times$ compared to default UVM and the framework's own offloading.
-This policy is expressed as eBPF callbacks in the driver plus device-side handlers
-that mark expert regions as ``will-use soon'' or ``cold'' without modifying the
-application.
-
-We then evaluate vLLM on a 30B FP8 MoE model (about 30~GB) on the same GPU.
-Without offloading, the model does not fit. We compare vLLM's own CPU-offload
-mode (no UVM, \texttt{--cpu-offload-gb 8}) against \sys, which runs vLLM with
-UVM and a simple sequential prefetch policy for KV-cache segments. Using the
-standard ShareGPT benchmark with 100 requests and around 30 requests in parallel,
-\sys improves mean and p99 time-to-first-token by 1.7--2$\times$ and decoding
-throughput by about 1.3$\times$ over vLLM's framework-managed offload. Simply
-enabling UVM without \sys policies performs worse than vLLM's own offload; the
-\sys configuration is roughly 2--3$\times$ faster than this UVM-only baseline.
+On the vLLM 30B FP8 MoE model, we compare vLLM's own CPU-offload mode (no UVM,
+\texttt{--cpu-offload-gb 8}) against \sys, which runs vLLM with UVM and a
+simple sequential prefetch policy for KV-cache segments. Using the ShareGPT
+benchmark from Section~\ref{sec:eval-app-workloads}, \sys improves mean and p99
+time-to-first-token by 1.7--2$\times$ and decoding throughput by about
+1.3$\times$ over vLLM's framework-managed offload. Simply enabling UVM without
+\sys policies performs worse than vLLM's own offload; the \sys configuration is
+roughly 2--3$\times$ faster than this UVM-only baseline.
 
 \paragraph{Vector search and GNN training.}
-We integrate \sys with Faiss for vector search and with PyTorch for GNN training,
-using UVM-based oversubscription.
-
-For Faiss, we evaluate index build and query latency when the index does not fit
-in device memory. A \sys policy that adaptively prefetches index segments based
+For Faiss, a \sys policy that adaptively prefetches index segments based
 on observed PCIe traffic and access streams reduces index build time by about
-1.5$\times$ compared to default UVM behavior. Query workloads see similar
-benefits from keeping frequently accessed centroids and posting lists resident
-and demoting cold segments.
+1.5$\times$ compared to default UVM behavior when the index does not fit in
+device memory. Query workloads see similar benefits from keeping frequently
+accessed centroids and posting lists resident and demoting cold segments.
 
 For GNN workloads, we run PyTorch-based training under 1.5$\times$
 oversubscription of GPU memory. With default UVM, epoch time is around 71~s.
