@@ -5,7 +5,7 @@ Extending eBPF programmability to GPUs introduces fundamental challenges arising
 
 \subsection{C1: Safe and Efficient Driver Extensibility}
 
-GPU drivers, such as NVIDIA's open GPU kernel modules, are large, monolithic codebases tightly integrating low-level hardware mechanisms and resource-management policies. Unlike Linux kernel subsystems explicitly designed with stable eBPF extension points (e.g., \texttt{struct_ops}), GPU drivers today do not provide interfaces intended for safe policy programmability.
+GPU drivers, such as NVIDIA's open GPU kernel modules, are large, monolithic codebases tightly integrating low-level hardware mechanisms and resource-management policies. Unlike Linux kernel subsystems explicitly designed with stable eBPF extension points (e.g., \texttt{struct\_ops}), GPU drivers today do not provide interfaces intended for safe policy programmability.
 
 \paragraph{Deep mechanism-policy coupling.}
 Critical decisions involving memory migration, prefetching, and kernel scheduling are deeply embedded within vendor-specific logic such as MMU page fault handlers and interrupt delivery paths. Introducing stable and efficient attach points for programmable policies without violating hardware invariants or introducing excessive latency overhead is challenging.
@@ -21,7 +21,7 @@ Standard eBPF is designed for scalar, single-threaded execution on CPUs, but GPU
 Naively mapping scalar eBPF handlers to GPU threads introduces severe warp divergence and serialization overhead, significantly degrading GPU throughput and occupancy. For example, directly executing scalar policy logic independently on all 32 threads in a warp can increase instruction divergence by up to 32$\times$ and drastically reduce kernel performance.
 
 \paragraph{Complex GPU memory hierarchies.}
-GPU architectures feature complex memory hierarchies (e.g., per-thread registers, shared memory, L2 caches, global memory) and weak memory consistency semantics (\texttt{__threadfence_system}). Verifying memory safety under thousands of concurrent warp accesses poses verification challenges fundamentally unaddressed by existing CPU-side eBPF tools.
+GPU architectures feature complex memory hierarchies (e.g., per-thread registers, shared memory, L2 caches, global memory) and weak memory consistency semantics (\texttt{\_\_threadfence\_system}). Verifying memory safety under thousands of concurrent warp accesses poses verification challenges fundamentally unaddressed by existing CPU-side eBPF tools.
 
 \paragraph{No runtime error recovery.}
 GPU kernels execute within flat address spaces without isolation or kernel-level runtime recovery mechanisms. Policy errors, such as infinite loops or invalid memory accesses, directly cause unrecoverable hardware stalls affecting entire GPUs. Hence, bounded execution and memory safety guarantees must be statically enforced at compile time, without any runtime recovery.
