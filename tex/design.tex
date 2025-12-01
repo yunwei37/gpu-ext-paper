@@ -12,7 +12,7 @@
 All \sys policies, whether running in the OS kernel or inside GPU kernels, are written in the same restricted eBPF IR and use the same abstractions. A single control plane loads, verifies, and attaches eBPF programs, configures shared maps, and coordinates their lifecycle. This sacrifices some expressiveness compared to arbitrary CUDA code (e.g., direct kernel manipulations), but eliminates cross-layer fragmentation and makes it straightforward to split a policy across host and device.
 
 \paragraph{Principle 3: Safety and efficiency through verified bounded execution and interfaces}
-\sys only executes policy code that is expressed in a restricted eBPF subset and accepted by the in-kernel verifier, each type with certain budget and capabilities like kfunc. It's much more important and challenge on GPU that we need to aware the SIMT model, for both efficiency and Safety, since the eBPF bytecode and verifier is not design for it. This design intentionally trades policy expressiveness for strong guarantees and efficiency: policy handlers cannot hang the GPU, corrupt driver or application memory, introduce unbounded latency on critical paths or use too much resource that hurt the application.
+\sys only executes policy code that is expressed in a restricted eBPF subset and accepted by the in-kernel verifier, each type with certain kfunc. It's much more important and challenge on GPU that we need to aware the SIMT model and the multi-layer nature of memory, for both efficiency and Safety, since the eBPF bytecode and verifier is not design for it. This design intentionally trades policy expressiveness for strong guarantees and efficiency: policy handlers cannot hang the GPU, corrupt driver or application memory, introduce unbounded latency on critical paths or use too much resource that hurt the application.
 
 \subsection{High-Level Architecture}
 \label{sec:arch}
@@ -89,10 +89,12 @@ The driver side is simple, we simply use the kernel's eBPF verifier, checks that
 Besides this, 
 
 So, we explictly extend kernel eBPF verifier through kernel module to:
-1. use conservative work budgets for execution instructions, memory useage, and memory access count per instructions, to avoid memory bandwidth overlord
-2. avoid sync 
+1. use conservative work budgets for execution instructions, memory useage, and memory access count per instructions, to avoid memory bandwidth overlord. Define per-program-type budgets that reflect how often hooks fire and what overhead you can tolerate, e.g. insn_bound ≤ B_max_prog_type, map_ops ≤ M_max_prog_type, branch < M_max_prog_type
+2. avoid sync and atomic, global barriers or device-wide synchronization, ban the eBPF instructions
 3. enforce the new and GPU specific helpers
 3. what is more ?
+
+There is no runtime sandbox; if the program gets past the verifier, it runs natively on GPU; if it doesn’t, it never gets loaded.
 
 \paragraph{SIMT aware optimization}
 
