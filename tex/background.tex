@@ -6,6 +6,13 @@ Modern GPU-centric systems, ranging from single-node dense servers to disaggrega
 
 \subsection{GPU Systems Architecture}
 
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{img/motivation_silos.pdf}
+    \caption{The \textbf{Control Loop Gap} in modern GPU stacks. User-space applications possess rich semantic information (e.g., SLAs) but lack hardware control (\textbf{Semantic Gap}), while the GPU device holds fine-grained execution state (e.g., warp stalls) that is invisible to the driver (\textbf{Observability Gap}). The OS driver, acting as the narrow waist, is forced to make decisions using "one-size-fits-all" policies without visibility into either layer.}
+    \label{fig:motivation_silos}
+\end{figure}
+
 % need a better figure
 
 \paragraph{User-Space Logic (Applications \& Runtimes)}
