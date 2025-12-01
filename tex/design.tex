@@ -1,3 +1,36 @@
+\section{Challenges}
+\label{sec:challenges}
+
+Designing a unified programmable policy substrate across GPU driver and device contexts introduces unique challenges absent in CPU-only eBPF environments. We identify three fundamental challenges that must be addressed:
+
+\subsection{C1: Safe and Efficient Driver Extensibility}
+
+Modern GPU drivers (e.g., NVIDIA's open kernel modules) tightly couple critical hardware mechanisms—such as MMU page faults, interrupt handling, and command submission—with internal, opaque policy decisions. This tight coupling creates two core difficulties:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Identifying stable, low-overhead extension points.} Abstracting internal driver mechanisms into safe attach points is challenging due to strict latency constraints, hardware state machine complexities, and frequent vendor-specific changes.
+  \item \textbf{Ensuring driver integrity.} Injected policy logic in driver contexts can cause GPU stalls or corruption if mishandling hardware events or resources. Thus, we must design mechanisms ensuring memory safety and bounded execution at driver-level.
+\end{itemize}
+
+\subsection{C2: SIMT-Aware Device-Side Execution}
+
+eBPF's scalar, single-threaded execution model does not naturally map onto GPUs' SIMT architecture, leading to critical challenges:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Scalar model mismatch and divergence overhead.} Direct scalar policy execution per GPU thread leads to severe warp divergence, serialization, and catastrophic performance degradation. A GPU-specific semantic model (e.g., warp-uniform semantics) is required.
+  \item \textbf{Parallel memory verification complexity.} GPU memory hierarchies (register/shared/global memory) and weak consistency models (\texttt{\_\_threadfence\_system}) differ substantially from CPU's coherent memory model, complicating static verification of concurrent accesses.
+  \item \textbf{Absence of runtime isolation or recovery.} GPU kernels lack OS-level isolation or runtime protection mechanisms. Any verification gaps, such as infinite loops or out-of-bound accesses, risk catastrophic device failures. Consequently, GPU policy verification must be completely static, without runtime safeguards.
+\end{itemize}
+
+\subsection{C3: Unified Cross-Layer State Management}
+
+Coherent coordination between GPU driver-side and device-side policies faces inherent challenges in latency, consistency, and asynchrony:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Memory placement tradeoffs.} Naively sharing policy state across host memory, GPU global memory, or GPU local caches introduces high latency, cache contention, or bandwidth exhaustion. Effective policies must automatically and intelligently manage hierarchical state placement.
+  \item \textbf{Consistency of cross-layer decisions.} Cross-layer policy decisions (e.g., device-side page access tracking informing host-side eviction) risk inconsistency if host and device lack explicitly defined consistency guarantees or synchronization abstractions.
+  \item \textbf{Host-device asynchronous correlation.} The GPU pipeline's asynchronous nature complicates correlating low-level device events (e.g., memory access signals) with higher-level host events (e.g., kernel scheduling or memory migration). Thus, new cross-layer abstractions for consistent, low-overhead state correlation are needed.
+\end{itemize}
 
 \section{\sys Design}
 
