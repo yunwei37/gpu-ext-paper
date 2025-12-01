@@ -4,15 +4,11 @@
 We evaluate \sys along five questions:
 
 \begin{itemize}[leftmargin=*]
-  \item \textbf{RQ1:} What is the runtime overhead of the \sys runtime compared
-        to existing GPU instrumentation frameworks?
-  \item \textbf{RQ2:} How efficiently can \sys maintain shared state across the
-        CPU--GPU boundary?
-  \item \textbf{RQ3:} Can \sys express practical GPU observability tools with
-        significantly lower overhead than CUPTI and NVBit?
-  \item \textbf{RQ4:} Can \sys-based memory policies improve performance over
+  \item \textbf{RQ1:} What is the runtime overhead of \sys's core mechanisms and
+        observability tools compared to existing approaches?
+  \item \textbf{RQ2:} Can \sys-based memory policies improve performance over
         framework-managed offloading and default UVM across realistic workloads?
-  \item \textbf{RQ5:} Can \sys-based scheduling policies provide tangible gains
+  \item \textbf{RQ3:} Can \sys-based scheduling policies provide tangible gains
         in tail latency and throughput in multi-tenant workloads?
 \end{itemize}
 
@@ -38,7 +34,7 @@ instrumentation; application and framework binaries are unchanged and does not r
 \paragraph{PyTorch.}
 We use PyTorch for both inference and training workloads. For RQ1, we run a
 ResNet model on ImageNet-sized batches to measure end-to-end inference latency
-under \sys and the PyTorch profiler (CUPTI+NVTX). For RQ4, we use PyTorch-based
+under \sys and the PyTorch profiler (CUPTI+NVTX). For RQ2, we use PyTorch-based
 GNN training under 1.5$\times$ GPU memory oversubscription to study the impact
 of programmable UVM policies on epoch time. \sys is loaded as a runtime
 extension and instruments CUDA kernels without changes to the PyTorch code,
@@ -46,7 +42,7 @@ models, or training loops.
 
 \paragraph{\texttt{llama.cpp}.}
 We use the GPT-OSS-120B configuration in \texttt{llama.cpp} to evaluate expert
-offload policies (RQ4). The model is approximately 60~GB on an RTX~5090 with
+offload policies (RQ2). The model is approximately 60~GB on an RTX~5090 with
 32~GB of device memory, so inference runs in oversubscribed mode with UVM and
 the framework's built-in offload support. \sys attaches
 transparently at the driver level and
@@ -55,7 +51,7 @@ drive prefetch/eviction decisions.
 
 \paragraph{vLLM.}
 We evaluate vLLM on a 30B FP8 MoE model to study KV-cache placement and
-offloading policies (RQ4) under realistic serving loads. We use a ShareGPT
+offloading policies (RQ2) under realistic serving loads. We use a ShareGPT
 benchmark with 100 requests and around 30 concurrent requests to stress KV-cache
 growth and reuse. \sys runs alongside vLLM with UVM enabled and implements
 sequential prefetch and eviction policies for KV-cache segments via callbacks
@@ -63,13 +59,20 @@ and GPU handlers.
 
 \paragraph{Faiss.}
 We integrate \sys with the GPU backend of Faiss to evaluate vector search with
-oversubscribed indices (RQ4). We consider both index build and query workloads
+oversubscribed indices (RQ2). We consider both index build and query workloads
 where the index does not fit in device memory and UVM migrates index pages over
 PCIe. \sys observes and steers index-segment placement by instrumenting GPU
 memory operations and monitoring PCIe traffic, keeping frequently accessed
 centroids and posting lists resident while demoting cold segments.
 
-\subsection{RQ1: Runtime Overhead vs Existing Tools}
+\subsection{RQ1: Runtime Overhead and Observability}
+
+We evaluate the efficiency of \sys's core mechanisms and its observability
+capabilities. We first quantify the base runtime overhead and shared state costs,
+then demonstrate that \sys enables practical observability tools with
+significantly lower overhead than existing frameworks.
+
+\subsubsection{Runtime and Shared State Overhead}
 
 We first quantify the overhead of the \sys runtime itself, independent of any
 specific policy logic. We use two microbenchmarks:
@@ -104,8 +107,6 @@ keep overhead low.
 \label{fig:resnet-latency}
 \end{figure}
 
-\subsection{RQ2: Shared State and Cross-domain Overheads}
-
 Next, we measure the cost of maintaining shared state between CPU and GPU via
 \sys maps. We benchmark shared-memory bandwidth and one-way latency on both
 servers using a 1~GiB region and GPU-to-CPU and CPU-to-GPU access patterns.
@@ -116,7 +117,7 @@ the frequency of cross-domain synchronization. We see this in the use cases
 below, where policy and observability overhead remains in the low single-digit
 percent range.
 
-\subsection{RQ3: Low-overhead GPU Observability}
+\subsubsection{Low-overhead GPU Observability}
 
 We evaluate the suite of bcc-style observability tools built on \sys, measuring
 accuracy, overhead, and practical utility across diverse workloads.
@@ -164,7 +165,7 @@ live instrumentation without interrupting execution.
 \label{fig:obs-comparison}
 \end{figure}
 
-\subsection{RQ4: Programmable Memory Management}
+\subsection{RQ2: Programmable Memory Management}
 
 We now evaluate \sys's memory policy interface on the application workloads
 introduced in Section~\ref{sec:eval-app-workloads}, focusing on oversubscribed
@@ -212,7 +213,7 @@ structure (experts, KV-cache, graph structure, index layout) that existing UVM
 policies and framework-level offload mechanisms cannot leverage without invasive
 changes.
 
-\subsection{RQ5: Fine-grain Scheduling}
+\subsection{RQ3: Fine-grain Scheduling}
 
 We finally evaluate \sys's scheduling interface using priority-based policies on
 mixed workloads that combine high-priority latency-sensitive kernels with

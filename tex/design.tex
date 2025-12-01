@@ -64,50 +64,10 @@ Shared eBPF maps store policy-relevant state including counters, histograms, per
 
 A \sys policy also includes a dedicated user-space control-plane component responsible for lifecycle management, dynamic reconfiguration, and policy introspection. This component instantiates and manages eBPF maps, and attaches policy sections to defined host and GPU device hook points exposed by \sysdriver and GPU-side runtime. It enables dynamic reconfiguration of deployed policies at runtime by updating parameters (e.g., thresholds, sampling rates, eviction aggressiveness, power caps) stored in shared maps, and facilitates swapping or updating of attached policy logic without restarting applications or kernels. Furthermore, the control-plane application continuously monitors policy operation by reading metrics and state from maps, such as memory hotness counters, per-tenant scheduling metrics, and queueing latencies—and exports this information to external observability frameworks or adaptation controllers. Thus, from a developer's perspective, a complete \sys policy application comprises policy logic for both CPU and GPU execution contexts along with a complementary control-plane component orchestrating policy behavior and evolution over time.
 
-\subsection{\sys GPU device SIMT specific verification and optimizations}
-\label{sec:prog-model}
+\subsection{Policy Interfaces}
+\label{sec:design-interfaces}
 
-The CPU‑side verifier and bytecode under a model where
-Execution is single‑threaded, under high frequency CPU, can efficiency handle multiple branch and memory access, Memory accesses go through helpers/maps with specific semantics.
-
-simply reusing eBPF verifier and JIT compiler infrastructure on GPU is challenge: it does not aware Concurrency and cross‑domain memory semantics...
-The Execution is SIMT, with many warps in parallel.The memory model (UM, CUDA, __threadfence_system) is different.You’re re‑implementing helpers (map access) yourself in PTX. Concurrent access patterns (thousands of warps + CPU) are far more intense.
-
-\paragraph{Safety Model and TCB.}
-The core challenge in programmable GPU policy is to run operator-supplied logic in privileged, latency-critical GPU driver and device paths without process-like isolation: even simple bugs can corrupt mappings, stall the device, or inflate tail latency, which even cause cluster level fault in critical training process. \sys runs operator-supplied policy code in these privileged paths. We assume the entity deploying \sys policies (e.g., a cluster operator) is trusted but fallible: policies may contain logic bugs or misconfigurations but are not malicious. Malicious kernel modules, vendor drivers, firmware, or hardware are out of scope.
-
-Under this model, the \sys TCB consists of: (1) the in-kernel eBPF verifier, (2) the \sys kernel module, (3) the device-code backend, and (4) the GPU driver/firmware. Policy authors only reason about eBPF and the \sys API; they never write PTX/SASS directly. All policies are expressed in a restricted eBPF subset and must pass the in-kernel verifier, which enforces bounded loops, stack and map safety, and restricts helpers and kfuncs to the \sys-specific set.
-
-\paragraph{SMIT aware Verification}
-
-The driver side is simple, we simply use the kernel's eBPF verifier, checks that each program uses only the \sys-specific kfuncs and hook contexts declared via BTF annotations. The kernel verifier enforce:
-1. memory safety
-2. type Safety
-3. resource safety
-4. bound and no hardware exceptions
-
-Besides this, 
-
-So, we explictly extend kernel eBPF verifier through kernel module to:
-1. use conservative work budgets for execution instructions, memory useage, and memory access count per instructions, to avoid memory bandwidth overlord. Define per-program-type budgets that reflect how often hooks fire and what overhead you can tolerate, e.g. insn_bound ≤ B_max_prog_type, map_ops ≤ M_max_prog_type, branch < M_max_prog_type
-2. avoid sync and atomic, global barriers or device-wide synchronization, ban the eBPF instructions
-3. enforce the new and GPU specific helpers
-3. what is more ?
-
-There is no runtime sandbox; if the program gets past the verifier, it runs natively on GPU; if it doesn’t, it never gets loaded.
-
-\paragraph{SIMT aware optimization}
-
-Naively executing scalar control logic across all GPU threads introduces prohibitive divergence and overhead. The \sys JIT implement a optimization pass pipeline, allow:
-To overcome this, 
-1. \sys aggregates scalar policy logic execution at warp granularity, executing decisions on a designated lane while synchronizing minimal input from other lanes. 
-2. We find a pattern that most maps does not need golabl access: mutl level map design and auto placement: Frequent global state updates are optimized through warp-level and SM-level local maps dramatically reducing contention and costly global memory operations. logically shard, but not actually shared. user can mark a map and move it from cpu/gpu memory explictly. we model the eBPF map access tp different place as distance, similar to the ideqqa of numa node, and by static analysis the access of eBPF instructions, we can calc the best place to put the maps to.
-4. so, unlike kernel ebpf, in gpu functions and maps after verification are aggressively inline to avoid call cost, and we restrict the gpu map size to fit into the register.. 
-5. since we can inline the maps and helpers, we can eliminates branch cost as much as possible by remove the if after
-6. allow user to config sampling to reduce overhead. (Do we need this?)
-Collectively, these optimizations enable efficient, scalable, and minimally invasive GPU-side policy execution suitable for production deployment.
-
-\subsection{Policy Interface for Memory}
+\subsubsection{Memory Interface}
 \label{sec:design-mem}
 
 % Modern GPU memory subsystems move data across device memory, host memory, and
@@ -115,7 +75,7 @@ Collectively, these optimizations enable efficient, scalable, and minimally inva
 % page faults or simple recency-based policies. These mechanisms neither expose their
 % decisions nor exploit workload-specific structure, and they interact poorly with
 % user-space caches that increasingly manage model weights, KV-cache segments, and
-% expert parameters. 
+% expert parameters.
 \sys treats memory placement as a programmable region
 cache: it exposes a small set of region-level events for \emph{admission},
 \emph{access}, and \emph{removal}, together with a prefetch channel, and lets host
@@ -183,7 +143,7 @@ The same device-side interface also supports \emph{HINT} events, which kernels
 invoke explicitly when they have domain knowledge about future region usage. For
 example, a mixture-of-experts kernel can compute the identifiers of experts it
 will access for the next batch and call a \sys helper with HINT events that mark
-the corresponding regions as “will-use soon” with an optional priority or deadline;
+the corresponding regions as "will-use soon" with an optional priority or deadline;
 a KV-cache kernel can emit HINT events that mark segments as cold and suitable for
 demotion. Both ACCESS and HINT events are recorded in shared maps or small control
 queues that host-side \sys handlers consult at Access, Remove, and prefetch hooks.
@@ -193,7 +153,7 @@ implements the sensing and hinting side of a closed-loop policy, while host-side
 GPU memory hierarchy.
 
 
-\subsection{Policy Interface for Scheduling}
+\subsubsection{Scheduling Interface}
 \label{sec:design-sched}
 
 GPU schedulers today typically implement fixed, coarse-grained policies such as FIFO
@@ -251,3 +211,46 @@ Together, the host-side and device-side interfaces allow \sys policies to coordi
 
 \paragraph{Example: priority-aware block scheduler.}
 As a concrete illustration, consider a policy that gives low latency to an interactive tenant while preserving throughput for batch jobs. The host keeps a per-tenant record of outstanding work and virtual time in a BPF map. \texttt{submit} tags kernels with a tenant ID and initial priority. \texttt{admit} prefers kernels from the interactive tenant when its queue is non-empty and boosts its priority when its p99 latency (tracked in another map) exceeds a target. On the device, each worker block's \texttt{entry} handler increments a per-tenant ``active blocks'' counter, and \texttt{exit} decrements it and records the work-unit completion time. When \texttt{should\_try\_steal} runs on an idle block, it uses these maps to decide whether to steal a work unit from the interactive tenant or from the batch pool. In \S\ref{sec:eval} we show that this policy reduces p99 latency by 2--5$\times$ with 8--12\% throughput loss for batch work.
+
+\subsection{\sys GPU device SIMT specific verification and optimizations}
+\label{sec:safety-model}
+
+The CPU‑side verifier and bytecode under a model where
+Execution is single‑threaded, under high frequency CPU, can efficiency handle multiple branch and memory access, Memory accesses go through helpers/maps with specific semantics.
+
+simply reusing eBPF verifier and JIT compiler infrastructure on GPU is challenge: it does not aware Concurrency and cross‑domain memory semantics...
+The Execution is SIMT, with many warps in parallel.The memory model (UM, CUDA, __threadfence_system) is different.You're re‑implementing helpers (map access) yourself in PTX. Concurrent access patterns (thousands of warps + CPU) are far more intense.
+
+\paragraph{Safety Model and TCB.}
+The core challenge in programmable GPU policy is to run operator-supplied logic in privileged, latency-critical GPU driver and device paths without process-like isolation: even simple bugs can corrupt mappings, stall the device, or inflate tail latency, which even cause cluster level fault in critical training process. \sys runs operator-supplied policy code in these privileged paths. We assume the entity deploying \sys policies (e.g., a cluster operator) is trusted but fallible: policies may contain logic bugs or misconfigurations but are not malicious. Malicious kernel modules, vendor drivers, firmware, or hardware are out of scope.
+
+Under this model, the \sys TCB consists of: (1) the in-kernel eBPF verifier, (2) the \sys kernel module, (3) the device-code backend, and (4) the GPU driver/firmware. Policy authors only reason about eBPF and the \sys API; they never write PTX/SASS directly. All policies are expressed in a restricted eBPF subset and must pass the in-kernel verifier, which enforces bounded loops, stack and map safety, and restricts helpers and kfuncs to the \sys-specific set.
+
+\paragraph{SMIT aware Verification}
+
+The driver side is simple, we simply use the kernel's eBPF verifier, checks that each program uses only the \sys-specific kfuncs and hook contexts declared via BTF annotations. The kernel verifier enforce:
+1. memory safety
+2. type Safety
+3. resource safety
+4. bound and no hardware exceptions
+
+Besides this,
+
+So, we explictly extend kernel eBPF verifier through kernel module to:
+1. use conservative work budgets for execution instructions, memory useage, and memory access count per instructions, to avoid memory bandwidth overlord. Define per-program-type budgets that reflect how often hooks fire and what overhead you can tolerate, e.g. insn_bound ≤ B_max_prog_type, map_ops ≤ M_max_prog_type, branch < M_max_prog_type
+2. avoid sync and atomic, global barriers or device-wide synchronization, ban the eBPF instructions
+3. enforce the new and GPU specific helpers
+3. what is more ?
+
+There is no runtime sandbox; if the program gets past the verifier, it runs natively on GPU; if it doesn't, it never gets loaded.
+
+\paragraph{SIMT aware optimization}
+
+Naively executing scalar control logic across all GPU threads introduces prohibitive divergence and overhead. The \sys JIT implement a optimization pass pipeline, allow:
+To overcome this,
+1. \sys aggregates scalar policy logic execution at warp granularity, executing decisions on a designated lane while synchronizing minimal input from other lanes.
+2. We find a pattern that most maps does not need golabl access: mutl level map design and auto placement: Frequent global state updates are optimized through warp-level and SM-level local maps dramatically reducing contention and costly global memory operations. logically shard, but not actually shared. user can mark a map and move it from cpu/gpu memory explictly. we model the eBPF map access tp different place as distance, similar to the ideqqa of numa node, and by static analysis the access of eBPF instructions, we can calc the best place to put the maps to.
+4. so, unlike kernel ebpf, in gpu functions and maps after verification are aggressively inline to avoid call cost, and we restrict the gpu map size to fit into the register..
+5. since we can inline the maps and helpers, we can eliminates branch cost as much as possible by remove the if after
+6. allow user to config sampling to reduce overhead. (Do we need this?)
+Collectively, these optimizations enable efficient, scalable, and minimally invasive GPU-side policy execution suitable for production deployment.
