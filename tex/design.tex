@@ -19,7 +19,7 @@ Many GPU policies require coordinated actions spanning CPU host drivers and GPU 
 
 \subsection{Design Principles}
 
-\sys follows three fundamental design principles guiding its approach to GPU programmability, ensuring transparency, consistency, and verifiable correctness across CPU--GPU boundaries:
+\sys follows three fundamental design principles:
 
 \paragraph{Principle 1: Transparent and Dynamic Policy Programmability.}
 \sys explicitly separates stable, privileged GPU driver mechanisms from dynamically programmable policies. Instead of embedding policies in opaque vendor stacks or application-specific runtimes, \sys provides clearly-defined policy interfaces that allow dynamic updates without requiring driver modifications or invasive application changes.
@@ -86,12 +86,6 @@ A \sys policy also includes a dedicated user-space control-plane component respo
 \subsubsection{Memory Interface}
 \label{sec:design-mem}
 
-% Modern GPU memory subsystems move data across device memory, host memory, and
-% intermediate tiers using fixed, internally implemented heuristics, often tied to
-% page faults or simple recency-based policies. These mechanisms neither expose their
-% decisions nor exploit workload-specific structure, and they interact poorly with
-% user-space caches that increasingly manage model weights, KV-cache segments, and
-% expert parameters.
 \sys treats memory placement as a programmable region
 cache: it exposes a small set of region-level events for \emph{admission},
 \emph{access}, and \emph{removal}, together with a prefetch channel, and lets host
