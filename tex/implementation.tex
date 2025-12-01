@@ -4,7 +4,7 @@
 
 \subsection{Components Overview}
 
-Our prototype extends Linux 6.15 with a small core \sys kernel code source file ($\sim$1 KLOC) to register new eBPF program types, hook contexts, and kfuncs, customize the verifier to support the helper functions on GPU using dumb kfunc and struct_ops, add additional checks for GPU, and a lightweight integration into NVIDIA's open GPU kernel modules ($\sim$100 LOC changed across UVM module and nvidia.ko) to wire struct\_ops tables into the GPU memory and scheduling paths (§4.1–§4.2). The userspace loader/JIT are substantially larger ($\sim$10 KLOC), implemented by extending bpftime's loader infrastructure. Finally, our eBPF$\rightarrow$ bytecode backend, built on LLVM, consists of $\sim$1 KLOC of lowering code that translates the restricted \sys eBPF subset into device code include PTX/SPIR‑V.
+Our prototype extends Linux 6.15 with a small core \sys kernel code source file ($\sim$1 KLOC) to register new eBPF program types, hook contexts, and kfuncs, customize the verifier to support the helper functions on GPU using dumb kfunc and struct_ops, add additional checks for GPU, and a lightweight integration into NVIDIA's open GPU kernel modules ($\sim$100 LOC changed across UVM module and nvidia.ko) to wire struct\_ops tables into the GPU memory and scheduling paths (§4.1–§4.2). The userspace loader/JIT are substantially larger ($\sim$10 KLOC), implemented by extending bpftime's loader infrastructure. Finally, our eBPF$\rightarrow$ bytecode backend, built on LLVM, consists of $\sim$1 KLOC of lowering code that translates the restricted \sys eBPF subset into device code including PTX/SPIR‑V.
 
 \subsection{Host-side Integration}
 \label{sec:impl-host}
@@ -12,14 +12,12 @@ Our prototype extends Linux 6.15 with a small core \sys kernel code source file 
 \subsubsection{Driver hooks for memory and scheduling}
 
 \sys builds on the NVIDIA Open GPU Kernel Modules (Turing, Ampere, Hopper and
-Blackwell or newer) We use the UVM module for memory Ops,
-because it expose critical memory decision points such as page fault handlers,
-prefetch logic with mechaism to offload memory to CPU and manage it. and allow us to customize the kernel module behavior instead of let user bypassing all the kernel mechaism, we does not treat UVM as a whole (同质的) memory.  These implement the region-level
+Blackwell or newer) We use the UVM module for memory operations, as it exposes critical memory decision points such as page fault handlers and prefetch logic with a mechanism to offload and manage memory on the CPU. This allows us to customize the kernel module behavior instead of letting users bypass all kernel mechanisms. We do not treat UVM as a whole memory region.  These implement the region-level
 Add/Access/Remove and prefetch events from Section~\ref{sec:design-mem}. Each
 callback constructs a compact context (for example region range or fault
 address, block size) and
 invokes an attached eBPF handler. The handler 
-returns compact decisions default, bypass, whilch allow using our own logic or use kernel default logic
+returns compact decisions (default or bypass), allowing for custom logic or the use of the kernel's default logic
 
 For scheduling, we extend the kernel lifecycle code that manages GPU contexts and
 hardware queues with struct\_ops callback vectors at kernel submission, admission, and completion, implementing the interface in
@@ -60,9 +58,9 @@ to enable or disable instrumentation at runtime without relaunching applications
 \paragraph{Code generation and trampolines}
 \sys builds its GPU compiler on bpftime's loader front end: when a \sys program is verified and loaded into the kernel, the bpftime-based loader intercepts it, extracts the bytecode and BTF metadata, and hands them to a user-space backend (LLVM-based) that lowers the restricted eBPF subset to device code (PTX/SPIR-V). We disable bpftime's user-space eBPF runtime; all execution remains in the kernel (via the normal eBPF JIT) or on the GPU via our backend and runtime. 
 
-To avoid recompiling applications, \sys allow user define pipeline to patches kernels at launch with small trampolines at position like entry, sampled memory operations, and phase boundaries.
+To avoid recompiling applications, \sys allows users to define pipelines to patch kernels at launch with small trampolines at positions such as entry, sampled memory operations, and phase boundaries.
 
-a small set of runtime helpers with verifier-approved prototypes is exposed and pre-compiled to GPU device code, and link with the device code generated from ebpf bytecode.
+a small set of runtime helpers with verifier-approved prototypes is exposed and pre-compiled to GPU device code, and linked with the device code generated from eBPF bytecode.
 
 Each translated handler is wrapped in a minimal prologue/epilogue that saves and restores the designated lane's registers and predicates and runs the policy logic under these guards. 
 
@@ -83,15 +81,13 @@ rates are stored in control-plane maps and can be tuned at runtime.
 \paragraph{Hooks, helper and maps}
 
 For scheduling policies, we implement a thread-block scheduler that models each
-kernel as a collection of work units (for example tiles or logical block indices)
-consumed by persistent worker blocks. On blackwell NVIDIA GPUs we map this to cluster
-launch control\cite{}, which treats a grid of blocks as cancellable work units and enable true haredware
-wrok steal style scheduler.
+kernel as a collection of work units (e.g., tiles or logical block indices)
+consumed by persistent worker blocks. On Blackwell NVIDIA GPUs, we map this to cluster launch control\cite{}, which treats a grid of blocks as cancellable work units and enables true hardware work-stealing style scheduling.
 Each worker processes its current unit, invokes a device-side \sys handler (running in one lane)
-to select or approve the next work unit. and uses the cluster API to
+to select or approve the next work unit, and uses the cluster API to
 claim or release indices. Progress and behavior probes implemented with \sys
 trampolines at kernel entry and annotated phase boundaries. All device-side scheduling logic is
-subject to the same bounded-execution constraints as other \sys code. For memory, it can attach to memory instructions or other traacepoints, function entry/exit, and issue hint to the host with helper functions. Unlike the eGPU prototype which use fench, atmoic, their is no fence and atomic in the helper and the attach point of the ebpf extensions.
+subject to the same bounded-execution constraints as other \sys code. For memory, it can attach to memory instructions or other tracepoints, function entry/exit, and issue hints to the host with helper functions. Unlike the eGPU prototype, which used fences and atomic operations, there are no fences or atomic operations in the helpers and attach points of the eBPF extensions.
 
 \paragraph{Cross-domain State and Synchronization}
 
@@ -100,4 +96,4 @@ allocate maps and coordination buffers in memory regions accessible to CPU and G
 avoiding explicit marshalling. On our NVIDIA prototypes we use managed shared
 memory so that map contents are addressable in both contexts. Maps store policy
 state such as per-region hotness, per-tenant scheduling priorities, per-block
-progress, and counters for observability tools. unnlike eGPU place the maps entirely on cpu, which cause orohibit overhead, we allow place the maps inside the GPU register., gpu main meory or cpu.
+progress, and counters for observability tools. Unlike eGPU, which placed the maps entirely on the CPU, causing prohibitive overhead, we allow maps to be placed inside GPU registers, GPU main memory, or CPU.
