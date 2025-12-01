@@ -1,6 +1,6 @@
 \section{Background and Motivation}
 
-\subsection{The diverse of GPU-Centric Workloads}
+\subsection{The Diversity of GPU-Centric Workloads}
 
 Modern GPU-centric systems, ranging from single-node dense servers to disaggregated clusters, host a heterogeneous mix of workloads with conflicting resource requirements across the memory, compute, and network hierarchy. Generative AI inference has evolved into complex pipelines: Prefill-Decode disaggregation separates compute-intensive prompt processing from memory-bandwidth-bound token generation across networked nodes, requiring precise scheduling to minimize tail latency; KV-cache offloading dynamically spills state to host memory or CXL pools during long-context generation, oscillating between PCIe-bound and HBM-bound phases; and Mixture-of-Experts (MoE) models exhibit sparse, data-dependent activation patterns that demand low-latency paging of expert weights. Neural Network training is equally diverse: while dense distributed training relies on predictable, bulk NCCL/RDMA synchronization, Graph Neural Network (GNN) training and sparse embedding lookups generate highly irregular, pointer-chasing memory access patterns that defy standard hardware prefetchers and thrash TLBs. Vector Search engines further vary based on indexing strategies---HNSW requires low-latency random access similar to graph traversal, while IVF relies on high-throughput scanning. In multi-tenant clouds, these workloads compete for shared resources; high-priority inference services demand strict temporal isolation and millisecond-level preemption to meet Service Level Agreements (SLAs), while background batch jobs necessitate aggressive resource oversubscription to maximize total cost of ownership (TCO), creating a tension that static hardware partitioning cannot resolve. At the cluster level, a large body of schedulers such as Gandiva, Tiresias, Optimus and Astraea~\cite{gandiva,tiresias,optimus,astraea} aims to place and time-slice deep-learning jobs across GPUs, but these systems necessarily treat per-GPU resource management as a largely fixed black box.
 
@@ -16,9 +16,9 @@ frameworks such as Salus~\cite{salus} and UVM-focused runtimes like
 PILOT~\cite{pilot} likewise centralize time-sharing and memory placement
 decisions above the driver. LithOS goes even
 further by re-implementing parts of the GPU runtime stack as
-an OS component, but it's still work in userspace as a library.~\cite{lithos}.
+an OS component, but it still works in userspace as a library~\cite{lithos}.
 
-\paragraph{The One-size-fit-all Kernel Driver}
+\paragraph{The One-size-fits-all Kernel Driver}
 The OS driver serves as the
 central authority for physical resource arbitration, holding ex-
 clusive control over the Memory Management Unit (MMU),
@@ -29,7 +29,7 @@ For memory management, the driver uses generic algorithms
 (e.g., LRU eviction and tree-based prefetching in Unified Vir-
 tual Memory) that ignore workload-specific access patterns.
 For scheduling, it employs simple time-slicing (e.g., round-
-robin) to arbitrate between processes. This “blind’’ management disconnects the driver’s powerful mechanisms from the application’s semantic needs, acting as a primary bottleneck for tail latency and efficiency. Prior OS-level work such as TimeGraph and Gdev moved
+robin) to arbitrate between processes. This ``blind'' management disconnects the driver's powerful mechanisms from the application's semantic needs, acting as a primary bottleneck for tail latency and efficiency. Prior OS-level work such as TimeGraph and Gdev moved
 GPU scheduling and memory control into Linux device driv-
 ers~\cite{timegraph,gdev}, and more recent systems based on
 kernel-space interception and preemptive scheduling (e.g.,
@@ -41,7 +41,7 @@ mechanisms.
 
 
 \paragraph{Device-Side Execution}
-Actual computation occurs on the GPU device, managed by a combination of user-written kernels (Device Code) and proprietary firmware/hardware schedulers. Device code defines precise thread-level logic but is typically compiled into static binaries that cannot adapt to runtime conditions like cache thrashing. Meanwhile, the hardware scheduler manages the execution of thousands of threads (warps) but offers no programmable interface for prioritization. This creates a "context silo": the device knows exactly which threads are stalling or consuming bandwidth, but this information is trapped on the chip, inaccessible to the host driver's policy engine.
+Actual computation occurs on the GPU device, managed by a combination of user-written kernels (Device Code) and proprietary firmware/hardware schedulers. Device code defines precise thread-level logic but is typically compiled into static binaries that cannot adapt to runtime conditions like cache thrashing. Meanwhile, the hardware scheduler manages the execution of thousands of threads (warps) but offers no programmable interface for prioritization. This creates a ``context silo'': the device knows exactly which threads are stalling or consuming bandwidth, but this information is trapped on the chip, inaccessible to the host driver's policy engine.
 In summary, modern GPU stacks suffer from tight coupling between resource management mechanisms (e.g.,  page migration, kernel execution lifecycle management, performance event collection) and embedded, hard-coded policy logic within kernel modules, closed-source vendor libraries or GPU device code. This tight coupling severely restricts the ability to adapt policies to diverse and evolving workloads, inhibits rapid experimentation, and fundamentally limits the adaptability of GPU infrastructure in production environments.
 
 \subsection{Limitations of Existing Extensibility Mechanisms}
@@ -52,8 +52,8 @@ To mitigate this rigidity, developers currently resort to fragmented extensibili
 More recent serving systems like Paella, Pie and
 KTransformers explicitly expose programmable interfaces: Paella provides
 software-defined GPU scheduling for model serving~\cite{paella}, Pie lets
-developers write “inferlets’’ that program the LLM generation loop and KV-cache
-management~\cite{pie}, and KTransformers offers a flexible CPU–GPU hybrid
+developers write ``inferlets'' that program the LLM generation loop and KV-cache
+management~\cite{pie}, and KTransformers offers a flexible CPU--GPU hybrid
 inference runtime with pluggable scheduling and expert-placement
 strategies~\cite{ktransformers}. XSched, although positioned as an XPU
 scheduling framework, also implements flexible, user-defined policies on top of
@@ -62,77 +62,46 @@ are already programmable frameworks.
 
 However, all of these approaches share fundamental limitations for GPU
 resource management. 
-1. First, their programmability is \emph{framework-scoped}:
+First, their programmability is \emph{framework-scoped}:
 policies are written against a particular serving system or runtime (e.g.,
 Pie, Paella, XSched, KTransformers), and cannot be reused across arbitrary
 applications or libraries without porting those applications onto the same
-stack. They typically require modify application to integrate them.
-2. Second, they operate strictly above vendor drivers and firmware and thus
+stack. They typically require modifying the application to integrate them.
+Second, they operate strictly above vendor drivers and firmware and thus
 lack a trusted, privileged interface to global low-level mechanisms such as page
 fault handling, MMU updates, interrupt delivery, and device context
 management. As a result, user-space runtimes are forced to defensively
-“hoard’’ resources; for example, applications statically pre-allocate GPU
+``hoard'' resources; for example, applications statically pre-allocate GPU
 memory at startup to manage their KV-cache or model weights, 
-preventing dynamic sharing with other processes, and require additional framework to handle that~\cite{lmcache}. Similarly,
-Hardware partitioning techniques like MIG enforce fixed boundaries that cannot
+preventing dynamic sharing with other processes, and require additional frameworks to handle that~\cite{lmcache}. Similarly,
+hardware partitioning techniques like MIG enforce fixed boundaries that cannot
 adapt to bursty traffic.
-3. Furthermore, user-space schedulers are confined to
+Third, user-space schedulers are confined to
 \emph{intra-process} or \emph{intra-framework} decisions; they cannot mitigate
-interference from arbitrary ``noisy neighbors’’ (other tenants or frameworks) contending
+interference from arbitrary ``noisy neighbors'' (other tenants or frameworks) contending
 for global bandwidth. 
-4. Even within a single process, they are unprivileged:
+Fourth, even within a single process, they are unprivileged:
 they cannot intervene at the granularity of hardware interrupts or directly
 manipulate physical memory mappings, preventing precise compute-transfer
 overlap and true preemption, and may impose substantial performance overhead.
 Finally, deploying new policies often necessitates invasive changes to the
 serving framework and service restarts.
-More over, they cannot work on latency critical path such as page fault handler.
-5. also, tools like xsched cannot express policies that depend on warp‑level behavior (e.g., “only preempt when most blocks have passed the barrier in phase 2”) or GPU‑side access patterns feeding into a driver‑level region cache. Typicallly they require a additional compiler integration to do it, make them non transparent.
+Moreover, they cannot work on latency-critical paths such as page fault handlers.
+Also, tools like XSched cannot express policies that depend on warp-level behavior (e.g., ``only preempt when most blocks have passed the barrier in phase 2'') or GPU-side access patterns feeding into a driver-level region cache. Typically they require additional compiler integration to do it, making them non-transparent.
 In contrast, \sys aims to provide a
 \emph{framework-agnostic}, verifier-backed policy substrate in the GPU driver
 and device execution layer that such user-space systems can target, rather
 than another standalone serving framework. 
 
-
-
-% Paella already bypasses the GPU scheduler by controlling when it submits kernels. But even if you modify Paella to talk to a tiny kernel module, you still cannot:
-% Attach policies at UVM page‑fault / migration points across all frameworks.
-% Paella only sees its own kernels and its own allocator.
-% Your policies see all tenants and all frameworks at the driver boundary and can control device memory as a shared region cache.
-% To do that with Paella, you’d have to re‑implement your UVM hooks and region cache inside the driver anyway.
-% Use in‑kernel GPU instrumentation in policy loops.
-% Paella has no way to inject device‑side hooks that report warp‑level access patterns or progress; it only sees high‑level “kernel X took Y ms.”
-% Your memory and scheduling policies explicitly consume device‑generated ACCESS/HINT events and progress signals.
-% Apply policies across heterogeneous stacks transparently.
-% XSched + Paella + “a bit of kernel glue” still won’t give a consistent policy plane across PyTorch, TF, vLLM, random CUDA jobs. Your struct_ops interfaces are defined at the driver level, so any framework benefits.
-
-\paragraph{Binary Instrumentation and Profiling Tools on device}
+\paragraph{Binary Instrumentation and Profiling Tools on Device}
 Tools like NVBit~\cite{nvbit}, Neutrino~\cite{neutrino} or sanitizer frameworks allow for the injection of logic directly into GPU binaries. NVBit
 provides dynamic SASS-level binary instrumentation for NVIDIA
 GPUs~\cite{nvbit}, while Neutrino attaches programmable probes
 at the assembly layer to profile kernels at instruction granularity
 with an eBPF-like user experience~\cite{neutrino}. While offering high visibility, these tools are primarily designed for offline
 profiling rather than online policy enforcement. They lack strong safety guarantees (a
-bug crashes or hang the application), and typically operate in a read-only manner, unable to actively regulate system behavior such as memory placement or thread scheduling, allso lack privileged driver integration since many control happends on CPU, they cannot do control beyond single kernel. Using assembly directly like neutrino also llimited it's expressiveness. Recent user-space approaches like eGPU workshop paper~\cite{egpu} demo extend eBPF to GPUs for observability, limiting them to application-level instrumentation and incurring prohibitive overheads (up to $1000\times$, see \S\ref{sec:eval}).
-
-% No driver‑anchored hook model
-% eGPU attaches via CUDA runtime hooking / Frida, not UVM and kernel scheduling paths.
-% Eunomia
-% It can observe page faults and kernel launches indirectly, but it cannot own the policy at:
-% region admission/removal,
-% UVM eviction,
-% kernel admission/preemption.
-% To turn it into that, you’d have to:
-% patch the GPU driver to expose hooks,
-% design a kfunc API,
-% and build a control plane to attach policies — i.e., replicate your driver work.
-% No single verifier/IR across host + device
-% In eGPU, eBPF for GPU is handled by bpftime’s own runtime; you don’t run the kernel verifier and then reuse that same bytecode as the device IR.
-% GitHub
-% In your system, the in‑kernel eBPF verifier is the verifier for both host and device programs; the backend is trusted but dumb lowering. That’s a different safety story.
-% No guaranteed bounded work inside privileged paths
-% CUPTI/NVBit/Neutrino/eGPU run arbitrary injected PTX or user‑verified eBPF; they do not integrate with kernel‑level budgets (“this hook can run at most X instructions per invocation”) and cannot be reasoned about from kernel schedulers.
+bug crashes or hangs the application), and typically operate in a read-only manner, unable to actively regulate system behavior such as memory placement or thread scheduling. Also, they lack privileged driver integration since many controls happen on the CPU, so they cannot do control beyond a single kernel. Using assembly directly like Neutrino also limits its expressiveness. Recent user-space approaches like the eGPU workshop paper~\cite{egpu} demo extend eBPF to GPUs for observability, limiting them to application-level instrumentation and incurring prohibitive overheads (up to $1000\times$, see \S\ref{sec:eval}).
 
 \paragraph{Host-Based Kernel Programmability (CPU eBPF)}
-The systems community has successfully used eBPF to customize OS policies on CPUs (e.g., \texttt{sched\_ext}, \texttt{cache\_ext}). However, directly extending this model to GPUs faces two fundamental barriers. First, host-based eBPF treats the GPU as an opaque peripheral; it can trace driver commands but remains blind to the device's internal execution state (e.g., warp divergence), making it impossible to react to on-chip bottlenecks. Second, unlike the Linux CPU scheduler which was refactored to support \texttt{sched\_ext}, monolithic GPU drivers lack safe, programmable extension points to dynamically change it's runtime behavior. Retrofitting mechanism-policy separation into these drivers is non-trivial: resource management logic is tightly coupled with low-level hardware interactions (e.g., MMU invalidation sequences), and simply "opening" the driver risks resource leaks or hardware hangs. A new interface design is required to safely expose these privileged mechanisms without compromising kernel stability.
-In summary, these existing methods suffer from fundamental architectural limitations: host-side policies (e.g., memory management, scheduling) lack visibility into GPU-internal runtime states, while device-side policy (e.g., memory sync, thread block management, trace instrumentation) are opaque, vendor-specific, and largely inaccessible to host-side management logic. This fundamental asymmetry in policy expression and execution severely constrains the programmability, observability, and adaptability of GPU resource management.
+The systems community has successfully used eBPF to customize OS policies on CPUs (e.g., \texttt{sched\_ext}, \texttt{cache\_ext}). However, directly extending this model to GPUs faces two fundamental barriers. First, host-based eBPF treats the GPU as an opaque peripheral; it can trace driver commands but remains blind to the device's internal execution state (e.g., warp divergence), making it impossible to react to on-chip bottlenecks. Second, unlike the Linux CPU scheduler which was refactored to support \texttt{sched\_ext}, monolithic GPU drivers lack safe, programmable extension points to dynamically change their runtime behavior. Retrofitting mechanism-policy separation into these drivers is non-trivial: resource management logic is tightly coupled with low-level hardware interactions (e.g., MMU invalidation sequences), and simply ``opening'' the driver risks resource leaks or hardware hangs. A new interface design is required to safely expose these privileged mechanisms without compromising kernel stability.
+In summary, these existing methods suffer from fundamental architectural limitations: host-side policies (e.g., memory management, scheduling) lack visibility into GPU-internal runtime states, while device-side policies (e.g., memory sync, thread block management, trace instrumentation) are opaque, vendor-specific, and largely inaccessible to host-side management logic. This fundamental asymmetry in policy expression and execution severely constrains the programmability, observability, and adaptability of GPU resource management.
