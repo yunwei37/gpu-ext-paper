@@ -7,7 +7,7 @@ Modern GPU-centric systems, ranging from single-node dense servers to disaggrega
 % \xiangyu{It is OK to roughly mention these scenarios (because people might have already known). However, instead of purely saying what they are doing, we should give one central sentence: they all generate heterogeneous workload.}
 In multi-tenant clouds, these workloads compete for shared resources; high-priority inference services demand strict temporal isolation and millisecond-level preemption to meet Service Level Agreements (SLAs), while background batch jobs necessitate aggressive resource oversubscription to maximize total cost of ownership (TCO), creating a tension that static hardware partitioning cannot resolve.
 % \xiangyu{The following might need a little bit of rewriting. I do not know the relationship with the previous sentence. Does it mean the previous one needs schedulers not to treat per-GPU as black box? or treat different GPUs differently?}
-At the cluster level, a large body of schedulers such as Gandiva, Tiresias, Optimus and Astraea~\cite{gandiva,tiresias,optimus,astraea} aims to place and time-slice deep-learning jobs across GPUs, but these systems necessarily treat per-GPU resource management as a largely fixed black box.
+% \yusheng{I think we can remove them.}
 
 \subsection{GPU Systems Architecture}
 
