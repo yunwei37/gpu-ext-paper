@@ -12,7 +12,7 @@
 All \sys policies, whether running in the OS kernel or inside GPU kernels, are written in the same restricted eBPF IR and use the same abstractions. A single control plane loads, verifies, and attaches eBPF programs, configures shared maps, and coordinates their lifecycle. This sacrifices some expressiveness compared to arbitrary CUDA code (e.g., direct kernel manipulations), but eliminates cross-layer fragmentation and makes it straightforward to split a policy across host and device.
 
 \paragraph{Principle 3: Safety and efficiency through verified bounded execution and interfaces}
-\sys only executes policy code that is expressed in a restricted eBPF subset and accepted by the in-kernel verifier, each type with certain kfunc. It's much more important and challenge on GPU that we need to aware the SIMT model and the multi-layer nature of memory, for both efficiency and Safety, since the eBPF bytecode and verifier is not design for it. This design intentionally trades policy expressiveness for strong guarantees and efficiency: policy handlers cannot hang the GPU, corrupt driver or application memory, introduce unbounded latency on critical paths or use too much resource that hurt the application.
+\sys only executes policy code that is expressed in a restricted eBPF subset and accepted by the in-kernel verifier, each type with certain kfunc. This design intentionally trades policy expressiveness for strong guarantees and efficiency: policy handlers cannot hang the GPU, corrupt driver or application memory, introduce unbounded latency on critical paths or use too much resource that hurt the application.
 
 \subsection{High-Level Architecture}
 \label{sec:arch}
@@ -241,7 +241,6 @@ There is no runtime sandbox; if the program gets past the verifier, it runs nati
 \paragraph{SIMT aware optimization}
 
 Naively executing scalar control logic across all GPU threads introduces prohibitive divergence and overhead. The \sys JIT implement a optimization pass pipeline, allow:
-To overcome this,
 1. \sys aggregates scalar policy logic execution at warp granularity, executing decisions on a designated lane while synchronizing minimal input from other lanes.
 2. We find a pattern that most maps does not need golabl access: mutl level map design and auto placement: Frequent global state updates are optimized through warp-level and SM-level local maps dramatically reducing contention and costly global memory operations. logically shard, but not actually shared. user can mark a map and move it from cpu/gpu memory explictly. we model the eBPF map access tp different place as distance, similar to the ideqqa of numa node, and by static analysis the access of eBPF instructions, we can calc the best place to put the maps to.
 4. so, unlike kernel ebpf, in gpu functions and maps after verification are aggressively inline to avoid call cost, and we restrict the gpu map size to fit into the register..
