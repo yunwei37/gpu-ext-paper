@@ -5,29 +5,36 @@ Extending eBPF programmability to GPUs introduces fundamental challenges arising
 
 \subsection{C1: Safe and Efficient Driver Extensibility}
 
-GPU drivers, such as NVIDIA's open GPU kernel modules, are large, monolithic codebases tightly integrating low-level hardware mechanisms and resource-management policies. Unlike Linux kernel subsystems explicitly designed with stable eBPF extension points (e.g., \texttt{struct\_ops}), GPU drivers today do not provide interfaces intended for safe policy programmability.
+GPU drivers, such as NVIDIA's open GPU kernel modules, are large, monolithic codebases tightly integrating low-level hardware mechanisms and resource-management policies. Unlike Linux kernel subsystems explicitly designed with stable eBPF extension points (e.g., \texttt{struct_ops}), GPU drivers today do not provide interfaces intended for safe policy programmability.
 
-First, critical decisions involving memory migration, prefetching, and kernel scheduling are deeply embedded within vendor-specific logic such as MMU page fault handlers and interrupt delivery paths. Introducing stable and efficient attach points for programmable policies without violating hardware invariants or introducing excessive latency overhead is challenging.
+\paragraph{Deep mechanism-policy coupling.}
+Critical decisions involving memory migration, prefetching, and kernel scheduling are deeply embedded within vendor-specific logic such as MMU page fault handlers and interrupt delivery paths. Introducing stable and efficient attach points for programmable policies without violating hardware invariants or introducing excessive latency overhead is challenging.
 
-Second, policy logic runs directly in privileged driver contexts, which have tight latency constraints and direct control of GPU hardware state. Any logic errors, such as incorrect lock usage or inconsistent command submission, can cause device-wide stalls or node-level failures. Thus, injecting programmable policy logic must guarantee strict bounded execution, memory safety, and driver integrity.
+\paragraph{Strict driver safety requirements.}
+Policy logic runs directly in privileged driver contexts, which have tight latency constraints and direct control of GPU hardware state. Any logic errors, such as incorrect lock usage or inconsistent command submission, can cause device-wide stalls or node-level failures. Thus, injecting programmable policy logic must guarantee strict bounded execution, memory safety, and driver integrity.
 
 \subsection{C2: SIMT-Aware Device-Side Execution}
 
 Standard eBPF is designed for scalar, single-threaded execution on CPUs, but GPU kernels operate under the fundamentally different Single Instruction Multiple Threads (SIMT) execution model, creating significant programmability mismatches:
 
-First, naively mapping scalar eBPF handlers to GPU threads introduces severe warp divergence and serialization overhead, significantly degrading GPU throughput and occupancy. For example, directly executing scalar policy logic independently on all 32 threads in a warp can increase instruction divergence by up to 32$\times$ and drastically reduce kernel performance.
+\paragraph{Warp divergence overhead.}
+Naively mapping scalar eBPF handlers to GPU threads introduces severe warp divergence and serialization overhead, significantly degrading GPU throughput and occupancy. For example, directly executing scalar policy logic independently on all 32 threads in a warp can increase instruction divergence by up to 32$\times$ and drastically reduce kernel performance.
 
-Second, GPU architectures feature complex memory hierarchies (e.g., per-thread registers, shared memory, L2 caches, global memory) and weak memory consistency semantics (\texttt{\_\_threadfence\_system}). Verifying memory safety under thousands of concurrent warp accesses poses verification challenges fundamentally unaddressed by existing CPU-side eBPF tools.
+\paragraph{Complex GPU memory hierarchies.}
+GPU architectures feature complex memory hierarchies (e.g., per-thread registers, shared memory, L2 caches, global memory) and weak memory consistency semantics (\texttt{__threadfence_system}). Verifying memory safety under thousands of concurrent warp accesses poses verification challenges fundamentally unaddressed by existing CPU-side eBPF tools.
 
-Third, GPU kernels execute within flat address spaces without isolation or kernel-level runtime recovery mechanisms. Policy errors, such as infinite loops or invalid memory accesses, directly cause unrecoverable hardware stalls affecting entire GPUs. Hence, bounded execution and memory safety guarantees must be statically enforced at compile time, without any runtime recovery.
+\paragraph{No runtime error recovery.}
+GPU kernels execute within flat address spaces without isolation or kernel-level runtime recovery mechanisms. Policy errors, such as infinite loops or invalid memory accesses, directly cause unrecoverable hardware stalls affecting entire GPUs. Hence, bounded execution and memory safety guarantees must be statically enforced at compile time, without any runtime recovery.
 
 \subsection{C3: Unified Cross-Layer State and Coordination}
 
 Many GPU policies require coordinated actions spanning CPU host drivers and GPU device execution. For example, GPU-side instrumentation capturing warp-level memory accesses informs host-side memory placement and scheduling decisions. Ensuring efficient, safe, and consistent cross-layer coordination poses unique technical difficulties:
 
-First, state shared between host and device spans significantly different memory hierarchies. Placing shared maps naively in host memory introduces prohibitive latency—hundreds of microseconds per access from GPU warps—drastically impacting GPU utilization. Conversely, placing all shared state within GPU global memory risks limited capacity, bandwidth bottlenecks, and cache thrashing. Hence, a unified substrate must automatically balance latency, capacity, and access locality.
+\paragraph{Cross-boundary memory hierarchy mismatch.}
+State shared between host and device spans significantly different memory hierarchies. Placing shared maps naively in host memory introduces prohibitive latency: hundreds of microseconds per access from GPU warps, drastically impacting GPU utilization. Conversely, placing all shared state within GPU global memory risks limited capacity, bandwidth bottlenecks, and cache thrashing. Hence, a unified substrate must automatically balance latency, capacity, and access locality.
 
-Second, host driver operations and GPU execution proceed asynchronously at vastly different granularities, complicating state consistency. Without explicitly defined consistency abstractions, host-side policy decisions (e.g., page eviction or kernel scheduling) risk relying on outdated or inconsistent GPU-side signals (e.g., warp-level memory access statistics), causing incorrect memory migration or scheduling decisions and significantly reducing system effectiveness.
+\paragraph{Asynchronous execution and state consistency.}
+Host driver operations and GPU execution proceed asynchronously at vastly different granularities, complicating state consistency. Without explicitly defined consistency abstractions, host-side policy decisions (e.g., page eviction or kernel scheduling) risk relying on outdated or inconsistent GPU-side signals (e.g., warp-level memory access statistics), causing incorrect memory migration or scheduling decisions and significantly reducing system effectiveness.
 
 \section{\sys Design}
 
