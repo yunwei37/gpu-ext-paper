@@ -32,8 +32,7 @@ progress and competing work. Completion callbacks update per-tenant statistics
 and virtual time. All callbacks can be attached and detached dynamically without
 driver recompilation or node restart.
 
-On the host, \sys reuses the standard kernel eBPF verifier to ensure memory
-safety, bounded loops, stack limits, and controlled helper and map usage. We implement
+On the host, \sys reuses the standard kernel eBPF verifier. We implement
 a kernel module that extends the verification context to support our GPU-specific attach points
 and special kfuncs. This module leverages the kernel's annotation mechanisms (BTF and kfunc
 declarations) to enforce interface correctness and type safety, similar to the approach

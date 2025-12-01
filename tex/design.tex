@@ -127,9 +127,13 @@ table with typed contexts:
 \begin{minted}[highlightlines=false,fontsize=\small]{c}
 // Host-side policy callbacks for GPU memory management.
 struct gdrv_mem_ops {
+  // Called when a region is created or becomes eligible for device placement.
   int (*region_add)(struct gdrv_mem_region_add_ctx *ctx);
+  // Called when memory subsystem observes region use; decide cache hit,
   int (*region_access)(struct gdrv_mem_region_access_ctx *ctx);
+  // Called when a region is about to leave the device-resident working set.
   int (*region_remove)(struct gdrv_mem_region_remove_ctx *ctx);
+  // Called at safe points (between kernel launches, page faults) for prefetch.
   int (*prefetch)(struct gdrv_mem_prefetch_ctx *ctx);
 };
 // Host-side kfunc, operate on a block (virtual address unit) across GPU and cpu
@@ -152,26 +156,6 @@ int gdev_mem_pin_hint(struct gmem_region* r, int device_id);
 \paragraph{Host-side region events and removal.}
 On the host, \sys models memory as a set of logical regions and exposes attach points for three
 canonical cache events. To ensure safety, e.g. no region is leak or always pin, the regions is organized as a list: it's always added from the end of the list and removed from the head of the list. The eBPF program can reorder the list, preserve state and addtional data with list nodes to express complex algorithms.
-
-% make them as comments?
-% \begin{itemize}[leftmargin=*]
-%   \item \emph{Add}, when a region is created or becomes eligible for device placement.
-%         The context includes a region identifier, size, tenant identifier, and
-%         optional semantic tags (for example, read-only, streaming, or shared).
-%   \item \emph{Access}, when the memory subsystem observes use of a region and must
-%         decide whether to treat it as a cache hit, trigger migration, or bypass
-%         the cache altogether. Access events may be driven by hardware misses,
-%         by explicit runtime calls, or by higher-level cache managers built on top
-%         of \sys.
-%   \item \emph{Remove}, when a region is about to leave the device-resident working
-%         set. The context includes a cause flag and a candidate set.
-% \end{itemize}
-
-% In addition, \sys provides a \emph{prefetch hook} that runs at safe points where
-% data can be moved proactively, for example between kernel launches or at page fault. 
-% The prefetch context includes a snapshot of current region state,
-% available capacity, and the policy returns a ranked
-% list of regions to promote to device memory. 
 
 Together, these events realize a
 general region-cache interface: policies implemented as eBPF handlers maintain their
@@ -252,34 +236,18 @@ struct gdev_sched_ops {
 \paragraph{Host-side scheduling hooks.}
 On the host, \sys extends the GPU kernel lifecycle with attach points that allow
 policies to control admission, ordering, and preemption of kernels:
-% make them as comments?
-% \begin{itemize}[leftmargin=*]
-%   \item \texttt{submit} runs when a framework enqueues a kernel; the context includes kernel metadata (grid and block size), tenant or stream identifiers, and priority hints. Policies may reject kernels (e.g., enforcing admission control) or adjust their priority fields before returning.
-%   \item \texttt{admit} runs when the driver is about to dispatch a kernel to a hardware queue; it can choose among ready kernels or defer admission by returning \texttt{-1}, effectively implementing arbitrary queueing disciplines over driver queues.
-%   \item \texttt{preempt} runs at cooperative yield points or at the end of a time slice; it returns a simple action code (e.g., \texttt{CONTINUE} vs \texttt{PREEMPT}), which the driver enforces by marking the kernel preemptible and enqueueing higher-priority work.
-%   \item \texttt{complete} is a notification that cannot fail; policies use it to update per-tenant statistics, virtual time, or longer-term admission control state.
-% \end{itemize}
 
 Attached eBPF schedulers read these contexts and shared maps (for example, per-tenant
 latency and throughput statistics, outstanding work across queues) and return compact
 decisions such as which kernel to run next, whether to throttle a tenant, or whether
 to allow preemption. The host-side interface thus controls which kernels occupy GPU
 contexts and how they are multiplexed in multi-tenant scenarios.
-% make them as comments?
 \paragraph{Device-side thread-block scheduler and signals.}
 
 Inside the GPU, \sys exposes a complementary interface that operates at the level of
 thread blocks or tiles, aligning with the SIMT execution model. Each kernel that uses \sys's internal scheduler is modeled as a pool of \emph{work units} (e.g., tiles or logical block indices) consumed by \emph{worker blocks}. Device-side policies observe and steer this internal scheduler via a \texttt{gdev\_block\_ctx} that includes the kernel identifier, tenant identifier, and a logical work-unit or block identifier.
 
-% \begin{itemize}[leftmargin=*]
-%   \item \texttt{entry} is invoked (one lane per warp) when a worker block starts a new work unit. Policies can record progress or adjust per-tenant counters in BPF maps.
-%   \item \texttt{exit} runs when a work unit completes and can update per-tenant service metrics or mark a block as safe to preempt.
-%   \item \texttt{should\_try\_steal} is called when a worker becomes idle; it reads shared maps and returns whether to pull work from another queue (e.g., a high-priority tenant) or park the block.
-% \end{itemize}
-
-In addition, \sys injects lightweight probes at kernel entry and at selected synchronization or phase boundaries to record per-warp or per-block progress (for example, iterations completed in a loop, entry into a barrier-heavy phase) and simple behavioral signals such as whether a block is currently memory-bound or compute-bound. These probes write into shared maps and can mark when a block or phase is safe to preempt.
-
-All device-side handlers cannot directly manipulate hardware queues; instead, they communicate hints, progress information, and per-block decisions that host policies or the \sys runtime consume at the next host-side scheduling hook or device scheduling point. Together, the host-side and device-side interfaces allow \sys policies to coordinate decisions across the full scheduling pipeline: from kernel admission and preemption on the host to fine-grained block-level work distribution inside GPU kernels.
+Together, the host-side and device-side interfaces allow \sys policies to coordinate decisions across the full scheduling pipeline: from kernel admission and preemption on the host to fine-grained block-level work distribution inside GPU kernels.
 
 \paragraph{Example: priority-aware block scheduler.}
 As a concrete illustration, consider a policy that gives low latency to an interactive tenant while preserving throughput for batch jobs. The host keeps a per-tenant record of outstanding work and virtual time in a BPF map. \texttt{submit} tags kernels with a tenant ID and initial priority. \texttt{admit} prefers kernels from the interactive tenant when its queue is non-empty and boosts its priority when its p99 latency (tracked in another map) exceeds a target. On the device, each worker block's \texttt{entry} handler increments a per-tenant ``active blocks'' counter, and \texttt{exit} decrements it and records the work-unit completion time. When \texttt{should\_try\_steal} runs on an idle block, it uses these maps to decide whether to steal a work unit from the interactive tenant or from the batch pool. In \S\ref{sec:eval} we show that this policy reduces p99 latency by 2--5$\times$ with 8--12\% throughput loss for batch work.
