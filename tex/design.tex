@@ -215,12 +215,6 @@ As a concrete illustration, consider a policy that gives low latency to an inter
 \subsection{\sys GPU device SIMT specific verification and optimizations}
 \label{sec:safety-model}
 
-The CPU‑side verifier and bytecode under a model where
-Execution is single‑threaded, under high frequency CPU, can efficiency handle multiple branch and memory access, Memory accesses go through helpers/maps with specific semantics.
-
-simply reusing eBPF verifier and JIT compiler infrastructure on GPU is challenge: it does not aware Concurrency and cross‑domain memory semantics...
-The Execution is SIMT, with many warps in parallel.The memory model (UM, CUDA, __threadfence_system) is different.You're re‑implementing helpers (map access) yourself in PTX. Concurrent access patterns (thousands of warps + CPU) are far more intense.
-
 \paragraph{Safety Model and TCB.}
 The core challenge in programmable GPU policy is to run operator-supplied logic in privileged, latency-critical GPU driver and device paths without process-like isolation: even simple bugs can corrupt mappings, stall the device, or inflate tail latency, which even cause cluster level fault in critical training process. \sys runs operator-supplied policy code in these privileged paths. We assume the entity deploying \sys policies (e.g., a cluster operator) is trusted but fallible: policies may contain logic bugs or misconfigurations but are not malicious. Malicious kernel modules, vendor drivers, firmware, or hardware are out of scope.
 
@@ -236,8 +230,8 @@ The driver side is simple, we simply use the kernel's eBPF verifier, checks that
 
 Besides this,
 
-So, we explictly extend kernel eBPF verifier through kernel module to:
-1. use conservative work budgets for execution instructions, memory useage, and memory access count per instructions, to avoid memory bandwidth overlord. Define per-program-type budgets that reflect how often hooks fire and what overhead you can tolerate, e.g. insn_bound ≤ B_max_prog_type, map_ops ≤ M_max_prog_type, branch < M_max_prog_type
+So, we explicitly extend kernel eBPF verifier through kernel module to:
+1. use conservative work budgets for execution instructions, memory usage, and memory access count per instructions, to avoid memory bandwidth overload. Define per-program-type budgets that reflect how often hooks fire and what overhead you can tolerate, e.g. \texttt{insn\_bound} $\le$ \texttt{B\_max\_prog\_type}, \texttt{map\_ops} $\le$ \texttt{M\_max\_prog\_type}, branch $<$ \texttt{M\_max\_prog\_type}
 2. avoid sync and atomic, global barriers or device-wide synchronization, ban the eBPF instructions
 3. enforce the new and GPU specific helpers
 3. what is more ?

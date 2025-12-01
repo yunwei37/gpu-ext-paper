@@ -7,6 +7,10 @@ TEX_SRCS=$(wildcard tex/*.tex) $(TEX)
 IMG_SRCS=$(wildcard img/*)
 BIB=cite.bib
 
+# SVG processing
+SVGS=$(wildcard img/*.svg)
+SVG_PDFS=$(SVGS:.svg=.pdf)
+
 LATEX=pdflatex
 LATEXFLAGS=-shell-escape -interaction=nonstopmode -halt-on-error
 BIBTEX=bibtex
@@ -15,7 +19,11 @@ BIBTEX=bibtex
 
 all: $(PDF)
 
-$(PDF): $(TEX_SRCS) $(IMG_SRCS) $(BIB)
+# Rule to convert SVG to PDF
+img/%.pdf: img/%.svg
+	convert $< $@
+
+$(PDF): $(TEX_SRCS) $(IMG_SRCS) $(BIB) $(SVG_PDFS)
 	$(LATEX) $(LATEXFLAGS) $(TEX)
 	$(BIBTEX) main || true
 	$(LATEX) $(LATEXFLAGS) $(TEX)
@@ -24,6 +32,7 @@ $(PDF): $(TEX_SRCS) $(IMG_SRCS) $(BIB)
 clean:
 	@rm -f *.aux *.bbl *.blg *.fdb_latexmk *.fls *.log *.out *.toc *.lof *.lot *.bcf *.run.xml
 	@rm -rf _minted-*
+	@rm -f $(SVG_PDFS)
 
 distclean: clean
 	@rm -f $(PDF)

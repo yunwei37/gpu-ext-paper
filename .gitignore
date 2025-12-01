@@ -2,7 +2,7 @@
 *.aux
 *.log
 *.out
-*.pdf
+main.pdf
 *.pyg
 *.bbl
 *.blg
