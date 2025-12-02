@@ -34,3 +34,24 @@ For memory management, \sys attaches handlers to select memory instructions, dev
 \paragraph{Cross-Domain State and Synchronization.}
 
 \sys relies on standard eBPF maps as its unified state abstraction across host-driver and GPU-device boundaries. To ensure efficient, zero-copy synchronization, we allocate map structures within GPU-accessible unified memory regions, thereby eliminating explicit data marshalling overhead between CPU and GPU contexts. These shared maps maintain dynamic policy state such as per-region access frequency (hotness), per-tenant scheduling priorities, block-level execution progress, and instrumentation counters. Unlike previous eGPU implementations, which restricted maps exclusively to CPU memory, causing prohibitive synchronization overhead, \sys transparently supports placing frequently accessed policy state directly within GPU registers, GPU local memory, or CPU-side memory, enabling optimal locality and minimal runtime overhead.
+
+\subsection{SIMT-aware Verification Implementation}
+\label{sec:impl-verification}
+
+The host-side verifier uses Linux kernel's existing eBPF verifier without modification, ensuring standard memory safety, bounded loops, and resource usage. We implement our GPU-specific extensions by adding an extra verification pass at program load time within the kernel module. This pass statically identifies warp-uniform fields from context structures annotated via BTF metadata. Control flow analysis checks that branches and loops depend solely on these warp-uniform fields, explicitly rejecting programs violating this constraint.
+
+We enforce resource bounds per hook type, setting conservative instruction and memory-operation budgets. Our verifier also explicitly rejects GPU-wide atomic operations, global barriers, and instructions causing potential hardware stalls or memory consistency violations. No runtime sandboxing mechanisms are used; policies that pass verification run directly on GPU hardware, while rejected programs are never executed.
+
+\subsection{Warp-level Execution Implementation}
+
+The GPU runtime implements warp-level execution aggregation via lightweight device-side trampolines inserted at kernel entry, synchronization barriers, and critical memory instructions. Trampolines minimally save warp execution state, aggregate lane-varying inputs using GPU shuffle instructions, execute the scalar policy handler once per warp, and then broadcast results back to all threads.
+
+We implement aggressive function and map-helper call inlining at JIT compilation, significantly reducing call overhead and branching. GPU map operations are specialized by identifying common access patterns and embedding them directly into the handler code, reducing register pressure and avoiding global memory round trips. An optional sampling mechanism is also provided to allow dynamic control of policy overhead.
+
+\subsection{Hierarchical Map Implementation}
+
+Our runtime internally employs a cost-based heuristic placement model for cross-layer maps. Low-frequency global state is stored in CPU host DRAM with periodic GPU-side snapshots cached locally. Frequently accessed GPU-intensive state is primarily stored in GPU global memory, periodically aggregated and asynchronously flushed back to host memory for policy consumption. Extremely hot per-warp or per-SM data resides directly in GPU shared memory or SM-local storage, ensuring extremely low latency access.
+
+The runtime transparently manages state coherence through carefully orchestrated epoch-based synchronization points (e.g., GPU threadfence, host polling), providing well-defined freshness guarantees without developer intervention. Device-side handlers use standard eBPF helper APIs to access maps, fully unaware of underlying memory management complexity.
+
+As a concrete example, GPU-side memory-access instrumentation handlers record per-region statistics directly into GPU-local map shards. Periodically, the runtime aggregates these shards into global GPU memory, subsequently making them available to host-side handlers. Host-side eviction handlers then read coherent aggregate statistics directly from global maps, enabling accurate memory management decisions without explicit data movement or synchronization logic in policy handlers.
