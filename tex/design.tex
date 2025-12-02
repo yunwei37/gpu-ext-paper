@@ -5,7 +5,7 @@ Extending eBPF programmability to GPUs introduces fundamental challenges arising
 
 \subsection{C1: Safe and Efficient Driver Extensibility}
 
-GPU drivers, such as NVIDIA's open GPU kernel modules, are large, monolithic codebases tightly integrating low-level hardware mechanisms and resource-management policies. While they exposes APIs for applications to provide hints (e.g., \texttt{cudaMemAdvise}) or adjust parameters, these interfaces only allow applications to influence fixed built-in policies, they do not support defining custom algorithms such as FIFO eviction or tenant-aware scheduling. Unlike Linux kernel subsystems explicitly designed with stable eBPF extension points (e.g., \texttt{struct\_ops}), GPU drivers lack interfaces designed for policy programmability. \textbf{Policy logic embedded in driver mechanisms} complicates the introduction of attach points that remain stable across driver versions and GPU generations. For instance, in NVIDIA's Unified Virtual Memory (UVM) kernel module, the page-fault handler directly embeds LRU-based eviction and tree-based prefetch policies, making it difficult to interpose on memory placement without modifying the driver code path. Moreover, since policy logic executes directly in privileged driver contexts with tight latency constraints and direct GPU hardware control, there are \textbf{strict driver safety requirements}: logic errors (e.g., incorrect lock usage or inconsistent command submission) can cause device-wide stalls or node-level failures, mandating bounded execution and memory safety guarantees.
+GPU drivers, such as NVIDIA's open GPU kernel modules, are large, monolithic codebases tightly integrating low-level hardware mechanisms and resource-management policies. While they expose APIs for applications to provide hints (e.g., \texttt{cudaMemAdvise}) or adjust parameters, these interfaces only allow applications to influence fixed built-in policies; they do not support defining custom algorithms such as workload-specific eviction or tenant-aware scheduling. Unlike Linux kernel subsystems explicitly designed with stable eBPF extension points (e.g., \texttt{struct\_ops}), GPU drivers lack interfaces designed for policy programmability. \textbf{Policy logic embedded in driver mechanisms} complicates the introduction of attach points that remain stable across driver versions and GPU generations. For instance, in NVIDIA's Unified Virtual Memory (UVM) kernel module, the page-fault handler directly embeds LRU-based eviction and tree-based prefetch policies, making it difficult to interpose on memory placement without modifying the driver code path. Moreover, since policy logic executes directly in privileged driver contexts with tight latency constraints and direct GPU hardware control, there are \textbf{strict driver safety requirements}: logic errors (e.g., incorrect lock usage or inconsistent command submission) can cause device-wide stalls or node-level failures, mandating bounded execution and memory safety guarantees.
 
 \subsection{C2: SIMT-Aware Device-Side Execution}
 
@@ -58,8 +58,8 @@ Policy execution occurs at structured hook points defined in GPU drivers and ker
 \subsection{Policy Interfaces}
 \label{sec:design-interfaces}
 
-\sys introduces two primary eBPF program types to categorize policy logic:
-a driver-level type for GPU policy hooks (encompassing both \texttt{BPF\_PROG\_TYPE\_GPU\_MEM} for memory events and \texttt{BPF\_PROG\_TYPE\_GPU\_SCHED} for scheduling) and a device-level type (\texttt{BPF\_PROG\_TYPE\_GPU\_DEV}) for GPU-kernel instrumentation. These types coexist with existing kernel eBPF program types (e.g., cgroup, TC) without conflict; they reuse the same verifier, loader, and map abstractions, and are distinguished only by their attach points and SIMT-specific verifier rules.
+\sys introduces three eBPF program types to categorize policy logic:
+two driver-level types for GPU policy hooks (\texttt{BPF\_PROG\_TYPE\_GPU\_MEM} for memory events and \texttt{BPF\_PROG\_TYPE\_GPU\_SCHED} for scheduling) and one device-level type (\texttt{BPF\_PROG\_TYPE\_GPU\_DEV}) for GPU-kernel instrumentation. These types coexist with existing kernel eBPF program types (e.g., cgroup, TC) without conflict; they reuse the same verifier, loader, and map abstractions, and are distinguished only by their attach points and SIMT-specific verifier rules.
 
 \subsubsection{Memory Interface}
 \label{sec:design-mem}
@@ -106,7 +106,7 @@ int gdev_mem_pin_hint(struct gmem_region* r, int device_id);
 
 \paragraph{Host-side region events and decisions.}
 On the host, \sys models memory as a set of logical regions and exposes attach points for three
-canonical cache events. Handlers encode decisions via an enum field in the context (e.g., \texttt{ctx->decision = GDRV\_ADMIT} or \texttt{GDRV\_BYPASS}) and return 0 on success or a negative error code. \sys maintains all device-resident regions in a kernel-owned doubly linked list. The memory subsystem always inserts newly admitted regions at the tail and evicts from the head when under pressure, even if eBPF handlers never select a region for eviction, memory pressure will trigger kernel-driven FIFO eviction of head regions. eBPF handlers may only reorder regions via \texttt{gdrv\_mem\_list\_*} helpers; handlers cannot remove regions, and the kernel retains sole authority to evict.
+canonical cache events. Handlers encode decisions via an enum field in the context (e.g., \texttt{ctx->decision = GDRV\_ADMIT} or \texttt{GDRV\_BYPASS}) and return 0 on success or a negative error code. \sys maintains all device-resident regions in a kernel-owned doubly linked list. The memory subsystem always inserts newly admitted regions at the tail and evicts from the head when under pressure. Even if eBPF handlers never select a region for eviction, memory pressure will still trigger kernel-driven FIFO eviction of head regions. eBPF handlers may only reorder regions via \texttt{gdrv\_mem\_list\_*} helpers; handlers cannot remove regions, and the kernel retains sole authority to evict.
 
 Together, these events realize a
 general region-cache interface: policies implemented as eBPF handlers maintain their
@@ -116,11 +116,11 @@ such as \emph{admit}, \emph{bypass}, \emph{pin}, or \emph{evict}. The underlying
 and maintains correct mappings, but delegates replacement and prefetch policy to
 \sys.
 
-\paragraph{device-side memory events.}
+\paragraph{Device-side memory events.}
 
 On the GPU, \sys exposes a single device-side memory event interface that kernels
 use both to report observed accesses and to express future-use hints. Device-side
-handlers receive a compact context struct with fields such as a logical
+handlers receive a compact, warp-uniform context struct with fields such as a logical
 region identifier, kernel, warp and SM identifiers, an event type (\emph{ACCESS}
 or \emph{HINT}), and optional hint flags.
 
