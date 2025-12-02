@@ -74,11 +74,11 @@ table with typed contexts:
 // Host-side policy callbacks for GPU memory management.
 struct gdrv_mem_ops {
   // Called when a region is created or becomes eligible for device placement.
-  int (*region_add)(struct gdrv_mem_region_add_ctx *ctx);
+  int (*region_add)(gdrv_mem_add_ctx *ctx);
   // Called when memory subsystem observes region use; decide cache hit,
-  int (*region_access)(struct gdrv_mem_region_access_ctx *ctx);
+  int (*region_access)(gdrv_mem_access_ctx *ctx);
   // Called when a region is about to leave the device-resident working set.
-  int (*region_remove)(struct gdrv_mem_region_remove_ctx *ctx);
+  int (*region_remove)(gdrv_mem_remove_ctx *ctx);
   // Called at safe points (between kernel launches, page faults) for prefetch.
   int (*prefetch)(struct gdrv_mem_prefetch_ctx *ctx);
 };
