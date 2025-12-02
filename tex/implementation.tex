@@ -52,6 +52,6 @@ We implement aggressive function and map-helper call inlining at JIT compilation
 
 Our runtime internally employs a cost-based heuristic placement model for cross-layer maps. Low-frequency global state is stored in CPU host DRAM with periodic GPU-side snapshots cached locally. Frequently accessed GPU-intensive state is primarily stored in GPU global memory, periodically aggregated and asynchronously flushed back to host memory for policy consumption. Extremely hot per-warp or per-SM data resides directly in GPU shared memory or SM-local storage, ensuring extremely low latency access.
 
-The runtime transparently manages state coherence through carefully orchestrated epoch-based synchronization points (e.g., GPU threadfence, host polling), providing well-defined freshness guarantees without developer intervention. Device-side handlers use standard eBPF helper APIs to access maps, fully unaware of underlying memory management complexity.
+Device-side handlers use standard eBPF helper APIs to access maps, fully unaware of underlying memory management complexity.
 
 As a concrete example, GPU-side memory-access instrumentation handlers record per-region statistics directly into GPU-local map shards. Periodically, the runtime aggregates these shards into global GPU memory, subsequently making them available to host-side handlers. Host-side eviction handlers then read coherent aggregate statistics directly from global maps, enabling accurate memory management decisions without explicit data movement or synchronization logic in policy handlers.
