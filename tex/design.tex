@@ -35,47 +35,27 @@ Recognizing the fundamental mismatch between traditional scalar eBPF semantics a
 
 \begin{figure}
 \centering
-\fbox{\parbox{0.8\columnwidth}{\centering [Figure: \sys Design]}}
+\fbox{\parbox{0.8\columnwidth}{\centering [Figure: \sys High-Level Design]}}
 \vspace{-.5ex}
-\caption{\sys high-level design: unified eBPF runtime across CPU and GPU.}
+\caption{\sys high-level design: unified eBPF runtime spanning CPU and GPU.}
 \label{fig:system-design}
 \end{figure}
 
-Figure~\ref{fig:system-design} shows the high-level architecture of \sys, including the CPU--GPU boundary, \sysdriver extensions, and GPU kernel-level runtime integration points. At its core, \sys provides a unified eBPF runtime that manages verification and just-in-time (JIT) compilation in the operating system kernel or the userspace loader.
+Figure~\ref{fig:system-design} illustrates the high-level architecture of \sys, consisting of a user-space control plane and a unified kernel-device execution path. A \sys policy is structured as a distributed application comprising host- and device-side eBPF programs, hierarchical cross-layer maps, and a user-space control-plane for lifecycle management and dynamic reconfiguration.
 
-Policy authors write \sys programs using standard eBPF tooling (e.g., \texttt{clang} with \texttt{libbpf}, \texttt{bpftool}, or \texttt{bpftrace}). Programs are compiled to eBPF bytecode, loaded into the kernel, and verified by our extended kernel verifier before execution. \sys loader places eBPF maps in memory regions visible to both the OS kernel and GPU kernels.
+\paragraph{User-space Control Plane.}
+Policy authors write \sys policies using standard eBPF tooling (e.g., \texttt{clang/libbpf}, \texttt{bpftool}, \texttt{bpftrace}). The control-plane application uses a \sys loader library to compile policies into eBPF bytecode, create hierarchical maps, and load policies into kernel and device execution contexts. It manages policy lifecycle operations (installing, updating, removing), enables dynamic reconfiguration (e.g., adjusting eviction thresholds, sampling rates, or tenant priorities), and exports aggregated runtime metrics (e.g., per-region hotness, tenant latencies) to external monitoring or adaptation systems without application or kernel restarts.
 
-Once verified, the same bytecode can be installed in two ways:
+\paragraph{Kernel and Device Execution Path.}
+\sys provides a unified runtime spanning OS kernel and GPU device contexts that manages verification, compilation, cross-layer state management, and policy execution. Upon policy load requests, the runtime invokes a SIMT-aware static verifier (\S\ref{sec:verification}) extending standard eBPF verification to enforce warp-uniform semantics, bounded execution, memory safety, and GPU-specific synchronization constraints. Verified programs are JIT-compiled into host-native instructions for kernel hooks and GPU-compatible code (e.g., PTX or SPIR-V) for device hooks.
 
-\begin{itemize}[leftmargin=*]
-  \item \emph{Host side:} \sys attaches eBPF programs to hooks in \sysdriver at critical policy decision points in the GPU stack (e.g., memory prefetching, migration, and kernel scheduling), or use other eBPF CPU hooks. These hooks follow a \texttt{struct\_ops}-style callback interface: when the driver reaches a hook, it invokes the attached eBPF handler with an event-specific context structure. The handler returns a compact decision (e.g., an action code or priority) that the driver enforces or using safe kfunc calls into the driver code.
-  \item \emph{Device side:} for execution inside GPU kernels, \sys JIT runtime inside the loader translates the verified eBPF bytecode to device bytecode and injects it into the target GPU context. JIT runtime use a pass like pipeline abstraction to allow user do instructions level instrucmentation to the GPU device bytecode, define new attach points, insert the function calls before and after any instruction, and custom define their optimizations. Lightweight trampolines inserted at kernel entry or other selected sites save minimal live state, call into the translated eBPF snippet, and then restore state to resume the original control flow. Device-side eBPF programs update the same maps as their host-side counterparts.
-\end{itemize}
+This runtime transparently manages hierarchical eBPF maps, exposing a stable logical abstraction and key space to policy programs while internally optimizing placement, sharding, and synchronization across host memory, GPU global memory, and GPU on-chip memory tiers. Host- and device-side handlers access shared state exclusively via standard eBPF helper interfaces, abstracting away manual synchronization and cross-layer address translation.
 
-A GPU-side runtime enforces the safety guarantees described in the Safety Model (\S\ref{sec:prog-model}): each injected program operates in a protected domain that cannot interfere with application kernels, while still enabling adaptive policy decisions on critical GPU execution paths.
+Verified eBPF handlers execute at structured hook points defined in GPU drivers and GPU kernels. On the host side, \sysdriver exposes \texttt{struct_ops}-style hooks for memory placement and kernel scheduling decisions (e.g., region admission/eviction, kernel submission/admission). When invoked, host-side handlers process strongly-typed BTF contexts and return concise policy decisions (\emph{admit}, \emph{evict}, scheduling priorities), which \sysdriver enforces via safe kernel helpers.
 
-Shared eBPF maps provide efficient state coordination between \sysdriver and eBPF policy logic on the host, on the device, and between host and GPU policies across the CPU--GPU boundary. This design yields real-time, low-overhead cross-layer observability and control while retaining the safety guarantees of the eBPF framework. We focus on multi-tenant policy control on shared GPUs, not on providing virtual GPU abstractions or hardware partitioning. Mechanisms such as MIG or SR-IOV are orthogonal and can, in principle, be deployed underneath \sys; \sys policies only manipulate well-defined \sys-managed state and cannot corrupt kernel or application memory outside that state.
+On the GPU device side, \sys injects lightweight trampolines at kernel entry/exit points, warp-synchronization barriers, and critical memory operations. Trampolines invoke device-side handlers at warp granularity, enabling handlers to perform fine-grained policy decisions (e.g., dynamically prefetch regions, pin frequently accessed data, or adjust block-level scheduling priorities). Device-side handlers also update cross-layer shared maps with detailed performance signals (per-region access frequency, warp occupancy), but do not directly manipulate hardware control registers or page tables.
 
-
-\subsection{\sys Programming Model}
-\label{sec:prog-model}
-
-A \sys policy is a distributed application consisting of eBPF code that runs in
-privileged contexts on the CPU and GPU device together, with a user-space control-plane
-component. All pieces program against a unified abstraction: a restricted eBPF IR,
-a small set of \sys-specific attach points and helper functions different for each attach types, and shared eBPF maps and metadata.
-
-\subsubsection{Policy Code (CPU \& GPU)}
-
-\sys introduces two primary eBPF program types to categorize policy logic:
-a driver-level type for GPU policy hooks (encompassing both \texttt{BPF\_PROG\_TYPE\_GPU\_MEM} for memory events and \texttt{BPF\_PROG\_TYPE\_GPU\_SCHED} for scheduling) and a device-level type (\texttt{BPF\_PROG\_TYPE\_GPU\_DEV}) for GPU-kernel instrumentation. Each program type is associated with a specific family of hook contexts that are rigorously defined and BTF-annotated (BPF Type Format) to be understood by the kernel verifier. Each program defines multiple entry points corresponding to attach points on either the host or GPU device.
-
-On the host, verified eBPF bytecode executes directly in privileged kernel contexts provided by \sysdriver, allowing policies to respond to critical memory events (such as device memory misses, eviction candidate selection) and kernel scheduling decisions (kernel submission, admission, preemption, completion). On the GPU, the same verified bytecode is translated to device instructions (e.g., PTX or SPIR-V) and executed through lightweight trampolines injected at kernel entry points, selected memory operations, and synchronization or phase boundaries. GPU side eBPF can only use helpers that implemented as part of the GPU trampoline. In both host and GPU contexts, policy handlers receive structured event contexts containing metadata (e.g., virtual addresses, region IDs, kernel IDs, warp identifiers), and return compact policy decisions enforced directly by underlying GPU mechanisms.
-
-
-\subsubsection{Control-Plane Application and Lifecycle}
-
-A \sys policy also includes a dedicated user-space control-plane component responsible for lifecycle management, dynamic reconfiguration, and policy introspection. This component instantiates and manages eBPF maps, and attaches policy sections to defined host and GPU device hook points exposed by \sysdriver and GPU-side runtime. It enables dynamic reconfiguration of deployed policies at runtime by updating parameters (e.g., thresholds, sampling rates, eviction aggressiveness, power caps) stored in shared maps, and facilitates swapping or updating of attached policy logic without restarting applications or kernels. Furthermore, the control-plane application continuously monitors policy operation by reading metrics and state from maps, such as memory hotness counters, per-tenant scheduling metrics, and queueing latencies—and exports this information to external observability frameworks or adaptation controllers. Thus, from a developer's perspective, a complete \sys policy application comprises policy logic for both CPU and GPU execution contexts along with a complementary control-plane component orchestrating policy behavior and evolution over time.
+Together, the control plane, unified runtime, and structured hook execution form a tightly integrated, adaptive feedback loop: device-side logic directly implements granular GPU resource control and updates fine-grained instrumentation state; host-side handlers utilize this state to enforce global placement and scheduling decisions; and the control-plane continuously monitors policy effectiveness, dynamically adapting configurations or loading new policies as needed.
 
 \subsection{Policy Interfaces}
 \label{sec:design-interfaces}
