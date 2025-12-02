@@ -72,9 +72,6 @@ a driver-level type for GPU policy hooks (encompassing both \texttt{BPF\_PROG\_T
 
 On the host, verified eBPF bytecode executes directly in privileged kernel contexts provided by \sysdriver, allowing policies to respond to critical memory events (such as device memory misses, eviction candidate selection) and kernel scheduling decisions (kernel submission, admission, preemption, completion). On the GPU, the same verified bytecode is translated to device instructions (e.g., PTX or SPIR-V) and executed through lightweight trampolines injected at kernel entry points, selected memory operations, and synchronization or phase boundaries. GPU side eBPF can only use helpers that implemented as part of the GPU trampoline. In both host and GPU contexts, policy handlers receive structured event contexts containing metadata (e.g., virtual addresses, region IDs, kernel IDs, warp identifiers), and return compact policy decisions enforced directly by underlying GPU mechanisms.
 
-\subsubsection{Shared State \& Metadata}
-
-Shared eBPF maps store policy-relevant state including counters, histograms, per-region hotness metrics, per-tenant scheduling priorities, and runtime configuration parameters. This enables device-side probes, such as GPU memory access instrumentation or warp progress signals, to update policy metadata that host-side memory or scheduling hooks later consult. \sys transparently propagates and translates core metadata such as virtual memory addresses, kernel identifiers, timestamps across CPU and GPU, presenting a logically unified identifier space. This design allows policy developers to implement sophisticated cross-layer logic (e.g., GPU-side access tracking coupled with host-side eviction or scheduling) without manually handling address translation or cross-boundary synchronization complexities.
 
 \subsubsection{Control-Plane Application and Lifecycle}
 
@@ -82,6 +79,9 @@ A \sys policy also includes a dedicated user-space control-plane component respo
 
 \subsection{Policy Interfaces}
 \label{sec:design-interfaces}
+
+\sys introduces two primary eBPF program types to categorize policy logic:
+a driver-level type for GPU policy hooks (encompassing both \texttt{BPF\_PROG\_TYPE\_GPU\_MEM} for memory events and \texttt{BPF\_PROG\_TYPE\_GPU\_SCHED} for scheduling) and a device-level type (\texttt{BPF\_PROG\_TYPE\_GPU\_DEV}) for GPU-kernel instrumentation.
 
 \subsubsection{Memory Interface}
 \label{sec:design-mem}
@@ -257,3 +257,8 @@ Naively executing scalar control logic across all GPU threads introduces prohibi
 5. since we can inline the maps and helpers, we can eliminates branch cost as much as possible by remove the if after
 6. allow user to config sampling to reduce overhead. (Do we need this?)
 Collectively, these optimizations enable efficient, scalable, and minimally invasive GPU-side policy execution suitable for production deployment.
+
+
+\subsubsection{Shared State \& Metadata}
+
+Shared eBPF maps store policy-relevant state including counters, histograms, per-region hotness metrics, per-tenant scheduling priorities, and runtime configuration parameters. This enables device-side probes, such as GPU memory access instrumentation or warp progress signals, to update policy metadata that host-side memory or scheduling hooks later consult. \sys transparently propagates and translates core metadata such as virtual memory addresses, kernel identifiers, timestamps across CPU and GPU, presenting a logically unified identifier space. This design allows policy developers to implement sophisticated cross-layer logic (e.g., GPU-side access tracking coupled with host-side eviction or scheduling) without manually handling address translation or cross-boundary synchronization complexities.
