@@ -40,7 +40,7 @@ For memory management, \sys attaches handlers to select memory instructions, dev
 
 The host-side verifier uses Linux kernel's existing eBPF verifier without modification, ensuring standard memory safety, bounded loops, and resource usage. We implement our GPU-specific extensions by adding an extra verification pass at program load time within the kernel module. This pass statically identifies warp-uniform fields from context structures annotated via BTF metadata. Control flow analysis checks that branches and loops depend solely on these warp-uniform fields, explicitly rejecting programs violating this constraint.
 
-We enforce resource bounds per hook type, setting conservative instruction and memory-operation budgets. Our verifier also explicitly rejects GPU-wide atomic operations, global barriers, and instructions causing potential hardware stalls or memory consistency violations. No runtime sandboxing mechanisms are used; policies that pass verification run directly on GPU hardware, while rejected programs are never executed.
+We enforce resource bounds per hook type, setting conservative instruction and memory-operation budgets. Our verifier explicitly rejects GPU-wide synchronization constructs, global barriers, and non-uniform atomic operations that could cause hardware stalls or memory consistency violations. No runtime sandboxing mechanisms are used; policies that pass verification run directly on GPU hardware, while rejected programs are never executed.
 
 \subsection{Warp-level Execution Implementation}
 
