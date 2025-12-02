@@ -28,7 +28,7 @@ Many GPU policies require coordinated actions spanning CPU host drivers and GPU 
 To eliminate the complexity and fragmentation of heterogeneous GPU stacks, \sys offers a unified abstraction for policy state, programming interfaces, and lifecycle management across CPU hosts and GPU devices. This ensures consistent cross-layer coordination, simplifies policy expression, and enables coherent decisions in asynchronous execution environments.
 
 \paragraph{Principle 3: Verifiable, SIMT-aware Safe and Efficient Execution.}
-Recognizing the fundamental mismatch between traditional scalar eBPF semantics and GPU's SIMT parallelism, \sys introduces a novel static verification model explicitly designed for SIMT execution. Leveraging formal verification of warp-level semantics, \sys ensures safe, efficient GPU-side execution with provably bounded resource usage, latency, and memory safety, eliminating the need for runtime isolation or overhead.
+Recognizing the fundamental mismatch between traditional scalar eBPF semantics and GPU's SIMT parallelism, \sys introduces a static verification model explicitly designed for SIMT execution. Through a type discipline that distinguishes warp-uniform from lane-varying values, the verifier statically enforces bounded resource usage, latency constraints, and memory safety, eliminating the need for runtime isolation or overhead.
 
 \subsection{High-Level Architecture}
 \label{sec:arch}
@@ -57,7 +57,7 @@ Together, the control-plane, unified runtime, and structured hook execution form
 \label{sec:design-interfaces}
 
 \sys introduces two primary eBPF program types to categorize policy logic:
-a driver-level type for GPU policy hooks (encompassing both \texttt{BPF\_PROG\_TYPE\_GPU\_MEM} for memory events and \texttt{BPF\_PROG\_TYPE\_GPU\_SCHED} for scheduling) and a device-level type (\texttt{BPF\_PROG\_TYPE\_GPU\_DEV}) for GPU-kernel instrumentation.
+a driver-level type for GPU policy hooks (encompassing both \texttt{BPF\_PROG\_TYPE\_GPU\_MEM} for memory events and \texttt{BPF\_PROG\_TYPE\_GPU\_SCHED} for scheduling) and a device-level type (\texttt{BPF\_PROG\_TYPE\_GPU\_DEV}) for GPU-kernel instrumentation. These types coexisting with existing kernel eBPF program types (e.g., cgroup, TC) without conflict.
 
 \subsubsection{Memory Interface}
 \label{sec:design-mem}
@@ -101,7 +101,7 @@ int gdev_mem_pin_hint(struct gmem_region* r, int device_id);
 
 \paragraph{Host-side region events and removal.}
 On the host, \sys models memory as a set of logical regions and exposes attach points for three
-canonical cache events. To ensure safety, e.g. no region is leak or always pin, the regions is organized as a list: it's always added from the end of the list and removed from the head of the list. The eBPF program can reorder the list, preserve state and addtional data with list nodes to express complex algorithms.
+canonical cache events. \sys maintains all device-resident regions in a kernel-owned doubly linked list. The memory subsystem always inserts newly admitted regions at the tail and evicts from the head when under pressure, ensuring eventual eviction of all regions even if policies are buggy. eBPF handlers may only reorder regions via \texttt{gdrv\_mem\_list\_*} helpers, and cannot remove the head node; the kernel retains authority to evict head regions unconditionally.
 
 Together, these events realize a
 general region-cache interface: policies implemented as eBPF handlers maintain their
@@ -213,7 +213,7 @@ Our verification model statically ensures safety-critical properties: bounded ex
 
 While SIMT-aware verification ensures correctness and safety, direct scalar execution of eBPF handlers across GPU threads would still incur prohibitive divergence and memory overhead. To eliminate this inefficiency, \sys introduces a novel warp-level aggregated execution model optimized specifically for GPU hardware characteristics.
 
-The key idea is executing scalar policy logic exactly once per warp, using a designated ``warp leader'' thread. Warp-level primitives (e.g., shuffle, ballot) efficiently gather lane-varying inputs (such as per-thread addresses or activity masks) from all threads. The warp leader computes policy decisions based on these aggregated inputs, and broadcasts compact decisions back to the warp. Under warp-uniform constraints, this aggregated warp-level execution provably preserves the original scalar eBPF semantics while drastically minimizing GPU overhead.
+The key idea is executing scalar policy logic exactly once per warp, using a designated ``warp leader'' thread. Warp-level primitives (e.g., shuffle, ballot) efficiently gather lane-varying inputs (such as per-thread addresses or activity masks) from all threads. The warp leader computes policy decisions based on these aggregated inputs, and broadcasts compact decisions back to the warp. Under warp-uniform constraints enforced by the verifier, this aggregated warp-level execution preserves the original scalar eBPF semantics while drastically minimizing GPU overhead.
 
 Additionally, recognizing that GPU policy code frequently accesses local, highly-thread-local map state, we perform aggressive specialization and inlining optimizations. These compiler-level optimizations eliminate unnecessary branching and helper call overhead, further reducing instruction count and warp divergence.
 
