@@ -1,21 +1,94 @@
+% Core new contri:
+
+% story:
+% many memory, sched,
+% no OS level
+
+
+% paper:
+
+% hXDP (offload to device)
+% XRP (kernel driver)
+% cache\_ext/sched\_ext
+
+% (safe, efficient) fine-grain, unified(cross device) and global(multi-tenant), transparent
+
+% 1. support for xxx memory management (pretech, eviction)
+%     a. find a interface, where we need hooks 
+%     b. build eBPF runtime around it on GPU device for: expanding eBPF into SIMT space
+%     c. build a SIMT aware verification for safety
+% 2. xxx schedule (GPU: fine-grain thread block level scheduler; driver: addimisson, set priority and premetion)
+%     a. find a interface, where we need hooks
+%     b. safety
+% 3. trace/observebility?
+
+% what we have done
+
+% tracing
+
+% 1. A set bcc style of observability tools on device (gpu memory access, fine-grain scheduler thread block / thread enter / end) neutrino can do
+% 2. bcc style trace tools that can show page fault, prefecth decistion / eviction decisitons, GPU scheduler create queue / descrtoy queue / (our interfcae/hooks)
+% 3. trace across CPU and GPU (launchlate, etc)
+
+% policy
+
+% 4. memory policy LFU/FIFO/MRU... (driver) preftech policy seq / tree / stide (driver, global)
+% 5. GPU side: CLC style work stealing policy, prefetch policy (prefecth some memory without block computing)
+% 6. together: prefetch
+
+% eval:
+% efficient,
+% multi-tenant,
+% transparent,
+% unified(cross device)
+
+% 1. sync or small kernels (gemm, vector add)
+% 2. pytorch / llama.cpp / vllm / faiss
+% 3. run multi together
+
 \section{Challenges}
 \label{sec:challenges}
+\xiangyu{This section is updated.}
+Achieving programmable resource management on GPUs remains fundamentally difficult today. 
+Unlike CPUs—where extension frameworks such as eBPF provide stable, safe, and well-defined programmability points—GPU software stacks were not designed with similar goals. 
+We identify three core challenges that make GPU programmability hard.
 
-Extending eBPF programmability to GPUs introduces fundamental challenges arising from (1) monolithic GPU drivers lacking designed-for-programmability interfaces, (2) fundamental mismatches between scalar eBPF semantics and GPU's SIMT execution model, and (3) complexities in coordinating consistent state across asynchronous host-device boundaries.
-\xiangyu{There is a mismatch between the description in this paragraph and the titles of 3.1-3.3.}
-\yusheng{we also need to change the title here to state the problems instead of goals?}
+\subsection{C1: Lack of Safe and Stable Extension Points in Monolithic GPU Drivers}
+Modern GPU drivers are large, monolithic vendor-controlled codebases that tightly intertwine low-level hardware mechanisms with proprietary resource-management policies, offering no stable hooks for user-defined logic. 
+GPU drivers were not architected with programmable resource management in mind—partly due to historical assumptions about GPU usage, and partly due to strict safety constraints, as incorrect driver logic can stall the device or crash an entire node. 
+As a result, developers cannot inject new scheduling policies, memory-placement strategies, or custom instrumentation without invasive modifications to vendor drivers. This absence of safe, stable extension points naturally limits any attempt to retrofit programmability into today's GPU stacks.
 
-\subsection{C1: Safe and Efficient Driver Extensibility}
+\subsection{C2: Mismatch Between eBPF Semantics and the SIMT GPU Execution Model}
 
-GPU drivers, such as NVIDIA's open GPU kernel modules, are large, monolithic codebases tightly integrating low-level hardware mechanisms and resource-management policies. While they expose APIs for applications to provide hints (e.g., \texttt{cudaMemAdvise}) or adjust parameters, these interfaces only allow applications to influence fixed built-in policies; they do not support defining custom algorithms such as FIFO eviction or tenant-aware scheduling. Unlike Linux kernel subsystems explicitly designed with stable eBPF extension points (e.g., \texttt{struct\_ops}), GPU drivers lack interfaces designed for policy programmability. \textbf{Policy logic embedded in driver mechanisms} complicates the introduction of attach points that remain stable across driver versions and GPU generations. For instance, in NVIDIA's Unified Virtual Memory (UVM) kernel module, the page-fault handler directly embeds LRU-based eviction and tree-based prefetch policies, making it difficult to interpose on memory placement without modifying the driver code path. Moreover, since policy logic executes directly in privileged driver contexts with tight latency constraints and direct GPU hardware control, there are \textbf{strict driver safety requirements}: logic errors (e.g., incorrect lock usage or inconsistent command submission) can cause device-wide stalls or node-level failures, mandating bounded execution and memory safety guarantees.
+Even if GPU drivers exposed extensible interfaces, directly applying existing programmable CPU-oriented eBPF mechanisms does not work because of the conflict between eBPF semantics and the GPU Single Instruction Multiple Threads (SIMT) execution model execution model. 
+Concretely, eBPF programs assume single-threaded control flow, strong memory consistency, and bounded execution enforced by a CPU-oriented verifier, whereas GPU kernels execute in warps of 32 threads that must follow largely uniform control paths. 
+Naively running scalar eBPF logic per thread introduces warp divergence, unbounded serialization, and correctness risks stemming from thousands of simultaneous memory operations that the CPU-side verifier do not check. 
+Furthermore, GPUs lack isolation, recovery points, or preemption mechanisms for misbehaving device-side code, meaning an unbounded loop or invalid access in policy logic can halt an entire device. 
+The architectural and semantic mismatch makes straightforward reuse of eBPF unsafe and inevitably slow.
 
-\subsection{C2: SIMT-Aware Device-Side Execution}
+\subsection{C3: Absence of Efficient Mechanisms for Host–Device Shared State Coordination}
 
-Standard eBPF is designed for scalar, single-threaded execution on CPUs, but GPU kernels operate under the fundamentally different Single Instruction Multiple Threads (SIMT) execution model, creating significant programmability mismatches. Naively mapping scalar eBPF handlers onto GPU threads introduces severe \textbf{warp divergence overhead}: executing scalar policy logic independently on all 32 threads of a warp forces the warp to serialize branches that depend on lane-local state, effectively turning each divergent branch into up to 32 serialized paths in the worst case. Furthermore, GPU architectures feature \textbf{memory bandwidth limit and complex synchronicity} and weak memory consistency semantics. For example, concurrent updates to shared maps from thousands of threads with relaxed atomics cannot be verified by the standard CPU-side eBPF verifier, which treats programs as single-threaded and cannot reason about SIMT interference. Lastly, GPU kernels execute within flat address spaces \textbf{without isolation or runtime recovery mechanisms}; policy errors like infinite loops or invalid memory accesses cause unrecoverable hardware stalls, making bounded execution and memory safety guarantees essential to enforce statically at compile time.
+Even with GPU-side programmability that respects SIMT constraints, real GPU clusters require coordinated host–device resource management, which today lacks an efficient abstraction for shared policy state. 
+GPU-accessible host memory suffers from orders-of-magnitude higher latency than GPU global memory, while GPU memory is capacity-limited and optimized for throughput, creating a fundamental mismatch in memory hierarchies. 
+Meanwhile, CPU and GPU components operate asynchronously on vastly different timescales, causing policy decisions to rely on inconsistent state unless carefully synchronized. 
+Existing systems force developers to manually manage DMA transfers, data replication, and consistency across devices, resulting in brittle, application-specific mechanisms that do not generalize.
+The absence of a principled, efficient way to maintain shared state across the host–device boundary remains a major barrier to deploying practical programmable resource management on GPU clusters.
 
-\subsection{C3: Shared Cross-Layer State and Coordination}
+% Extending eBPF programmability to GPUs introduces fundamental challenges arising from (1) monolithic GPU drivers lacking designed-for-programmability interfaces, (2) fundamental mismatches between scalar eBPF semantics and GPU's SIMT execution model, and (3) complexities in coordinating consistent state across asynchronous host-device boundaries.
+% \xiangyu{There is a mismatch between the description in this paragraph and the titles of 3.1-3.3.}
+% \yusheng{we also need to change the title here to state the problems instead of goals?}
 
-Many GPU policies require coordinated actions spanning CPU host drivers and GPU device execution; for example, GPU-side instrumentation capturing warp-level memory accesses informs host-side memory placement and scheduling decisions. Ensuring efficient and consistent cross-layer coordination poses unique technical difficulties. First, there is a significant \textbf{cross-boundary memory hierarchy mismatch}: placing shared maps naively in host memory introduces prohibitive latency (tens to hundreds of microseconds per access from GPU warps via PCIe), drastically impacting GPU utilization, whereas placing all shared state within GPU global memory or wrap local memory risks limited capacity, bandwidth bottlenecks, and cache thrashing. Second, host driver operations and GPU execution proceed asynchronously at vastly different granularities, complicating \textbf{state consistency}. High-latency propagation of GPU signals to host policies means that without careful coordination, host-side policy decisions (e.g., page eviction or kernel scheduling) risk relying on stale GPU-side signals (e.g., warp-level schedule statistics), causing thrashing migrations and oscillatory scheduling.
+% \subsection{C1: Safe and Efficient Driver Extensibility}
+
+% GPU drivers, such as NVIDIA's open GPU kernel modules, are large, monolithic codebases tightly integrating low-level hardware mechanisms and resource-management policies. While they expose APIs for applications to provide hints (e.g., \texttt{cudaMemAdvise}) or adjust parameters, these interfaces only allow applications to influence fixed built-in policies; they do not support defining custom algorithms such as FIFO eviction or tenant-aware scheduling. Unlike Linux kernel subsystems explicitly designed with stable eBPF extension points (e.g., \texttt{struct\_ops}), GPU drivers lack interfaces designed for policy programmability. \textbf{Policy logic embedded in driver mechanisms} complicates the introduction of attach points that remain stable across driver versions and GPU generations. For instance, in NVIDIA's Unified Virtual Memory (UVM) kernel module, the page-fault handler directly embeds LRU-based eviction and tree-based prefetch policies, making it difficult to interpose on memory placement without modifying the driver code path. Moreover, since policy logic executes directly in privileged driver contexts with tight latency constraints and direct GPU hardware control, there are \textbf{strict driver safety requirements}: logic errors (e.g., incorrect lock usage or inconsistent command submission) can cause device-wide stalls or node-level failures, mandating bounded execution and memory safety guarantees.
+
+% \subsection{C2: SIMT-Aware Device-Side Execution}
+
+% Standard eBPF is designed for scalar, single-threaded execution on CPUs, but GPU kernels operate under the fundamentally different Single Instruction Multiple Threads (SIMT) execution model, creating significant programmability mismatches. Naively mapping scalar eBPF handlers onto GPU threads introduces severe \textbf{warp divergence overhead}: executing scalar policy logic independently on all 32 threads of a warp forces the warp to serialize branches that depend on lane-local state, effectively turning each divergent branch into up to 32 serialized paths in the worst case. Furthermore, GPU architectures feature \textbf{memory bandwidth limit and complex synchronicity} and weak memory consistency semantics. For example, concurrent updates to shared maps from thousands of threads with relaxed atomics cannot be verified by the standard CPU-side eBPF verifier, which treats programs as single-threaded and cannot reason about SIMT interference. Lastly, GPU kernels execute within flat address spaces \textbf{without isolation or runtime recovery mechanisms}; policy errors like infinite loops or invalid memory accesses cause unrecoverable hardware stalls, making bounded execution and memory safety guarantees essential to enforce statically at compile time.
+
+% \subsection{C3: Shared Cross-Layer State and Coordination}
+
+% Many GPU policies require coordinated actions spanning CPU host drivers and GPU device execution; for example, GPU-side instrumentation capturing warp-level memory accesses informs host-side memory placement and scheduling decisions. Ensuring efficient and consistent cross-layer coordination poses unique technical difficulties. First, there is a significant \textbf{cross-boundary memory hierarchy mismatch}: placing shared maps naively in host memory introduces prohibitive latency (tens to hundreds of microseconds per access from GPU warps via PCIe), drastically impacting GPU utilization, whereas placing all shared state within GPU global memory or wrap local memory risks limited capacity, bandwidth bottlenecks, and cache thrashing. Second, host driver operations and GPU execution proceed asynchronously at vastly different granularities, complicating \textbf{state consistency}. High-latency propagation of GPU signals to host policies means that without careful coordination, host-side policy decisions (e.g., page eviction or kernel scheduling) risk relying on stale GPU-side signals (e.g., warp-level schedule statistics), causing thrashing migrations and oscillatory scheduling.
 
 \section{\sys Design}
 
@@ -96,15 +169,32 @@ bool gdrv_mem_list_insert_tail(gdrv_mem_list_t *list,
 struct gdev_mem_ops {
     // Warp observed memory access;
     void (*access)(gdev_mem_access_ctx_t *ctx);
-    // Kernel provides future-use hint for prefetch/pin
-    void (*hint)(gdev_mem_hint_ctx_t *ctx);
+    // Kernel provides
+    void (*fence)(gdev_mem_fence_ctx_t *ctx);
 };
 // Device-side helpers
 // Request prefetch, triggers prefetch callback in kernel
-int gdev_mem_prefetch_hint(gmem_region_t* r);
+% int gdev_mem_prefetch_hint(gmem_region_t* r);
 // Pin memory on CPU or GPU
-int gdev_mem_pin_hint(gmem_region_t* r, int device_id);
+% int gdev_mem_pin_hint(gmem_region_t* r, int device_id);
+int gdev_mem_use_hint(gmem_region_t* r, int device_id);
 \end{minted}
+
+% map(address)
+
+% // hostside
+% prefetch_callback() {
+% // check logic
+%     prefetch region(device,address)
+% }
+
+% //device side
+% SEC(gdev_entry/xxx)
+% ebpf_gpu(int expert_id) {
+%     gdev_mem_use_hint（address a, b)
+% }
+
+
 
 \paragraph{Host-side region events and decisions.}
 On the host, \sys models memory as a set of logical regions and exposes attach points for three
@@ -143,19 +233,24 @@ scheduling callbacks:
 \begin{minted}[highlightlines=false,fontsize=\small]{c}
 // Host-side policy callbacks for GPU kernel scheduling
 struct gdrv_sched_ops {
-  // Kernel enqueued; return 0 to accept, <0 to reject/defer
-  int  (*submit)(gsched_submit_ctx_t *ctx);
-  // Dispatch ready kernel; return kernel ID or -1 to defer
-  void (*complete)(gsched_complete_ctx_t *ctx);
+  // Kernel enqueu created; return 0 to accept, <0 to reject/defer
+  // Set the queue pamamaters
+  int  (*queue_create)(gsched_submit_ctx_t *ctx);
+  // destroy kernel queue; return kernel ID or -1 to defer
+  void (*queue_destory)(gsched_complete_ctx_t *ctx);
 };
 // Host-side kfunc
 bool gdrv_sched_preempt(gdrv_preempt_ctx_t *ctx);
 // Device-side block scheduling callbacks
 struct gdev_sched_ops {
   // Worker block starts new work unit
-  void (*entry)(gdev_block_ctx_t *ctx);
+  void (*enter)(gdev_block_ctx_t *ctx);
   // Worker block finishes work unit
   void (*exit)(gdev_block_ctx_t *ctx);
+  // device function starts
+  void (*probe)(gdev_block_ctx_t *ctx);
+  // device function ends
+  void (*retprobe)(gdev_block_ctx_t *ctx);
   // return whether to steal work (Thread Block scheduler)
   bool (*should_try_steal)(gdev_block_ctx_t *ctx);
 };

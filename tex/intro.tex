@@ -16,9 +16,25 @@ We propose exposing the GPU driver and device layer as a programmable resource m
 \section{Introduction}
 
 GPUs dominate the compute and capital costs of modern systems, powering workloads ranging from latency-sensitive LLM inference pipelines to large-scale training, graph analytics, and vector search. Across these workloads, overall throughput and latency depend not just on raw FLOPs, but on \emph{policies}: how the system places and migrates data across device and host memory, admits and schedules kernels in multi-tenant environments, and collects observability signals for online adaptation. These policies must evolve as models, SLAs, and hardware change.
+% enhance the multi-tenant
+
+% My two-cents, make it focus on policy itself
+\JC{
+
+Effective resource management policies have become increasingly critical in modern computing systems, particularly with the rise of GPU-accelerated workloads~\cite{}. GPUs have emerged as the dominant platform for a wide range of applications, from latency-sensitive deep learning inference pipelines to large-scale training~\cite{}, graph analytics, and data visualization. As GPU-based systems grow in scale and complexity, the policies that govern resource allocation, scheduling, and data movement play a crucial role in determining overall system performance, efficiency, and fairness. Across these diverse workloads, overall system performance depends not just on raw computing power, but crucially on the ability of resource management policies to adapt to the dynamic needs of applications. The importance of adaptive resource management policies has been well-recognized in various domains, such as xx
+
+The current state of policy specification and enforcement in GPU systems xxx
+
+On the other hand, user-space approaches offer more flexibility but face limitations in xxx
+
+Moreover, xxx
+C1, C2, C3
+}
 
 % cpu ebpf is a background for solution
-GPU stacks, however, remain dominated by vendor drivers and firmware implementing fixed, opaque mechanisms, or by profiling-focused instrumentation frameworks\cite{cupti,villa2019nvbit,neutrino,egpu}. While academic works like TimeGraph and Gdev have shifted GPU scheduling and memory control into Linux device drivers\cite{timegraph,gdev}, and recent systems further refactor driver-level control paths\cite{kernelintercept,gpreempt,lithos}, these efforts typically implement policies as static kernel modules. Lacking a safe, programmable interface, adapting policies requires invasive driver changes and operational disruptions. To enable flexibility without kernel modification, recent serving systems retrofit programmability above the driver. \xiangyu{Should we clearly say that the following works are user-space approaches.} Paella\cite{paella} and XSched\cite{xsched} expose software-defined scheduling, while Pie\cite{pie} and KTransformers\cite{ktransformers} offer programmable runtimes for LLM inference. 
+GPU stacks, however, remain dominated by vendor drivers and firmware implementing fixed, opaque mechanisms, or by profiling-focused instrumentation frameworks\cite{cupti,villa2019nvbit,neutrino,egpu}. 
+\yusheng{However, this make the performance bad... }
+While academic works like TimeGraph and Gdev have shifted GPU scheduling and memory control into Linux device drivers\cite{timegraph,gdev}\yusheng{to improve performance...}, and recent systems further refactor driver-level control paths\cite{kernelintercept,gpreempt,lithos}, these efforts typically implement policies as static kernel modules. Lacking a safe, programmable interface, adapting policies requires invasive driver changes and operational disruptions. To enable flexibility without kernel modification, recent serving systems retrofit programmability above the driver. \xiangyu{Should we clearly say that the following works are user-space approaches.} Paella\cite{paella} and XSched\cite{xsched} expose software-defined scheduling, while Pie\cite{pie} and KTransformers\cite{ktransformers} offer programmable runtimes for LLM inference. 
 % more detail?
 % \xiangyu{User-space sharing and serving frameworks can therefore be programmable in a restricted way to the behavior that the fixed driver and device mechanisms choose to expose.}
 
