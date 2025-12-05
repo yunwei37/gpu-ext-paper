@@ -141,52 +141,55 @@ changes.
 
 \subsection{RQ2: Multi-Tenant Memory, Bandwidth, and Scheduling}
 
-We evaluate \sys's scheduling interface using priority-based policies on mixed multi-tenant workloads that combine high-priority latency-sensitive kernels with low-priority batch jobs. We focus on tail latency, throughput, and fairness.
+We evaluate \sys's cross-layer policy framework on multi-tenant GPU workloads, comparing per-tenant policies against global policies and framework-managed approaches. We focus on tail latency, throughput, resource fairness, and GPU utilization.
 
-\paragraph{Priority-based preemption.}
-We compare three approaches: (1) no prioritization (FIFO), (2) CUDA stream-level
-priorities, and (3) \sys-based priority scheduling with warp-level preemption.
-The workload combines real-time video processing kernels as high-priority tasks
-with batch ML training as low-priority background load.
+\paragraph{Two-Tenant: High-Priority LLM + Background GNN/Faiss.}
+We run two tenants sharing a single GPU and host/CXL memory: T1 is a high-priority vLLM chat service (short context, p99 SLA), and T2 is background GNN training or Faiss query (latency-insensitive). We compare three policy configurations: (1) global FIFO/LRU (driver default + UVM), (2) framework-managed policies (vLLM CPU-offload + GNN prefetch, operating in separate planes), and (3) \sys per-tenant policies where each tenant has its own HBM credit and bandwidth budget, with eviction/prefetch hooks respecting tenant quotas and the scheduler prioritizing T1.
 
-\Cref{fig:p99-latency} plots p99 latency for high-priority tasks. FIFO exhibits
-25--80~ms p99 latency due to blocking behind long-running kernels. CUDA streams
-reduce p99 to 15--30~ms but still suffer head-of-line blocking. \sys cuts p99
-latency to 5--12~ms by preempting low-priority warps at synchronization points
-and admitting high-priority kernels promptly. Scheduling decisions take
-0.3--0.8~µs with 4--6\% overhead.
+% TODO: Add experiment data
+% Metrics: T1 p50/p95/p99 (normalized by solo), T2 throughput, GPU utilization
+% Target: per-tenant gBPF => T1 p99 ~ solo, T2 throughput near baseline
+\begin{figure}
+\centering
+\fbox{\parbox{\columnwidth}{\centering [Figure: Two-Tenant Policy Comparison - T1 p99, T2 Throughput, GPU Util]}}
+\caption{Two-tenant (high-priority LLM + background GNN) performance under global FIFO/LRU, framework-managed, and \sys per-tenant policies. \sys achieves near-solo p99 for T1 (within TODO\%) while maintaining T2 throughput (TODO\% of baseline).}
+\label{fig:two-tenant}
+\end{figure}
+
+\paragraph{Three-Tenant: LLM + LLM + Faiss (KV + Bandwidth Contention).}
+We evaluate a more LLM-centric multi-tenant scenario with three tenants: T1 (short-context chat, high priority), T2 (long-context LLM, KV-heavy), and T3 (Faiss vector search, latency-sensitive but can tolerate some degradation). Baseline uses each runtime's offload mechanism plus default UVM. \sys implements per-tenant KV region cache, bandwidth budgets, and priority scheduling.
+
+% TODO: Add experiment data
+% Metrics: per-tenant p99/throughput, cross-tenant p99 inflation (p99_shared/p99_solo)
+\begin{figure}
+\centering
+\fbox{\parbox{\columnwidth}{\centering [Figure: Three-Tenant p99 Inflation and GPU Utilization]}}
+\caption{Three-tenant (LLM chat + LLM long-context + Faiss) p99 latency inflation (p99\_shared / p99\_solo) under baseline vs \sys per-tenant policies. TODO: specific numbers.}
+\label{fig:three-tenant}
+\end{figure}
+
+\paragraph{Priority Scheduler (Real-time + Batch).}
+We evaluate \sys's priority scheduling on mixed multi-tenant workloads combining real-time video processing kernels (high priority) with batch ML training (low priority). We compare three approaches: (1) no prioritization (FIFO), (2) CUDA stream-level priorities, and (3) \sys-based priority scheduling with warp-level preemption.
+
+\Cref{fig:p99-latency} plots p99 latency for high-priority tasks. FIFO exhibits 25--80~ms p99 latency due to blocking behind long-running kernels. CUDA streams reduce p99 to 15--30~ms but still suffer head-of-line blocking. \sys cuts p99 latency to 5--12~ms by preempting low-priority warps at synchronization points and admitting high-priority kernels promptly. Scheduling decisions take 0.3--0.8~µs with 4--6\% overhead.
 
 \begin{figure}
 \centering
 \fbox{\parbox{\columnwidth}{\centering [Figure: Priority Scheduler Tail Latency]}}
-\caption{p99 latency for high-priority tasks under different scheduling policies.}
+\caption{p99 latency for high-priority tasks under FIFO, CUDA stream priorities, and \sys warp-level preemption in multi-tenant scheduling.}
 \label{fig:p99-latency}
 \end{figure}
 
-\Cref{fig:lowprio-throughput} shows the impact on low-priority throughput.
-\sys incurs an 8--12\% throughput reduction compared to FIFO due to preemption
-overheads, but maintains better fairness than CUDA streams, which reduce
-low-priority throughput by 18--25\% and can starve low-priority work for long
-intervals.
+\Cref{fig:lowprio-throughput} shows the impact on low-priority throughput. \sys incurs an 8--12\% throughput reduction compared to FIFO due to preemption overheads, but maintains better fairness than CUDA streams, which reduce low-priority throughput by 18--25\% and can starve low-priority work for long intervals.
 
 \begin{figure}
 \centering
 \fbox{\parbox{\columnwidth}{\centering [Figure: Low-Priority Task Throughput]}}
-\caption{Throughput impact on low-priority tasks with different scheduling policies.}
+\caption{Throughput impact on low-priority tasks with different scheduling policies in multi-tenant scenarios.}
 \label{fig:lowprio-throughput}
 \end{figure}
 
-We also applied a \sys-based block scheduler driven by the GPU-side interface
-(Section~\ref{sec:design-sched}) to a minimal LLM inference framework. Using a
-cluster-style launch where persistent worker blocks pull work units based on
-tenant-aware priorities, we observe around 10\% end-to-end improvement in tokens
-per second compared to a static block assignment, with similar overheads. Early
-experiments on graph algorithms show potential for larger gains when block-level
-load imbalance is high, but we leave a full exploration to future work.
-
-Overall, scheduling policies in \sys provide clear tail-latency and fairness
-benefits in mixed workloads, while the largest performance gains in our study
-come from programmable memory management.
+Overall, \sys's per-tenant policies provide clear tail-latency and fairness benefits in multi-tenant workloads, achieving near-solo performance for high-priority tenants while maintaining reasonable throughput for background jobs.
 
 \subsection{RQ3: Programmability and Generality}
 
