@@ -45,7 +45,7 @@ We integrate \sys with the GPU backend of Faiss to evaluate vector search with o
 
 We evaluate \sys's memory policy interface on the application workloads introduced in Section~\ref{sec:eval-app-workloads}, focusing on oversubscribed single-tenant setups where memory placement and prefetching dominate performance.
 
-\paragraph{LLM inference: expert and KV-cache offload.}
+\paragraph{Expert Offloading (llama.cpp GPT-OSS-120B).}
 For the GPT-OSS-120B model in \texttt{llama.cpp}, a \sys policy that triggers a
 max-prefetch strategy on GPU-side memory events (prefetching additional experts
 when entering an expert region and evicting based on expert-level hotness)
@@ -55,22 +55,34 @@ Section~\ref{sec:eval-app-workloads}. This policy is expressed as eBPF callbacks
 in the driver plus device-side handlers that mark expert regions as
 ``will-use soon'' or ``cold'' without modifying the application.
 
-On the vLLM 30B FP8 MoE model, we compare vLLM's own CPU-offload mode (no UVM,
-\texttt{--cpu-offload-gb 8}) against \sys, which runs vLLM with UVM and a
-simple sequential prefetch policy for KV-cache segments. Using the ShareGPT
-benchmark from Section~\ref{sec:eval-app-workloads}, \sys improves mean and p99
-time-to-first-token by 1.7--2$\times$ and decoding throughput by about
-1.3$\times$ over vLLM's framework-managed offload. Simply enabling UVM without
-\sys policies performs worse than vLLM's own offload; the \sys configuration is
-roughly 2--3$\times$ faster than this UVM-only baseline.
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{img/results-raw/llama.cpp/llama_uvm_combined_color.png}
+\caption{Throughput of \sys expert-region caching policy vs default UVM and llama.cpp offloading across varying oversubscription ratios (model 60GB, GPU 32GB).}
+\label{fig:llama-expert-offload}
+\end{figure}
 
-\paragraph{Vector search and GNN training.}
-For Faiss, a \sys policy that adaptively prefetches index segments based
-on observed PCIe traffic and access streams reduces index build time by about
-1.5$\times$ compared to default UVM behavior when the index does not fit in
-device memory. Query workloads see similar benefits from keeping frequently
-accessed centroids and posting lists resident and demoting cold segments.
+% TODO: Add mechanism figure - per-miss stall CDF or timeline explaining where 5x comes from (fewer faults + bulk prefetch)
+\begin{figure}
+\centering
+\fbox{\parbox{\columnwidth}{\centering [Figure: llama.cpp Timeline/CDF - Mechanism Analysis]}}
+\caption{Per-miss stall timeline showing reduction in GPU stall time due to optimized bulk-prefetch decisions driven by GPU-side execution hints.}
+\label{fig:llama-mechanism}
+\end{figure}
 
+\paragraph{KV-cache Offloading (vLLM Qwen-30B MoE).}
+We evaluate on the Qwen-30B FP8 MoE model ($\approx$30GB) on RTX 5090 (32GB). The model alone nearly fills GPU VRAM, so default no-offload configuration OOMs under load. We stress KV-cache growth by sending 100 concurrent requests from ShareGPT (single-round, no prefix caching), resulting in total memory footprint of 36--40GB (model + KV-cache for $\approx$60K tokens aggregate). Existing solutions typically offload either KV-cache or MoE experts, but not both; in contrast, UVM attempts on-demand migration of both, leading to thrashing.
+
+We compare vLLM's CPU-offload mode (\texttt{--cpu-offload-gb 8}) against \sys with UVM and a simple sequential prefetch policy based on PCIe traffic patterns. This policy performs more aggressive prefetching than fixed heuristics, reducing thrashing and page faults. \sys improves mean and p99 time-to-first-token by 1.7--2$\times$ and decoding throughput by about 1.3$\times$ over vLLM's framework-managed offload (\Cref{fig:vllm-kv-offload}). Simply enabling UVM without \sys policies performs worse than vLLM's own offload; the \sys configuration is roughly 2--3$\times$ faster than this UVM-only baseline. This demonstrates that \sys's programmable driver-level policies can match or exceed SOTA framework-managed offloading while providing better p99 latency, even in single-tenant scenarios.
+
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{img/results-raw/vllm/ttft_tpot_combined.pdf}
+\caption{Time-to-first-token and decoding throughput for \sys KV-aware sequential prefetch policy vs vLLM CPU-offload on Qwen-30B FP8 MoE with 100 concurrent requests ($\approx$60K tokens KV-cache).}
+\label{fig:vllm-kv-offload}
+\end{figure}
+
+\paragraph{Graph Neural Networks (GNN Training).}
 For GNN workloads, we run PyTorch-based training under 1.5$\times$
 oversubscription of GPU memory. With default UVM, epoch time is around 71~s.
 With a simple \sys policy that performs sequential prefetching of adjacency and
@@ -80,6 +92,46 @@ working set that fits entirely in GPU memory completes an epoch in 15~s; \sys
 thus brings the oversubscribed configuration close to the non-oversubscribed
 baseline. The CPU-side framework overhead for these policies is around 1\%, and
 device-side instrumentation adds 2--3\%.
+
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{img/results-raw/pytorch/uvm_perf_vs_memory.png}
+\caption{Epoch time for GNN training with 1.5$\times$ GPU memory oversubscription: fit-in-HBM (15s), default UVM (71s), and \sys block-level prefetch with FIFO eviction (26s).}
+\label{fig:gnn-epoch}
+\end{figure}
+
+\paragraph{Faiss Vector Search.}
+For Faiss, a \sys policy that adaptively prefetches index segments based
+on observed PCIe traffic and access streams reduces index build time by about
+1.5$\times$ compared to default UVM behavior when the index does not fit in
+device memory. Query workloads see similar benefits from keeping frequently
+accessed centroids and posting lists resident and demoting cold segments.
+
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{img/results-raw/faiss/faiss_buildindex.png}
+\caption{Faiss index build time and query throughput with \sys adaptive prefetch policy vs default UVM under oversubscribed index segments ($\approx$1.5$\times$ speedup).}
+\label{fig:faiss-perf}
+\end{figure}
+
+\paragraph{Single-Tenant Block Scheduler.}
+We apply a \sys-based block scheduler driven by the GPU-side interface
+(Section~\ref{sec:design-sched}) to workloads with significant load imbalance.
+Using a cluster-style launch where persistent worker blocks pull work units
+via \texttt{should\_try\_steal}, we evaluate on a minimal LLM inference framework
+and graph algorithms where static block assignment leads to some blocks being
+overloaded while others idle.
+
+% TODO: Add actual experiment data
+% Workload: minimal LLM or graph algorithm with load imbalance
+% Compare: static block assignment vs gBPF device-side block scheduler
+% Expected: ~10% improvement in throughput
+\begin{figure}
+\centering
+\fbox{\parbox{\columnwidth}{\centering [Figure: Single-Tenant Block Scheduler]}}
+\caption{Throughput improvement from \sys device-side block scheduler with work stealing vs static block assignment on load-imbalanced workloads (TODO: +X\% improvement).}
+\label{fig:block-scheduler-single}
+\end{figure}
 
 Across these applications, the common pattern is that programmable region-based
 placement and prefetch policies in \sys allow the system to exploit workload
