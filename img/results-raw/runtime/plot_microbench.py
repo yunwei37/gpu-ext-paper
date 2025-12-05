@@ -142,11 +142,9 @@ def main():
 
     # Right subplot: CPU map access latency
     x_cpu = np.arange(len(cpu_labels))
-    # Convert to thousands for display (μs -> ms scale on axis)
-    cpu_time_k = [t / 1000 for t in cpu_time]
-    bars_cpu = ax_right.bar(x_cpu, cpu_time_k, 0.6, color='#d62728', edgecolor='black', linewidth=0.5)
+    bars_cpu = ax_right.bar(x_cpu, cpu_time, 0.6, color='#d62728', edgecolor='black', linewidth=0.5)
 
-    ax_right.set_ylabel('Latency (×10³ μs)', fontsize=14)
+    ax_right.set_ylabel('Latency (μs)', fontsize=14)
     ax_right.set_xlabel('CPU Map Op', fontsize=14)
     ax_right.set_xticks(x_cpu)
     ax_right.set_xticklabels(cpu_labels, fontsize=11, rotation=45, ha='right')
@@ -163,7 +161,7 @@ def main():
 
     ax_right.set_axisbelow(True)
     ax_right.yaxis.grid(True, linestyle='--', alpha=0.7)
-    ax_right.set_ylim(0, max(cpu_time_k) * 1.15)
+    ax_right.set_ylim(0, max(cpu_time) * 1.15)
 
     plt.tight_layout()
     output_path = script_dir / 'microbench_comparison.pdf'

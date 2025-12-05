@@ -342,9 +342,9 @@ live instrumentation without interrupting execution.
 \paragraph{Device-side Microbenchmarks and Optimization Effects.}
 We evaluate device-side \sys mechanisms using a vector-add microbenchmark (32 elements, 10K iterations) on RTX 5090. \Cref{fig:microbench}(a) compares latency before and after our SIMT-aware warp-level execution optimizations (\S\ref{sec:verification}), with a baseline of 5.2~μs. Empty probe latency drops from 6.2~μs to 5.5~μs (-11\%), and exit probe from 6.2~μs to 5.3~μs (-14\%). More complex operations show larger improvements: array map lookup drops from 8.2~μs to 5.8~μs (-30\%), array map update from 11.1~μs to 7.0~μs (-37\%), and Memtrace from 9.4~μs to 6.1~μs (-35\%). \Cref{fig:microbench}(b) shows CPU map access via PCIe incurs ~33,700~μs latency---approximately 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU.
 
-\begin{figure}
+\begin{figure*}
 \centering
-\includegraphics[width=\columnwidth]{img/results-raw/runtime/microbench_comparison.pdf}
+\includegraphics[width=\textwidth]{img/results-raw/runtime/microbench_comparison.pdf}
 \caption{Device-side microbenchmark latency. (a) GPU-side operations before/after SIMT-aware optimizations show 11--37\% latency reduction. (b) CPU map access via PCIe is ~6000$\times$ slower than GPU-side operations.}
 \label{fig:microbench}
-\end{figure}
+\end{figure*}
