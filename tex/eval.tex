@@ -1,18 +1,13 @@
 \section{Evaluation}
 \label{sec:eval}
 
-We evaluate \sys along five questions:
+We evaluate \sys using four key questions:
 
 \begin{itemize}[leftmargin=*]
-  \item \textbf{RQ1:} What is the runtime overhead of \sys's core mechanisms and
-        observability tools compared to existing approaches?
-  \item \textbf{RQ2:} Can \sys-based memory policies improve performance over
-        framework-managed offloading and default UVM across realistic workloads?
-  \item \textbf{RQ3:} Can \sys-based memory policies improve performance over
-        multi-tenant workloads and improve oversubscribe and context switch performance?
-  \item \textbf{RQ4:} Can \sys-based scheduling policies provide tangible gains
-        in tail latency and throughput in multi-tenant workloads?
-  \item \textbf{RQ5:} Can \sys-device side and optimization improve the device policy performance?
+  \item \textbf{RQ1 (Single-Tenant Memory/Scheduling):} How much performance gain can \sys's programmable memory and scheduling policies provide on oversubscribed single-tenant workloads?
+  \item \textbf{RQ2 (Multi-Tenant Management):} Does \sys's cross-layer policy framework improve tail latency, throughput, and resource fairness compared to user-space and global policies in multi-tenant settings?
+  \item \textbf{RQ3 (Programmability \& Generality):} Is \sys sufficiently programmable and general to support diverse resource management policies without significant complexity?
+  \item \textbf{RQ4 (Mechanism Overhead):} What is the overhead of \sys's core mechanisms, including its observability capabilities and device-side extensions?
 \end{itemize}
 
 \subsection{Methodology and Setup}
@@ -35,45 +30,20 @@ end-to-end workloads. In all cases, \sys attaches via runtime and kernel driver
 instrumentation; application and framework binaries are unchanged and does not require recompilation.
 
 \paragraph{PyTorch.}
-We use PyTorch for both inference and training workloads. For RQ1, we run a
-ResNet model on ImageNet-sized batches to measure end-to-end inference latency
-under \sys and the PyTorch profiler (CUPTI+NVTX). For RQ2, we use PyTorch-based
-GNN training under 1.5$\times$ GPU memory oversubscription to study the impact
-of programmable UVM policies on epoch time. \sys is loaded as a runtime
-extension and instruments CUDA kernels without changes to the PyTorch code,
-models, or training loops.
+We use PyTorch for both inference and training workloads. For RQ4, we run a ResNet model on ImageNet-sized batches to measure end-to-end inference latency under \sys and the PyTorch profiler (CUPTI+NVTX). For RQ1, we use PyTorch-based GNN training under 1.5$\times$ GPU memory oversubscription to study the impact of programmable UVM policies on epoch time. \sys is loaded as a runtime extension and instruments CUDA kernels without changes to the PyTorch code, models, or training loops.
 
 \paragraph{\texttt{llama.cpp}.}
-We use the GPT-OSS-120B configuration in \texttt{llama.cpp} to evaluate expert
-offload policies (RQ2). The model is approximately 60~GB on an RTX~5090 with
-32~GB of device memory, so inference runs in oversubscribed mode with UVM and
-the framework's built-in offload support. \sys attaches
-transparently at the driver level and
-via device-side handlers that tag expert regions as ``hot'' or ``cold'' and
-drive prefetch/eviction decisions.
+We use the GPT-OSS-120B configuration in \texttt{llama.cpp} to evaluate expert offload policies (RQ1). The model is approximately 60~GB on an RTX~5090 with 32~GB of device memory, so inference runs in oversubscribed mode with UVM and the framework's built-in offload support. \sys attaches transparently at the driver level and via device-side handlers that tag expert regions as ``hot'' or ``cold'' and drive prefetch/eviction decisions.
 
 \paragraph{vLLM.}
-We evaluate vLLM on a 30B FP8 MoE model to study KV-cache placement and
-offloading policies (RQ2) under realistic serving loads. We use a ShareGPT
-benchmark with 100 requests and around 30 concurrent requests to stress KV-cache
-growth and reuse. \sys runs alongside vLLM with UVM enabled and implements
-sequential prefetch and eviction policies for KV-cache segments via callbacks
-and GPU handlers.
+We evaluate vLLM on a 30B FP8 MoE model to study KV-cache placement and offloading policies (RQ1) under realistic serving loads. We use a ShareGPT benchmark with 100 requests and around 30 concurrent requests to stress KV-cache growth and reuse. \sys runs alongside vLLM with UVM enabled and implements sequential prefetch and eviction policies for KV-cache segments via callbacks and GPU handlers.
 
 \paragraph{Faiss.}
-We integrate \sys with the GPU backend of Faiss to evaluate vector search with
-oversubscribed indices (RQ2). We consider both index build and query workloads
-where the index does not fit in device memory and UVM migrates index pages over
-PCIe. \sys observes and steers index-segment placement by instrumenting GPU
-memory operations and monitoring PCIe traffic, keeping frequently accessed
-centroids and posting lists resident while demoting cold segments.
+We integrate \sys with the GPU backend of Faiss to evaluate vector search with oversubscribed indices (RQ1). We consider both index build and query workloads where the index does not fit in device memory and UVM migrates index pages over PCIe. \sys observes and steers index-segment placement by instrumenting GPU memory operations and monitoring PCIe traffic, keeping frequently accessed centroids and posting lists resident while demoting cold segments.
 
-\subsection{RQ1: Runtime Overhead and Observability}
+\subsection{RQ4: Runtime Overhead and Observability}
 
-We evaluate the efficiency of \sys's core mechanisms and its observability
-capabilities. We first quantify the base runtime overhead and shared state costs,
-then demonstrate that \sys enables practical observability tools with
-significantly lower overhead than existing frameworks.
+We evaluate the efficiency of \sys's core mechanisms and its observability capabilities. We first quantify the base runtime overhead and shared state costs, then demonstrate that \sys enables practical observability tools with significantly lower overhead than existing frameworks.
 
 \subsubsection{Runtime and Shared State Overhead}
 
@@ -168,11 +138,9 @@ live instrumentation without interrupting execution.
 \label{fig:obs-comparison}
 \end{figure}
 
-\subsection{RQ2: Programmable Memory Management}
+\subsection{RQ1: Single-Tenant Memory and Scheduling Policies}
 
-We now evaluate \sys's memory policy interface on the application workloads
-introduced in Section~\ref{sec:eval-app-workloads}, focusing on oversubscribed
-setups where memory placement and prefetching dominate performance.
+We evaluate \sys's memory policy interface on the application workloads introduced in Section~\ref{sec:eval-app-workloads}, focusing on oversubscribed single-tenant setups where memory placement and prefetching dominate performance.
 
 \paragraph{LLM inference: expert and KV-cache offload.}
 For the GPT-OSS-120B model in \texttt{llama.cpp}, a \sys policy that triggers a
@@ -216,12 +184,9 @@ structure (experts, KV-cache, graph structure, index layout) that existing UVM
 policies and framework-level offload mechanisms cannot leverage without invasive
 changes.
 
-\subsection{RQ3: Fine-grain Scheduling}
+\subsection{RQ2: Multi-Tenant Memory, Bandwidth, and Scheduling}
 
-We finally evaluate \sys's scheduling interface using priority-based policies on
-mixed workloads that combine high-priority latency-sensitive kernels with
-low-priority batch jobs. We focus on tail latency and fairness; power-aware
-control is omitted here.
+We evaluate \sys's scheduling interface using priority-based policies on mixed multi-tenant workloads that combine high-priority latency-sensitive kernels with low-priority batch jobs. We focus on tail latency, throughput, and fairness.
 
 \paragraph{Priority-based preemption.}
 We compare three approaches: (1) no prioritization (FIFO), (2) CUDA stream-level
