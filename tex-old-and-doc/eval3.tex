@@ -6,7 +6,8 @@ We evaluate \sys using four key questions:
 \begin{itemize}[leftmargin=*]
   \item \textbf{RQ1 (Single-Tenant Memory/Scheduling):} How much performance gain can \sys's programmable memory and scheduling policies provide on oversubscribed single-tenant workloads?
   \item \textbf{RQ2 (Multi-Tenant Management):} Does \sys's cross-layer policy framework improve tail latency, throughput, and resource fairness compared to user-space and global policies in multi-tenant settings?
-  \item \textbf{RQ3 (Programmability \& Mechanism Overhead):} Is \sys sufficiently programmable to support diverse policies, and what is the overhead of its core mechanisms and observability capabilities?
+  \item \textbf{RQ3 (Programmability \& Generality):} Is \sys sufficiently programmable and general to support diverse resource management policies without significant complexity?
+  \item \textbf{RQ4 (Mechanism Overhead):} What is the overhead of \sys's core mechanisms, including its observability capabilities and device-side extensions?
 \end{itemize}
 
 \subsection{Methodology and Setup}
@@ -19,36 +20,30 @@ otherwise noted, we report results on Server~A and average each metric over
 10 trials; when averaging speedups we use geometric means. We compare against
 NVIDIA's CUPTI and NVTX-based profiler stack, NVBit gpumemtrace, default UVM
 memory management, and the native GPU scheduler without \sys-based policies, as
-well as framework-managed offloading where applicable. We use PyTorch (version 2.9.0), vLLM (version 0.11.0), llama.cpp (version 7101), and Faiss (version 1.13.0) for our evaluation.
+well as framework-managed offloading where applicable.
 
+\subsubsection{Application workloads}
+\label{sec:eval-app-workloads}
 
+We use four unmodified GPU applications from pre-release to evaluate \sys under realistic
+end-to-end workloads. In all cases, \sys attaches via runtime and kernel driver
+instrumentation; application and framework binaries are unchanged and does not require recompilation.
+
+\paragraph{PyTorch.}
+We use PyTorch for both inference and training workloads. For RQ4, we run a ResNet model on ImageNet-sized batches to measure end-to-end inference latency under \sys and the PyTorch profiler (CUPTI+NVTX). For RQ1, we use PyTorch-based GNN training under 1.5$\times$ GPU memory oversubscription to study the impact of programmable UVM policies on epoch time. \sys is loaded as a runtime extension and instruments CUDA kernels without changes to the PyTorch code, models, or training loops.
+
+\paragraph{\texttt{llama.cpp}.}
+We use the GPT-OSS-120B configuration in \texttt{llama.cpp} to evaluate expert offload policies (RQ1). The model is approximately 60~GB on an RTX~5090 with 32~GB of device memory, so inference runs in oversubscribed mode with UVM and the framework's built-in offload support. \sys attaches transparently at the driver level and via device-side handlers that tag expert regions as ``hot'' or ``cold'' and drive prefetch/eviction decisions.
+
+\paragraph{vLLM.}
+We evaluate vLLM on a 30B FP8 MoE model to study KV-cache placement and offloading policies (RQ1) under realistic serving loads. We use a ShareGPT benchmark with 100 requests and around 30 concurrent requests to stress KV-cache growth and reuse. \sys runs alongside vLLM with UVM enabled and implements sequential prefetch and eviction policies for KV-cache segments via callbacks and GPU handlers.
+
+\paragraph{Faiss.}
+We integrate \sys with the GPU backend of Faiss to evaluate vector search with oversubscribed indices (RQ1). We consider both index build and query workloads where the index does not fit in device memory and UVM migrates index pages over PCIe. \sys observes and steers index-segment placement by instrumenting GPU memory operations and monitoring PCIe traffic, keeping frequently accessed centroids and posting lists resident while demoting cold segments.
 
 \subsection{RQ1: Single-Tenant Memory and Scheduling Policies}
 
 We evaluate \sys's memory policy interface on the application workloads introduced in Section~\ref{sec:eval-app-workloads}, focusing on oversubscribed single-tenant setups where memory placement and prefetching dominate performance.
-
-\subsubsection{Microbenchmarks}
-
-\paragraph{Memory Policy Microbenchmarks.}
-We evaluate \sys's memory policies on three representative kernels: \texttt{HotSpot} (stencil-like structured access), \texttt{GEMM} (dense matrix multiplication), and \texttt{KMeans} (sparse/irregular access). We configure varying oversubscription ratios (0.6--0.9$\times$ of working set) to stress UVM migration. We compare \sys policies (e.g., Stride Prefetch, LFU Eviction) against the default driver-managed LRU, measuring execution time and fault reduction.
-
-\paragraph{Single-Tenant Block Scheduler.}
-We apply a \sys-based block scheduler driven by the GPU-side interface
-(Section~\ref{sec:design-sched}) to workloads with significant load imbalance.
-Using a cluster-style launch where persistent worker blocks pull work units
-via \texttt{should\_try\_steal}, we evaluate on AI inference with dynamic batching
-and GEMM with variable matrix sizes where static block assignment leads to some blocks being overloaded while others idle.
-
-\Cref{fig:block-scheduler-single} compares three scheduling policies: FixedWork (static block assignment), CLC Baseline (cooperative launch control), and workload-aware policies (WorkloadAware for inference, TokenBucket for GEMM). On AI inference with dynamic batching, the workload-aware policy reduces execution time from 27~µs (FixedWork) to 17~µs, a 37\% improvement. On imbalanced GEMM, TokenBucket achieves 51~µs compared to 67~µs for FixedWork, a 24\% improvement across variable MxNxK configurations.
-
-\begin{figure}
-\centering
-\includegraphics[width=\columnwidth]{img/results-raw/sync/clc/clc-policy.png}
-\caption{Block scheduler performance on load-imbalanced workloads: AI inference with dynamic batching and GEMM with variable matrix sizes. Workload-aware \sys policies achieve 24--37\% improvement over static assignment.}
-\label{fig:block-scheduler-single}
-\end{figure}
-
-\subsubsection{Case Studies}
 
 \paragraph{Expert Offloading (llama.cpp GPT-OSS-120B).}
 For the GPT-OSS-120B model in \texttt{llama.cpp}, a \sys policy that triggers a
@@ -119,6 +114,22 @@ accessed centroids and posting lists resident and demoting cold segments.
 \label{fig:faiss-perf}
 \end{figure}
 
+\paragraph{Single-Tenant Block Scheduler.}
+We apply a \sys-based block scheduler driven by the GPU-side interface
+(Section~\ref{sec:design-sched}) to workloads with significant load imbalance.
+Using a cluster-style launch where persistent worker blocks pull work units
+via \texttt{should\_try\_steal}, we evaluate on AI inference with dynamic batching
+and GEMM with variable matrix sizes where static block assignment leads to some blocks being overloaded while others idle.
+
+\Cref{fig:block-scheduler-single} compares three scheduling policies: FixedWork (static block assignment), CLC Baseline (cooperative launch control), and workload-aware policies (WorkloadAware for inference, TokenBucket for GEMM). On AI inference with dynamic batching, the workload-aware policy reduces execution time from 27~µs (FixedWork) to 17~µs, a 37\% improvement. On imbalanced GEMM, TokenBucket achieves 51~µs compared to 67~µs for FixedWork, a 24\% improvement across variable MxNxK configurations.
+
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{img/results-raw/sync/clc/clc-policy.png}
+\caption{Block scheduler performance on load-imbalanced workloads: AI inference with dynamic batching and GEMM with variable matrix sizes. Workload-aware \sys policies achieve 24--37\% improvement over static assignment.}
+\label{fig:block-scheduler-single}
+\end{figure}
+
 Across these applications, the common pattern is that programmable region-based
 placement and prefetch policies in \sys allow the system to exploit workload
 structure (experts, KV-cache, graph structure, index layout) that existing UVM
@@ -129,7 +140,30 @@ changes.
 
 We evaluate \sys's cross-layer policy framework on multi-tenant GPU workloads, comparing per-tenant policies against global policies and framework-managed approaches. We focus on tail latency, throughput, resource fairness, and GPU utilization.
 
-\subsubsection{Microbenchmarks}
+\paragraph{Two-Tenant: High-Priority LLM + Background GNN/Faiss.}
+We run two tenants sharing a single GPU and host/CXL memory: T1 is a high-priority vLLM chat service (short context, p99 SLA), and T2 is background GNN training or Faiss query (latency-insensitive). We compare three policy configurations: (1) global FIFO/LRU (driver default + UVM), (2) framework-managed policies (vLLM CPU-offload + GNN prefetch, operating in separate planes), and (3) \sys per-tenant policies where each tenant has its own HBM credit and bandwidth budget, with eviction/prefetch hooks respecting tenant quotas and the scheduler prioritizing T1.
+
+% TODO: Add experiment data
+% Metrics: T1 p50/p95/p99 (normalized by solo), T2 throughput, GPU utilization
+% Target: per-tenant gBPF => T1 p99 ~ solo, T2 throughput near baseline
+\begin{figure}
+\centering
+\fbox{\parbox{\columnwidth}{\centering [Figure: Two-Tenant Policy Comparison - T1 p99, T2 Throughput, GPU Util]}}
+\caption{Two-tenant (high-priority LLM + background GNN) performance under global FIFO/LRU, framework-managed, and \sys per-tenant policies. \sys achieves near-solo p99 for T1 (within TODO\%) while maintaining T2 throughput (TODO\% of baseline).}
+\label{fig:two-tenant}
+\end{figure}
+
+\paragraph{Three-Tenant: LLM + LLM + Faiss (KV + Bandwidth Contention).}
+We evaluate a more LLM-centric multi-tenant scenario with three tenants: T1 (short-context chat, high priority), T2 (long-context LLM, KV-heavy), and T3 (Faiss vector search, latency-sensitive but can tolerate some degradation). Baseline uses each runtime's offload mechanism plus default UVM. \sys implements per-tenant KV region cache, bandwidth budgets, and priority scheduling.
+
+% TODO: Add experiment data
+% Metrics: per-tenant p99/throughput, cross-tenant p99 inflation (p99_shared/p99_solo)
+\begin{figure}
+\centering
+\fbox{\parbox{\columnwidth}{\centering [Figure: Three-Tenant p99 Inflation and GPU Utilization]}}
+\caption{Three-tenant (LLM chat + LLM long-context + Faiss) p99 latency inflation (p99\_shared / p99\_solo) under baseline vs \sys per-tenant policies. TODO: specific numbers.}
+\label{fig:three-tenant}
+\end{figure}
 
 \paragraph{Priority Scheduler (Real-time + Batch).}
 We evaluate \sys's priority scheduling on mixed multi-tenant workloads combining real-time video processing kernels (high priority) with batch ML training (low priority). We compare three approaches: (1) no prioritization (FIFO), (2) CUDA stream-level priorities, and (3) \sys-based priority scheduling with warp-level preemption.
@@ -152,37 +186,11 @@ We evaluate \sys's priority scheduling on mixed multi-tenant workloads combining
 \label{fig:lowprio-throughput}
 \end{figure}
 
-\paragraph{Memory Priority Control (HotSpot).}
-We evaluate memory priority enforcement using the HotSpot kernel in a multi-tenant setting. \sys ensures high-priority tenants retain their working set in GPU memory, while low-priority tenants are evicted when contention occurs.
-\Cref{fig:hotspot-priority} shows that \sys effectively isolates the high-priority tenant's performance, whereas default UVM allows the low-priority tenant to thrash the shared memory, degrading both.
-
-\begin{figure}
-\centering
-\includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/results_hotspot_policy_selected_vertical.pdf}
-\caption{Impact of \sys memory priority control on HotSpot execution in a multi-tenant environment. High-priority tenants maintain near-solo performance.}
-\label{fig:hotspot-priority}
-\end{figure}
-
-\subsubsection{Case Studies}
-
-\paragraph{Two-Tenant: High-Priority LLM + Background GNN/Faiss.}
-We run two tenants sharing a single GPU and host/CXL memory: T1 is a high-priority vLLM chat service (short context, p99 SLA), and T2 is background GNN training or Faiss query (latency-insensitive). We compare three policy configurations: (1) global FIFO/LRU (driver default + UVM), (2) framework-managed policies (vLLM CPU-offload + GNN prefetch, operating in separate planes), and (3) \sys per-tenant policies where each tenant has its own HBM credit and bandwidth budget, with eviction/prefetch hooks respecting tenant quotas and the scheduler prioritizing T1.
-
-% TODO: Add experiment data
-% Metrics: T1 p50/p95/p99 (normalized by solo), T2 throughput, GPU utilization
-% Target: per-tenant gBPF => T1 p99 ~ solo, T2 throughput near baseline
-\begin{figure}
-\centering
-\fbox{\parbox{\columnwidth}{\centering [Figure: Two-Tenant Policy Comparison - T1 p99, T2 Throughput, GPU Util]}}
-\caption{Two-tenant (high-priority LLM + background GNN) performance under global FIFO/LRU, framework-managed, and \sys per-tenant policies. \sys achieves near-solo p99 for T1 (within TODO\%) while maintaining T2 throughput (TODO\% of baseline).}
-\label{fig:two-tenant}
-\end{figure}
-
 Overall, \sys's per-tenant policies provide clear tail-latency and fairness benefits in multi-tenant workloads, achieving near-solo performance for high-priority tenants while maintaining reasonable throughput for background jobs.
 
-\subsection{RQ3: Programmability and Mechanism Overhead}
+\subsection{RQ3: Programmability and Generality}
 
-We evaluate \sys's programmability by examining policy complexity and reuse, and quantify the efficiency of its core mechanisms and observability capabilities.
+We evaluate \sys's programmability by examining policy complexity (lines of code), support across diverse workloads, and the relationship between policy complexity and runtime overhead.
 
 \paragraph{Support Matrix.}
 \Cref{tab:support-matrix} shows the policies implemented for each workload, along with lines of code (host eBPF + device eBPF) and measured overhead. All policies attach to unmodified frameworks via \sys's runtime instrumentation. The key takeaway is that a few hundred lines of policy code can implement sophisticated cross-layer resource management without application changes.
@@ -191,20 +199,17 @@ We evaluate \sys's programmability by examining policy complexity and reuse, and
 \begin{table}[t]
 \centering
 \small
-\caption{Policy support matrix. LOC = Host C + Device eBPF lines.}
+\caption{Policy support matrix across workloads. LOC = host eBPF + device eBPF lines.}
 \label{tab:support-matrix}
-\begin{tabular}{llc}
+\begin{tabular}{lcccc}
 \toprule
-\textbf{Policy} & \textbf{Tag} & \textbf{Total LOC} \\
+\textbf{Workload} & \textbf{Observability} & \textbf{Memory} & \textbf{Scheduling} & \textbf{Overhead} \\
 \midrule
-Global FIFO Eviction & Memory (Eviction) & 145 \\
-Global LFU Eviction & Memory (Eviction) & 304 \\
-Multi-tenant Quota LRU & Memory (Multi-tenant) & 472 \\
-Adaptive Seq. Prefetch & Memory (Prefetch) & 375 \\
-Stride Prefetch & Memory (Prefetch) & 472 \\
-Tree-based Prefetch (Multi-tenant) & Memory (Multi-tenant) & 454 \\
-Dynamic Timeslice & Scheduling & 408 \\
-Preemption Control & Scheduling & 925 \\
+PyTorch ResNet & threadhist, mem\_trace & -- & -- & 2--3\% \\
+PyTorch GNN & kernelretsnoop & block prefetch (TODO LOC) & -- & 2--3\% \\
+llama.cpp 120B & launchlate & expert cache (TODO LOC) & block sched (TODO LOC) & 3--4\% \\
+vLLM 30B & mem\_trace & KV prefetch (TODO LOC) & priority (TODO LOC) & 2--3\% \\
+Faiss & kernelretsnoop & segment cache (TODO LOC) & -- & 2--3\% \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -225,6 +230,10 @@ Preemption Control & Scheduling & 925 \\
 
 \paragraph{Policy Reuse Across Workloads.}
 The region cache policy skeleton used for llama.cpp expert offloading can be adapted to vLLM KV-cache management by changing only the region identification helpers and ID mappings. Similarly, the sequential prefetch policy applies to both GNN adjacency blocks and Faiss index segments with minimal modification (TODO: X lines changed out of Y total). This demonstrates \sys's support for portable, reusable policy components.
+
+\subsection{RQ4: Runtime Overhead and Observability}
+
+We evaluate the efficiency of \sys's core mechanisms and its observability capabilities. We first quantify the base runtime overhead and shared state costs, then demonstrate that \sys enables practical observability tools with significantly lower overhead than existing frameworks.
 
 \subsubsection{Runtime and Shared State Overhead}
 
