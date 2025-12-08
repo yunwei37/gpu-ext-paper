@@ -131,36 +131,30 @@ We evaluate \sys's cross-layer policy framework on multi-tenant GPU workloads, c
 
 \subsubsection{Microbenchmarks}
 
-\paragraph{Priority Scheduler (Real-time + Batch).}
-We evaluate \sys's priority scheduling on mixed multi-tenant workloads combining real-time video processing kernels (high priority) with batch ML training (low priority). We compare three approaches: (1) no prioritization (FIFO), (2) CUDA stream-level priorities, and (3) \sys-based priority scheduling with warp-level preemption.
+\paragraph{Multi-Tenant Timeslice Scheduler (LC + BE).}
+We evaluate \sys's BPF struct\_ops scheduling policies on \emph{compute-bound} multi-tenant workloads where the bottleneck is GPU SM time rather than memory bandwidth. In this scenario, 2 latency-critical (LC) processes and 4 best-effort (BE) processes run concurrently, each with 4 CUDA streams submitting 50 compute kernels ($\sim$80ms/kernel). We compare the native scheduler against \sys with differentiated timeslices (LC: 1s, BE: 200$\mu$s), collecting 12,000 kernel launch latency samples over 10 rounds per configuration.
 
-\Cref{fig:p99-latency} plots p99 latency for high-priority tasks. FIFO exhibits 25--80~ms p99 latency due to blocking behind long-running kernels. CUDA streams reduce p99 to 15--30~ms but still suffer head-of-line blocking. \sys cuts p99 latency to 5--12~ms by preempting low-priority warps at synchronization points and admitting high-priority kernels promptly. Scheduling decisions take 0.3--0.8~µs with 4--6\% overhead.
+\Cref{fig:scheduler-latency} shows that \sys reduces the per-round P99 launch latency mean for LC workloads from 1188$\mu$s to 53$\mu$s (95.5\% reduction), while P99 standard deviation drops from 3405$\mu$s to 35$\mu$s (99\% reduction), demonstrating significantly improved scheduling stability. BE throughput remains essentially unchanged (+0.8\%), confirming that \sys's BPF struct\_ops can dramatically reduce LC tail latency without sacrificing BE throughput.
 
 \begin{figure}
 \centering
-\fbox{\parbox{\columnwidth}{\centering [Figure: Priority Scheduler Tail Latency]}}
-\caption{p99 latency for high-priority tasks under FIFO, CUDA stream priorities, and \sys warp-level preemption in multi-tenant scheduling.}
-\label{fig:p99-latency}
+\includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/scheduler_latency_throughput.pdf}
+\caption{Multi-tenant GPU scheduling with \sys BPF struct\_ops policies on compute-bound workloads. LC P99 launch latency drops 95.5\% (1188$\mu$s $\rightarrow$ 53$\mu$s) with 99\% lower variance, while BE throughput remains unchanged (+0.8\%).}
+\label{fig:scheduler-latency}
 \end{figure}
 
-\Cref{fig:lowprio-throughput} shows the impact on low-priority throughput. \sys incurs an 8--12\% throughput reduction compared to FIFO due to preemption overheads, but maintains better fairness than CUDA streams, which reduce low-priority throughput by 18--25\% and can starve low-priority work for long intervals.
+\paragraph{Multi-Tenant Memory Priority Differentiation.}
+We evaluate \sys's eBPF-based memory policies for priority differentiation on \emph{memory-bound} workloads under UVM oversubscription. We test three representative kernels: HotSpot (spatial locality), GEMM (compute-intensive), and K-Means (sparse access). Each experiment runs two concurrent processes competing for the same GPU memory, with \sys policies applying differentiated prefetch/eviction control based on process priority. We compare against: (1) no-policy multi-tenant execution, (2) single-process runtime (Single 1$\times$), and (3) the theoretical optimum for two workloads (2$\times$Single 1$\times$).
+
+\Cref{fig:all-kernels-priority} shows that without policies, both processes degrade equally severely due to memory thrashing, with completion times 20--50$\times$ slower than single-process execution and less than 0.2\% difference between them. With \sys memory priority policies enabled, total completion time improves by 55--92\% compared to the no-policy baseline. High-priority processes complete 6--19\% faster than low-priority ones, demonstrating effective priority enforcement. In the best case, K-Means drops from 85.5s to 6.6s, approaching the theoretical lower bound of 2$\times$Single 1$\times$ (3.9s $\times$ 2 $\approx$ 7.8s). Prefetch and eviction policies show nearly identical effectiveness (<1\% difference), indicating that prefetch control is the dominant optimization in these workloads.
+
+Crucially, scheduler timeslice policies are \emph{ineffective} for these memory-bound workloads (<1\% improvement), because the bottleneck is UVM page faults rather than GPU compute time. Memory policies directly control prefetch/eviction behavior, addressing the actual bottleneck. This demonstrates that \sys's layered policy framework allows operators to apply the right policy for each workload characteristic: scheduler policies for compute-bound scenarios, memory policies for memory-bound scenarios.
 
 \begin{figure}
 \centering
-\fbox{\parbox{\columnwidth}{\centering [Figure: Low-Priority Task Throughput]}}
-\caption{Throughput impact on low-priority tasks with different scheduling policies in multi-tenant scenarios.}
-\label{fig:lowprio-throughput}
-\end{figure}
-
-\paragraph{Memory Priority Control (HotSpot).}
-We evaluate memory priority enforcement using the HotSpot kernel in a multi-tenant setting. \sys ensures high-priority tenants retain their working set in GPU memory, while low-priority tenants are evicted when contention occurs.
-\Cref{fig:hotspot-priority} shows that \sys effectively isolates the high-priority tenant's performance, whereas default UVM allows the low-priority tenant to thrash the shared memory, degrading both.
-
-\begin{figure}
-\centering
-\includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/results_hotspot_policy_selected_vertical.pdf}
-\caption{Impact of \sys memory priority control on HotSpot execution in a multi-tenant environment. High-priority tenants maintain near-solo performance.}
-\label{fig:hotspot-priority}
+\includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/all_kernels_stacked.pdf}
+\caption{Multi-tenant memory priority differentiation on oversubscribed UVM workloads. \sys policies reduce total completion time by 55--92\% and enforce 6--19\% faster completion for high-priority tenants. Scheduler policies are ineffective (<1\%) on these memory-bound workloads. Single 1$\times$ shows ideal single-process time; 2$\times$Single 1$\times$ is the theoretical lower bound.}
+\label{fig:all-kernels-priority}
 \end{figure}
 
 \subsubsection{Case Studies}
@@ -331,7 +325,7 @@ live instrumentation without interrupting execution.
 \end{figure}
 
 \paragraph{Device-side Microbenchmarks and Optimization Effects.}
-We evaluate device-side \sys mechanisms using a vector-add microbenchmark (32 elements, 10K iterations) on RTX 5090. \Cref{fig:microbench}(a) compares latency before and after our SIMT-aware warp-level execution optimizations (\S\ref{sec:verification}), with a baseline of 5.2~μs. Empty probe latency drops from 6.2~μs to 5.5~μs (-11\%), and exit probe from 6.2~μs to 5.3~μs (-14\%). More complex operations show larger improvements: array map lookup drops from 8.2~μs to 5.8~μs (-30\%), array map update from 11.1~μs to 7.0~μs (-37\%), and Memtrace from 9.4~μs to 6.1~μs (-35\%). \Cref{fig:microbench}(b) shows CPU map access via PCIe incurs ~33,700~μs latency---approximately 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU.
+We evaluate device-side \sys mechanisms using a vector-add microbenchmark (32 elements, 10K iterations) on RTX 5090. \Cref{fig:microbench}(a) compares latency before and after our SIMT-aware warp-level execution optimizations (\S\ref{sec:verification}), with a baseline of 5.2~$\mu$s. Empty probe latency drops from 6.2~$\mu$s to 5.5~$\mu$s (-11\%), and exit probe from 6.2~$\mu$s to 5.3~$\mu$s (-14\%). More complex operations show larger improvements: array map lookup drops from 8.2~$\mu$s to 5.8~$\mu$s (-30\%), array map update from 11.1~$\mu$s to 7.0~$\mu$s (-37\%), and Memtrace from 9.4~$\mu$s to 6.1~$\mu$s (-35\%). \Cref{fig:microbench}(b) shows CPU map access via PCIe incurs ~33,700~$\mu$s latency---approximately 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU.
 
 \begin{figure*}
 \centering
