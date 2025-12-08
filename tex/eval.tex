@@ -185,9 +185,8 @@ We evaluate \sys's programmability by examining policy complexity and reuse, and
 \begin{table}[t]
 \centering
 \small
-\caption{Policy support matrix. LOC = Host C + Device eBPF lines.}
-\label{tab:support-matrix}
-\begin{tabular}{llc}
+
+\begin{tabularx}{\columnwidth}{@{} X l c @{}}
 \toprule
 \textbf{Policy} & \textbf{Tag} & \textbf{Total LOC} \\
 \midrule
@@ -200,8 +199,11 @@ Tree-based Prefetch (Multi-tenant) & Memory (Multi-tenant) & 454 \\
 Dynamic Timeslice & Scheduling & 408 \\
 Preemption Control & Scheduling & 925 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
+\caption{Policy support matrix. LOC = Host C + Device eBPF lines.}
+\label{tab:support-matrix}
 \end{table}
+
 
 \paragraph{Policy Complexity vs Overhead.}
 \Cref{fig:complexity-overhead} plots policy complexity (approximated by eBPF instruction count, map operations, and helper calls) against runtime overhead measured on a standard workload. Even complex tenant-aware policies incur less than 5\% overhead, demonstrating that \sys's design scales gracefully with policy sophistication.

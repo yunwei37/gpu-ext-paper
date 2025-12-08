@@ -64,7 +64,7 @@ Recognizing the fundamental mismatch between traditional scalar eBPF semantics a
 
 \begin{figure}
 \centering
-\fbox{\parbox{0.8\columnwidth}{\centering [Figure: \sys High-Level Design]}}
+    \includegraphics[width=\columnwidth]{img/gpu-ebpf-arch.png}
 \vspace{-.5ex}
 \caption{\sys high-level design: unified eBPF runtime spanning CPU and GPU.}
 \label{fig:system-design}
@@ -101,18 +101,30 @@ and device cooperate on a unified policy.
 On the host driver, these events are realized as a small \texttt{struct\_ops}-style policy
 table with typed contexts:
 
-\begin{minted}[highlightlines=false,fontsize=\small]{c}
+
+
+
+\begin{minted}[
+    highlightlines=false,
+    fontsize=\footnotesize,
+    breaklines=true,        % 开启自动换行
+    breaksymbolleft=,       % 【关键】去除换行处的箭头符号
+    breakindent=1em,        % 换行后缩进 1em，视觉上区分
+    baselinestretch=0.9
+]{c}
 // Host-side policy callbacks for GPU memory management
 struct gdrv_mem_ops {
   // Region created or eligible for device placement
   int (*region_add)(gdrv_mem_add_ctx_t *ctx);
-  // Memory subsystem observes region use; decide cache hit
+  // Memory subsystem observes region use;
+  // decide cache hit/eviction policies
   int (*region_access)(gdrv_mem_access_ctx_t *ctx);
   // Region about to leave device-resident working set
   int (*region_remove)(gdrv_mem_remove_ctx_t *ctx);
-  // Safe points (kernel launches, page faults) for prefetch
+  // Safe points (kernel launches, faults) for prefetch
   int (*prefetch)(gdrv_mem_prefetch_ctx_t *ctx);
 };
+
 // Host-side kfuncs: reorder regions in eviction list
 bool gdrv_mem_list_insert_head(gdrv_mem_list_t *list,
                                gmem_region_t *r);
@@ -126,12 +138,13 @@ struct gdev_mem_ops {
     // Kernel provides
     void (*fence)(gdev_mem_fence_ctx_t *ctx);
 };
+
 // Device-side helpers
-// Request prefetch, triggers prefetch callback in kernel
-% int gdev_mem_prefetch_hint(gmem_region_t* r);
+// Request prefetch, triggers callback in kernel
+ int gdev_mem_prefetch_hint(gmem_region_t* r);
 // Pin memory on CPU or GPU
-% int gdev_mem_pin_hint(gmem_region_t* r, int device_id);
-int gdev_mem_use_hint(gmem_region_t* r, int device_id);
+ int gdev_mem_pin_hint(gmem_region_t* r, int dev_id);
+int gdev_mem_use_hint(gmem_region_t* r, int dev_id);
 \end{minted}
 
 % map(address)
@@ -184,28 +197,31 @@ demotion. device side HINT events like prefetch are recorded in control queues a
 On the host, these lifecycle events are exported as a small struct-ops table of
 scheduling callbacks:
 
-\begin{minted}[highlightlines=false,fontsize=\small]{c}
-// Host-side policy callbacks for GPU hardware queue scheduling
+\begin{minted}[highlightlines=false,fontsize=\footnotesize]{c}
+// Host-side policy callbacks for GPU hardware
+// queue scheduling
 struct gdrv_sched_ops {
-  // Hardware queue creation; set priority/timeslice,
+  // Hardware queue creation; set prio/timeslice,
   // return 0 to accept or <0 to reject/defer
   int  (*queue_create)(gsched_queue_ctx_t *ctx);
-  // Hardware queue destruction; cleanup policy state
+  // Hardware queue destruction; cleanup policy
   void (*queue_destroy)(gsched_queue_ctx_t *ctx);
 };
+
 // Host-side kfunc
 bool gdrv_sched_preempt(gdrv_preempt_ctx_t *ctx);
+
 // Device-side block scheduling callbacks
 struct gdev_sched_ops {
-  // Worker block starts new work unit
+  // Worker block starts/exits new work unit
   void (*enter)(gdev_block_ctx_t *ctx);
-  // Worker block finishes work unit
   void (*exit)(gdev_block_ctx_t *ctx);
-  // device function starts
+  
+  // Device function starts/ends
   void (*probe)(gdev_block_ctx_t *ctx);
-  // device function ends
   void (*retprobe)(gdev_block_ctx_t *ctx);
-  // return whether to steal work (Thread Block scheduler)
+  
+  // Return whether to steal work (TB scheduler)
   bool (*should_try_steal)(gdev_block_ctx_t *ctx);
 };
 \end{minted}
