@@ -15,7 +15,7 @@ We propose exposing the GPU driver and device layer as a programmable resource m
 
 \section{Introduction}
 
-GPUs dominate the compute and capital costs of modern systems, powering workloads ranging from latency-sensitive LLM inference pipelines to large-scale training, graph analytics, and vector search. Across these workloads, overall throughput and latency depend not just on raw FLOPs, but on \emph{policies}: how the system places and migrates data across device and host memory, admits and schedules kernels in multi-tenant environments, and collects observability signals for online adaptation. These policies must evolve as models, SLAs, and hardware change.
+GPUs dominate the compute and capital costs of modern systems~\cite{jeon2019analysis}, powering workloads ranging from latency-sensitive LLM inference pipelines to large-scale training, graph analytics~\cite{lin2024towards,chen2020pangolin}, and vector search~\cite{pan2024survey,cao2023gpu}. Across these workloads, overall throughput and latency depend not just on raw FLOPs, but on \emph{policies}: how the system places and migrates data across device and host memory~\cite{sun2024llumnix,zhong2024distserve,patel2024splitwise,strati2024orion}, admits and schedules kernels in multi-tenant environments~\cite{fu2024serverlessllm,shubha2024usher,hu2023lucid,li2022miso,jayaram2023sia}, and collects observability signals for online adaptation~\cite{agrawal2024vidur}. These policies must evolve as models, SLAs, and hardware change~\cite{agrawal2024taming,}.
 % enhance the multi-tenant
 
 % My two-cents, make it focus on policy itself
@@ -49,6 +49,9 @@ However, user-space approaches face three fundamental limitations. First, progra
 % Concretely, eBPF's restricted instruction set, verifier guarantees, and rich existing ecosystem uniquely enable such a unified GPU policy substrate, seamlessly extending unified programmability from CPUs to GPUs.}
 % \xiangyu{There are multiple challenges to designing a general substrate for GPU policy programmability.}
 However, host-only eBPF is insufficient in GPU domain because critical decisions like thread-block scheduling and warp execution happen on the device, are invisible to the host. 
+
+\yusheng{We need to say extensiblility: prefetch / scheduler, not just observability}
+
 A practical system must safely expose programmable policy hooks in GPU drivers and support efficient policy execution within GPU kernels. 
 Thus, designing a general GPU policy substrate introduces three challenges.\xiangyu{I have a feeling that we can use ``goals" instead of challenges. We can say sth. such as Thus, designing a general GPU policy substrate should satisfy three goals.}
 \yusheng{or we should change the words to actually say problems, it seems current we are say it like goals? e.g.  driver side tightly-coupled, device side simt, complex memory hericieay}

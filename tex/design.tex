@@ -12,6 +12,8 @@ As a result, developers cannot inject new scheduling policies, memory-placement 
 
 \subsection{C2: Mismatch Between eBPF Semantics and the SIMT GPU Execution Model}
 
+\yusheng{mismatch between verify extension single thread CPU model vs SIMT GPU model, kernel concurrency / extension, not eBPF Semantics}
+
 Even if GPU drivers exposed extensible interfaces, directly applying existing programmable CPU-oriented eBPF mechanisms does not work because of the conflict between eBPF semantics and the GPU Single Instruction Multiple Threads (SIMT) execution model execution model. 
 Concretely, eBPF programs assume single-threaded control flow, strong memory consistency, and bounded execution enforced by a CPU-oriented verifier, whereas GPU kernels execute in warps of 32 threads that must follow largely uniform control paths. 
 Naively running scalar eBPF logic per thread introduces warp divergence, unbounded serialization, and correctness risks stemming from thousands of simultaneous memory operations that the CPU-side verifier do not check. 
