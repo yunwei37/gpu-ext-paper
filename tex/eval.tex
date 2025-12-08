@@ -106,15 +106,15 @@ device-side instrumentation adds 2--3\%.
 \end{figure}
 
 \paragraph{Faiss Vector Search.}
-For Faiss, a \sys policy that adaptively prefetches index segments based
-on observed PCIe traffic and access streams reduces index build time by about
-1.5$\times$ compared to default UVM behavior when the index does not fit in
-device memory. Query workloads see similar benefits from keeping frequently
-accessed centroids and posting lists resident and demoting cold segments.
+We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4096,Flat index. We scale the dataset from 20M (9.5GB, fits in memory) to 50M (24GB, near boundary) and 100M (48GB, exceeds 32GB GPU memory).
+First, we establish the baseline: for the 20M dataset, GPU execution is 21$\times$ faster for index construction and roughly 29$\times$ faster for search compared to CPU, confirming the critical value of GPU acceleration.
+For the larger datasets relying on UVM, we apply a \sys policy implementing adaptive tree-based prefetching.
+For index construction, \sys reduces build time by 21.4\% on SIFT50M (16.77s $\to$ 13.19s) and 28.9\% on SIFT100M (67.77s $\to$ 48.15s). Notably, the benefits scale with dataset size, with build throughput improvement increasing from 27\% to 40\% as memory pressure grows.
+For search workloads on the oversubscribed SIFT100M dataset, \sys reduces latency by 10--16\% across \texttt{nprobe} settings: 15.9\% improvement at nprobe=1 (14.04s $\to$ 11.80s) and 10.5\% at nprobe=16 (57.44s $\to$ 51.42s). The policy effectively hides latency by proactively fetching posting lists, increasing QPS by 11.7\% at nprobe=16 despite the random access patterns inherent in ANN search.
 
 \begin{figure}
 \centering
-\includegraphics[width=\columnwidth]{img/results-raw/faiss/faiss_buildindex.png}
+\includegraphics[width=\columnwidth]{img/results-raw/faiss/faiss_benchmark_results.pdf}
 \caption{Faiss index build time and query throughput with \sys adaptive prefetch policy vs default UVM under oversubscribed index segments ($\approx$1.5$\times$ speedup).}
 \label{fig:faiss-perf}
 \end{figure}
@@ -159,8 +159,8 @@ Crucially, scheduler timeslice policies are \emph{ineffective} for these memory-
 
 \subsubsection{Case Studies}
 
-\paragraph{Two-Tenant: High-Priority LLM + Background GNN/Faiss.}
-We run two tenants sharing a single GPU and host/CXL memory: T1 is a high-priority vLLM chat service (short context, p99 SLA), and T2 is background GNN training or Faiss query (latency-insensitive). We compare three policy configurations: (1) global FIFO/LRU (driver default + UVM), (2) framework-managed policies (vLLM CPU-offload + GNN prefetch, operating in separate planes), and (3) \sys per-tenant policies where each tenant has its own HBM credit and bandwidth budget, with eviction/prefetch hooks respecting tenant quotas and the scheduler prioritizing T1.
+\paragraph{Two-Tenant: High-Priority LLM Inference + Background Training.}
+We run two tenants sharing a single GPU and host/CXL memory: T1 is a high-priority \texttt{llama.cpp} inference service (representing Latency Critical LC workloads), and T2 is a background PyTorch GNN training job (representing Best Effort BE workloads). We compare three policy configurations: (1) global FIFO/LRU (driver default + UVM), (2) framework-managed policies (llama.cpp offloading + GNN prefetch, operating in separate planes), and (3) \sys per-tenant policies where each tenant has its own HBM credit and bandwidth budget, with eviction/prefetch hooks respecting tenant quotas and the scheduler prioritizing T1.
 
 % TODO: Add experiment data
 % Metrics: T1 p50/p95/p99 (normalized by solo), T2 throughput, GPU utilization
@@ -168,7 +168,7 @@ We run two tenants sharing a single GPU and host/CXL memory: T1 is a high-priori
 \begin{figure}
 \centering
 \fbox{\parbox{\columnwidth}{\centering [Figure: Two-Tenant Policy Comparison - T1 p99, T2 Throughput, GPU Util]}}
-\caption{Two-tenant (high-priority LLM + background GNN) performance under global FIFO/LRU, framework-managed, and \sys per-tenant policies. \sys achieves near-solo p99 for T1 (within TODO\%) while maintaining T2 throughput (TODO\% of baseline).}
+\caption{Two-tenant (high-priority \texttt{llama.cpp} + background PyTorch GNN) performance under global FIFO/LRU, framework-managed, and \sys per-tenant policies. \sys achieves near-solo p99 for T1 (within TODO\%) while maintaining T2 throughput (TODO\% of baseline).}
 \label{fig:two-tenant}
 \end{figure}
 
