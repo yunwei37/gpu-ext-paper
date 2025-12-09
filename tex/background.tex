@@ -8,13 +8,14 @@ Modern GPU-centric systems, ranging from single-node dense servers to disaggrega
 In multi-tenant clouds, these workloads compete for shared resources; high-priority inference services demand strict temporal isolation and millisecond-level preemption to meet Service Level Agreements (SLAs), while background batch jobs necessitate aggressive resource oversubscription to maximize total cost of ownership (TCO), creating a tension that static hardware partitioning cannot resolve.
 % \xiangyu{The following might need a little bit of rewriting. I do not know the relationship with the previous sentence. Does it mean the previous one needs schedulers not to treat per-GPU as black box? or treat different GPUs differently?}
 % \yusheng{I think we can remove them.}
+\Cref{fig:access_patterns} illustrates this diversity through memory access patterns: FAISS index building exhibits sequential scans, while query operations show random access; LLaMA prefill follows periodic sequential patterns, whereas decode generates sparse random accesses; PyTorch DNN training displays periodic block access. These fundamentally different patterns demonstrate that no single memory management policy can be optimal across workloads.
 
-\begin{figure}[t]
+\begin{figure*}[t]
     \centering
     \includegraphics[width=\textwidth]{img/pattern/combined_patterns_1x5.pdf}
     \caption{Memory access patterns vary significantly across GPU workloads. FAISS Build exhibits sequential scanning; FAISS Query shows random access; LLaMA Prefill demonstrates periodic sequential patterns; LLaMA Decode displays sparse random access; PyTorch DNN shows periodic block access. These diverse patterns motivate the need for workload-adaptive memory management policies.}
     \label{fig:access_patterns}
-\end{figure}
+\end{figure*}
 
 \subsection{GPU Systems Architecture}
 

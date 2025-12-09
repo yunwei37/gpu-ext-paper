@@ -76,9 +76,9 @@ def create_combined_figure(workloads, output_name, ncols=4):
                    ha='center', va='center', transform=ax.transAxes)
 
         ax.axis('off')
-        # Label at bottom with smaller font
-        ax.text(0.5, -0.08, label, fontsize=8, ha='center', va='top',
-                transform=ax.transAxes)
+        # Label at bottom with larger font
+        ax.text(0.5, -0.08, label, fontsize=24, ha='center', va='top',
+                transform=ax.transAxes, fontweight='bold')
 
     # Hide any extra subplots if n < ncols
     for idx in range(n, ncols):
@@ -117,9 +117,9 @@ def create_combined_figure_2x2(workloads, output_name):
                    ha='center', va='center', transform=ax.transAxes)
 
         ax.axis('off')
-        # Label at bottom with smaller font
-        ax.text(0.5, -0.08, label, fontsize=8, ha='center', va='top',
-                transform=ax.transAxes)
+        # Label at bottom with larger font
+        ax.text(0.5, -0.08, label, fontsize=24, ha='center', va='top',
+                transform=ax.transAxes, fontweight='bold')
 
     plt.tight_layout()
     plt.subplots_adjust(bottom=0.08, hspace=0.25)  # Make room for bottom labels
@@ -153,9 +153,9 @@ def create_combined_figure_3x2(workloads, output_name):
                    ha='center', va='center', transform=ax.transAxes)
 
         ax.axis('off')
-        # Label at bottom with smaller font
-        ax.text(0.5, -0.08, label, fontsize=8, ha='center', va='top',
-                transform=ax.transAxes)
+        # Label at bottom with larger font
+        ax.text(0.5, -0.08, label, fontsize=24, ha='center', va='top',
+                transform=ax.transAxes, fontweight='bold')
 
     # Hide the 6th subplot
     axes[5].axis('off')

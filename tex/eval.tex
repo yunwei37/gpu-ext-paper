@@ -36,17 +36,9 @@ We evaluate \sys's memory policies on three representative kernels: \texttt{HotS
 We apply a \sys-based block scheduler driven by the GPU-side interface
 (Section~\ref{sec:design-sched}) to workloads with significant load imbalance.
 Using a cluster-style launch where persistent worker blocks pull work units
-via \texttt{should\_try\_steal}, we evaluate on AI inference with dynamic batching
-and GEMM with variable matrix sizes where static block assignment leads to some blocks being overloaded while others idle.
+via \texttt{should\_try\_steal}, we evaluate on GEMM with variable matrix sizes where static block assignment leads to some blocks being overloaded while others idle.
 
-\Cref{fig:block-scheduler-single} compares three scheduling policies: FixedWork (static block assignment), CLC Baseline (cooperative launch control), and workload-aware policies (WorkloadAware for inference, TokenBucket for GEMM). On AI inference with dynamic batching, the workload-aware policy reduces execution time from 27~µs (FixedWork) to 17~µs, a 37\% improvement. On imbalanced GEMM, TokenBucket achieves 51~µs compared to 67~µs for FixedWork, a 24\% improvement across variable MxNxK configurations.
-
-\begin{figure}
-\centering
-\includegraphics[width=\columnwidth]{img/results-raw/sync/clc/clc-policy.png}
-\caption{Block scheduler performance on load-imbalanced workloads: AI inference with dynamic batching and GEMM with variable matrix sizes. Workload-aware \sys policies achieve 24--37\% improvement over static assignment.}
-\label{fig:block-scheduler-single}
-\end{figure}
+We compare three scheduling policies: FixedWork (static block assignment), CLC Baseline (cooperative launch control), and TokenBucket (workload-aware). On imbalanced GEMM with variable MxNxK configurations, TokenBucket achieves 51~µs compared to 67~µs for FixedWork, a 24\% improvement.
 
 \subsubsection{Case Studies}
 

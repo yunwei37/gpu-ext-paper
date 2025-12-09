@@ -7,10 +7,10 @@ We present \sys, a unified policy plane that treats the GPU driver and device as
 % \JC{
 % Resource management policies have become crucial in modern GPU systems, as diverse workloads contend for limited resources in multi-tenant environments. However, current approaches to policy specification and enforcement are inadequate. Policies are either hard-coded into opaque drivers or scattered across user-space runtimes, lacking flexibility, coordination, and strong safety guarantees.
 
-% We propose exposing the GPU driver and device layer as a programmable resource management substrate using eBPF, enabling application-transparent policies with stack-wide coordination, full hardware control, and strong safety guarantees. \sys introduces a verifiable runtime that executes management policies within the GPU stack, ensuring policy code is checked for bounded execution and memory access. This allows policies to dynamically adapt to workload requirements while guaranteeing system stability. Our evaluation on real-world workloads shows that \sys improves 
+% We propose exposing the GPU driver and device layer as a programmable resource management substrate using eBPF, enabling application-transparent policies with stack-wide coordination, full hardware control, and strong safety guarantees. \sys introduces a verifiable runtime that executes management policies within the GPU stack, ensuring policy code is checked for bounded execution and memory access. This allows policies to dynamically adapt to workload requirements while guaranteeing system stability. Our evaluation on real-world workloads shows that \sys improves
 
 
-}
+% }
 \end{abstract}
 
 \section{Introduction}
