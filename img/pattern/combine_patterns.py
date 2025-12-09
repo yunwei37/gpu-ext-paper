@@ -76,16 +76,16 @@ def create_combined_figure(workloads, output_name, ncols=4):
                    ha='center', va='center', transform=ax.transAxes)
 
         ax.axis('off')
-        # Label at bottom with larger font
-        ax.text(0.5, -0.08, label, fontsize=24, ha='center', va='top',
-                transform=ax.transAxes, fontweight='bold')
+        # Label at bottom
+        ax.text(0.5, -0.08, label, fontsize=12, ha='center', va='top',
+                transform=ax.transAxes)
 
     # Hide any extra subplots if n < ncols
     for idx in range(n, ncols):
         axes[idx].axis('off')
 
     plt.tight_layout()
-    plt.subplots_adjust(bottom=0.12)  # Make room for bottom labels
+    plt.subplots_adjust(bottom=0.12, wspace=0)  # Make room for bottom labels, no horizontal spacing
 
     # Save in multiple formats
     output_path_png = OUTPUT_DIR / f"{output_name}.png"
@@ -117,12 +117,12 @@ def create_combined_figure_2x2(workloads, output_name):
                    ha='center', va='center', transform=ax.transAxes)
 
         ax.axis('off')
-        # Label at bottom with larger font
-        ax.text(0.5, -0.08, label, fontsize=24, ha='center', va='top',
-                transform=ax.transAxes, fontweight='bold')
+        # Label at bottom
+        ax.text(0.5, -0.08, label, fontsize=12, ha='center', va='top',
+                transform=ax.transAxes)
 
     plt.tight_layout()
-    plt.subplots_adjust(bottom=0.08, hspace=0.25)  # Make room for bottom labels
+    plt.subplots_adjust(bottom=0.08, hspace=0.15, wspace=0)  # Make room for bottom labels, no spacing
 
     output_path_png = OUTPUT_DIR / f"{output_name}.png"
     output_path_pdf = OUTPUT_DIR / f"{output_name}.pdf"
@@ -153,15 +153,15 @@ def create_combined_figure_3x2(workloads, output_name):
                    ha='center', va='center', transform=ax.transAxes)
 
         ax.axis('off')
-        # Label at bottom with larger font
-        ax.text(0.5, -0.08, label, fontsize=24, ha='center', va='top',
-                transform=ax.transAxes, fontweight='bold')
+        # Label at bottom
+        ax.text(0.5, -0.08, label, fontsize=12, ha='center', va='top',
+                transform=ax.transAxes)
 
     # Hide the 6th subplot
     axes[5].axis('off')
 
     plt.tight_layout()
-    plt.subplots_adjust(bottom=0.08, hspace=0.25)  # Make room for bottom labels
+    plt.subplots_adjust(bottom=0.08, hspace=0.15, wspace=0)  # Make room for bottom labels, no spacing
 
     output_path_png = OUTPUT_DIR / f"{output_name}.png"
     output_path_pdf = OUTPUT_DIR / f"{output_name}.pdf"
