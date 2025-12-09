@@ -15,7 +15,6 @@ We present \sys, a unified policy plane that treats the GPU driver and device as
 
 \section{Introduction}
 
-% 1. (General problem) GPU is important (1). Motivate the resources management policy is important (resource mpolicy has emerged as ... 
 % 2. (The problem with current works) Current design rigiet for us to create new resource management policy, some one has try to modify drivers; others are trying to do it in usersapce framwork
 % 3. Our key insight is that the GPU driver is uniquely positiooned in the GPU stack to have transparency into all applications, etc. 
 % 4. (Our claim) In this paper, we present \sys{}, a new system that enables flexible resource management policies for GPU deployments.  Building on our key insight, \sys{} implements a stable set of control plane hooks that allow for flexible resource managment policies...
@@ -26,6 +25,7 @@ We present \sys, a unified policy plane that treats the GPU driver and device as
 %   a. 
 
 
+% 1. (General problem) GPU is important (1). Motivate the resources management policy is important (resource mpolicy has emerged as ... 
 GPUs dominate the compute and capital costs of modern systems~\cite{jeon2019analysis}, powering workloads ranging from latency-sensitive LLM inference pipelines to large-scale training, graph analytics~\cite{lin2024towards,chen2020pangolin}, and vector search~\cite{pan2024survey,cao2023gpu}. Across these workloads, overall throughput and latency depend not just on raw FLOPs, but on \emph{policies}: how the system places and migrates data across device and host memory~\cite{sun2024llumnix,zhong2024distserve,patel2024splitwise,strati2024orion}, admits and schedules kernels in multi-tenant environments~\cite{fu2024serverlessllm,shubha2024usher,hu2023lucid,li2022miso,jayaram2023sia}, and collects observability signals for online adaptation~\cite{agrawal2024vidur}. These policies must evolve as models, SLAs, and hardware change~\cite{agrawal2024taming,yu2024orca,kwon2023efficient}.
 % enhance the multi-tenant
 
@@ -44,7 +44,7 @@ C1, C2, C3
 % 
 
 % cpu ebpf is a background for solution
-GPU stacks, however, remain dominated by vendor drivers and firmware implementing fixed, opaque mechanisms, or by profiling-focused instrumentation frameworks\cite{cupti,nvbit,neutrino,egpu}. 
+GPU stacks, however, remain dominated by vendor drivers and firmware implementing fixed, opaque mechanisms, or by profiling-focused instrumentation frameworks\cite{cupti,villa2019nvbit,neutrino,egpu}. 
 \yusheng{However, this make the performance bad... }
 While academic works like TimeGraph and Gdev have shifted GPU scheduling and memory control into Linux device drivers\cite{kato2011timegraph,kato2012gdev}\yusheng{to improve performance...}, and recent systems further refactor driver-level control paths\cite{kernelintercept,gpreempt,lithos,wang2024gcaps}, these efforts typically implement policies as static kernel modules. Lacking a safe, programmable interface, adapting policies requires invasive driver changes and operational disruptions. To enable flexibility without kernel modification, recent serving systems retrofit programmability above the driver in the user-space.
 \xiangyu{Should we clearly say that the following works are user-space approaches.} Paella\cite{paella} and XSched\cite{xsched} expose software-defined scheduling, while Pie\cite{pie} and KTransformers\cite{ktransformers} offer programmable runtimes for LLM inference. 
