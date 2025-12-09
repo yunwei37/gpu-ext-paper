@@ -9,6 +9,13 @@ In multi-tenant clouds, these workloads compete for shared resources; high-prior
 % \xiangyu{The following might need a little bit of rewriting. I do not know the relationship with the previous sentence. Does it mean the previous one needs schedulers not to treat per-GPU as black box? or treat different GPUs differently?}
 % \yusheng{I think we can remove them.}
 
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{img/pattern/combined_patterns_1x5.pdf}
+    \caption{Memory access patterns vary significantly across GPU workloads. FAISS Build exhibits sequential scanning; FAISS Query shows random access; LLaMA Prefill demonstrates periodic sequential patterns; LLaMA Decode displays sparse random access; PyTorch DNN shows periodic block access. These diverse patterns motivate the need for workload-adaptive memory management policies.}
+    \label{fig:access_patterns}
+\end{figure}
+
 \subsection{GPU Systems Architecture}
 
 \begin{figure}[t]
