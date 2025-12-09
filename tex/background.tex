@@ -17,6 +17,15 @@ In multi-tenant clouds, these workloads compete for shared resources; high-prior
     \label{fig:access_patterns}
 \end{figure*}
 
+Beyond memory access patterns, GPU thread scheduling also exhibits significant variability. \Cref{fig:thread_scheduling} shows the SM and warp-level thread distribution captured using our eBPF-based \texttt{threadscheduling} tool during a simple vector addition kernel. Despite launching 16 blocks with 64 threads each, the default hardware scheduler produces highly uneven load distribution: SM~15 handles 382 threads while SM~6 receives only 3---a 127$\times$ imbalance. The load balance score of 48.6\% indicates that less than half of the ideal balanced distribution is achieved. The warp-level heatmap further reveals that SM~0 concentrates activity in high-numbered warps (warp 10 alone has 312 thread executions), while most other SMs only utilize warps 0--3. This unpredictable scheduling behavior, invisible to existing profiling tools, motivates the need for fine-grained, programmable observability into GPU execution.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{img/pattern/vector_add/thread_scheduling_motivation.pdf}
+    \caption{GPU thread scheduling imbalance observed via eBPF tracing. (a) SM load distribution shows 127$\times$ imbalance (SM~15: 382 threads vs SM~6: 3 threads). (b) Warp activity heatmap reveals SM~0 concentrates work in high-numbered warps while other SMs underutilize warp slots.}
+    \label{fig:thread_scheduling}
+\end{figure}
+
 \subsection{GPU Systems Architecture}
 
 \begin{figure}[t]

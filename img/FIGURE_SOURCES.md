@@ -7,8 +7,11 @@ This document tracks the source locations and generation scripts for all figures
 | Figure | File | Source | Script |
 |--------|------|--------|--------|
 | Page fault patterns | `pattern/combined_patterns_1x5.pdf` | `img/pattern/` subdirs (faiss-build, faiss-query, llama.cpp-decode, llama.cpp-prefill, pytorch-dnn) | `img/pattern/combine_patterns.py` |
+| Thread scheduling | `pattern/vector_add/thread_scheduling_motivation.pdf` | `img/pattern/vector_add/` | `plot_thread_scheduling.py` |
 | Motivation silos | `motivation_silos.pdf` | `img/` | - |
 | Architecture | `gpu-ebpf-arch.png` | `img/` | - |
+
+**Thread scheduling figure data source**: `test_gpu_thread_exec.md` in the same directory. Raw data from `threadscheduling` eBPF tool output.
 
 ## RQ1: Single-Tenant Memory/Scheduling
 
