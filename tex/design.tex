@@ -10,7 +10,7 @@ Modern GPU drivers are large, monolithic vendor-controlled codebases that tightl
 GPU drivers were not architected with programmable resource management in mind—partly due to historical assumptions about GPU usage, and partly due to strict safety constraints, as incorrect driver logic can stall the device or crash an entire node. 
 As a result, developers cannot inject new scheduling policies, memory-placement strategies, or custom instrumentation without invasive modifications to vendor drivers. This absence of safe, stable extension points naturally limits any attempt to retrofit programmability into today's GPU stacks.
 
-\subsection{C2: Mismatch Between eBPF Semantics and the SIMT GPU Execution Model}
+\subsection{C2: Mismatch Between CPU Extension Semantics and the SIMT GPU Execution Model}
 
 \yusheng{mismatch between verify extension single thread CPU model vs SIMT GPU model, kernel concurrency / extension, not eBPF Semantics}
 
@@ -20,7 +20,7 @@ Naively running scalar eBPF logic per thread introduces warp divergence, unbound
 Furthermore, GPUs lack isolation, recovery points, or preemption mechanisms for misbehaving device-side code, meaning an unbounded loop or invalid access in policy logic can halt an entire device. 
 The architectural and semantic mismatch makes straightforward reuse of eBPF unsafe and inevitably slow.
 
-\subsection{C3: Absence of Efficient Mechanisms for Host–Device Shared State Coordination}
+\subsection{C3: Absence of Efficient Mechanisms for Host–Device Shared State Status}
 
 Even with GPU-side programmability that respects SIMT constraints, real GPU clusters require coordinated host–device resource management, which today lacks an efficient abstraction for shared policy state. 
 GPU-accessible host memory suffers from orders-of-magnitude higher latency than GPU global memory, while GPU memory is capacity-limited and optimized for throughput, creating a fundamental mismatch in memory hierarchies. 
