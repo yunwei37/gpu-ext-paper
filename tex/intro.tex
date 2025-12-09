@@ -15,6 +15,7 @@ We present \sys, a unified policy plane that treats the GPU driver and device as
 
 \section{Introduction}
 
+% 1. (General problem) GPU is important (1). Motivate the resources management policy is important (resource mpolicy has emerged as ... 
 % 2. (The problem with current works) Current design rigiet for us to create new resource management policy, some one has try to modify drivers; others are trying to do it in usersapce framwork
 % 3. Our key insight is that the GPU driver is uniquely positiooned in the GPU stack to have transparency into all applications, etc. 
 % 4. (Our claim) In this paper, we present \sys{}, a new system that enables flexible resource management policies for GPU deployments.  Building on our key insight, \sys{} implements a stable set of control plane hooks that allow for flexible resource managment policies...
@@ -33,15 +34,12 @@ GPUs dominate the compute and capital costs of modern systems~\cite{jeon2019anal
 \JC{
 Effective resource management policies have become increasingly critical in modern computing systems, particularly with the rise of GPU-accelerated workloads~\cite{xiao2018gandiva,yu2020fine,sheng2023flexgen,rasley2020deepspeed}. GPUs have emerged as the dominant platform for a wide range of applications, from latency-sensitive deep learning inference pipelines to large-scale training~\cite{kwon2023efficient,shoeybi2019megatron}, graph analytics~\cite{wang2016gunrock}, and data visualization~\cite{moreland2016vtk}. As GPU-based systems grow in scale and complexity, the policies that govern resource allocation, scheduling, and data movement play a crucial role in determining overall system performance, efficiency, and fairness. Across these diverse workloads, overall system performance depends not just on raw computing power, but crucially on the ability of resource management policies to adapt to the dynamic needs of applications. The importance of adaptive resource management policies has been well-recognized in various domains, such as \weichen{cluster resource allocation~\cite{delimitrou2013paragon,delimitrou2014quasar}, adaptive contention management~\cite{lo2015heracles}, and adaptive scheduling for deep learning workloads~\cite{xiao2018gandiva,qiao2021pollux,narayanan2020heterogeneity}.}
 
-The current state of policy specification and enforcement in GPU systems xxx
-
-On the other hand, user-space approaches offer more flexibility but face limitations in xxx
-
-Moreover, xxx
-C1, C2, C3
 }
 
-% 
+% The current state of policy specification and enforcement in GPU systems xxx
+% On the other hand, user-space approaches offer more flexibility but face limitations in xxx
+%Moreover, xxx
+%C1, C2, C3
 
 % cpu ebpf is a background for solution
 GPU stacks, however, remain dominated by vendor drivers and firmware implementing fixed, opaque mechanisms, or by profiling-focused instrumentation frameworks\cite{cupti,villa2019nvbit,neutrino,egpu}. 
