@@ -199,23 +199,12 @@ The region cache policy skeleton used for llama.cpp expert offloading can be ada
 \subsubsection{Runtime and Shared State Overhead}
 
 We first quantify the overhead of the \sys runtime itself, independent of any
-specific policy logic. We use two microbenchmarks:
-
-\begin{itemize}[leftmargin=*]
-  \item a load/store latency benchmark that issues controlled memory accesses
-        from GPU kernels, instrumented with \sys and with NVBit gpumemtrace; and
-  \item a ResNet inference workload instrumented with \sys-based tracing and
-        with the PyTorch profiler (CUPTI+NVTX).
-\end{itemize}
+specific policy logic. We use a load/store latency benchmark that issues controlled memory accesses from GPU kernels, instrumented with \sys and with NVBit gpumemtrace.
 
 \Cref{fig:runtime-overhead} shows per-access latency slowdown under
 \sys and NVBit as access sizes increase. \sys adds substantially less latency
 than NVBit, remaining low and stable below 128~KB and increasing modestly
-thereafter. \Cref{fig:resnet-latency} compares end-to-end ResNet inference
-latency distributions: p10 and mean latencies under \sys are slightly better
-than with the PyTorch profiler, and p99 latency is comparable. In both cases,
-lightweight launch-time injection and warp-level execution of \sys handlers
-keep overhead low.
+thereafter. Lightweight launch-time injection and warp-level execution of \sys handlers keep overhead low.
 
 \begin{figure}
 \centering
@@ -223,34 +212,6 @@ keep overhead low.
 \caption{Runtime overhead of \sys vs NVBit across varying access sizes.}
 \label{fig:runtime-overhead}
 \end{figure}
-
-\begin{figure}
-\centering
-\fbox{\parbox{0.5\textwidth}{\centering [Figure: Resnet Inference Latency Overhead]}}
-\caption{ResNet inference latency with \sys tracing vs PyTorch profiler (CUPTI+NVTX).}
-\label{fig:resnet-latency}
-\end{figure}
-
-\paragraph{Map and Shared State Overhead.}
-We measure the cost of maintaining shared state between CPU and GPU via \sys maps (\Cref{tab:map-overhead}). We benchmark shared-memory bandwidth and one-way latency on both servers using a 1~GiB region and GPU-to-CPU and CPU-to-GPU access patterns. Servers~A and~B deliver 12--18~GB/s over PCIe with 8--15~µs cross-domain latencies. These costs are small relative to the time scales of the policies we implement, and our SIMT-aware aggregation and sampling strategies further reduce the frequency of cross-domain synchronization.
-
-% TODO: Add map size vs overhead microbench if time permits
-\begin{table}[t]
-\centering
-\small
-\caption{Shared state (map) overhead for cross-domain communication.}
-\label{tab:map-overhead}
-\begin{tabular}{lcc}
-\toprule
-\textbf{Metric} & \textbf{Server A (RTX 5090)} & \textbf{Server B (H100)} \\
-\midrule
-GPU$\rightarrow$CPU bandwidth & 12--14 GB/s & 16--18 GB/s \\
-CPU$\rightarrow$GPU bandwidth & 12--14 GB/s & 16--18 GB/s \\
-One-way latency & 10--15 µs & 8--12 µs \\
-Map memory overhead & <1\% HBM & <1\% HBM \\
-\bottomrule
-\end{tabular}
-\end{table}
 
 \subsubsection{Low-overhead GPU Observability}
 
