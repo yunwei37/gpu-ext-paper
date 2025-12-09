@@ -55,7 +55,7 @@ However, user-space approaches face three fundamental limitations. First, progra
 
 \xiangyu{To remedy the above limitations, we claim} that effective GPU resource management requires an OS-level narrow waist for policy. The GPU driver is uniquely positioned with application transparency, global cross-tenant visibility, and direct control over privileged mechanisms such as page migration, kernel scheduling, and preemption. We propose treating GPU resource management as a first-class, programmable kernel subsystem by exposing a small set of verifiable policy interfaces. 
 % On the CPU side, programmability frameworks like eBPF already provide dynamic, safe, kernel-level policies for scheduling, caching, and observability via stable attach points\cite{Bachl21,Zhong22,jia2023programmable,schedext-docs,cacheext-docs}.
-\xiangyu{Fortunately, the recent programmability frameworks on the CPU side such as eBPF offer possibility to do dynamic and safe kernel-level scheduling policies\cite{Bachl21,Zhong22,jia2023programmable,schedext-docs,cacheext-docs}.} \weichen{What is cacheext-docs}
+\xiangyu{Fortunately, the recent programmability frameworks on the CPU side such as eBPF offer possibility to do dynamic and safe kernel-level scheduling policies\cite{Bachl21,Zhong22,jia2023programmable,schedext-docs,cacheext-docs}.} \weichen{Here, in the ref cacheext refers to the Linux Resource Control (resctrl) Documentation?}
 % the last sentence can be put in front
 % \xiangyu{
 % Concretely, eBPF's restricted instruction set, verifier guarantees, and rich existing ecosystem uniquely enable such a unified GPU policy substrate, seamlessly extending unified programmability from CPUs to GPUs.}
