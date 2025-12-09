@@ -169,26 +169,28 @@ We evaluate \sys's programmability by examining policy complexity and reuse, and
 \paragraph{Support Matrix.}
 \Cref{tab:support-matrix} shows the policies implemented for each workload, along with lines of code (host eBPF + device eBPF) and measured overhead. All policies attach to unmodified frameworks via \sys's runtime instrumentation. The key takeaway is that a few hundred lines of policy code can implement sophisticated cross-layer resource management without application changes.
 
-% TODO: Fill in actual LOC and overhead numbers
 \begin{table}[t]
 \centering
 \small
 
-\begin{tabularx}{\columnwidth}{@{} X l c @{}}
+\begin{tabularx}{\columnwidth}{@{} X l c c @{}}
 \toprule
-\textbf{Policy} & \textbf{Tag} & \textbf{Total LOC} \\
+\textbf{Policy} & \textbf{Tag} & \textbf{Domain} & \textbf{LOC} \\
 \midrule
-Global FIFO Eviction & Memory (Eviction) & 145 \\
-Global LFU Eviction & Memory (Eviction) & 304 \\
-Multi-tenant Quota LRU & Memory (Multi-tenant) & 472 \\
-Adaptive Seq. Prefetch & Memory (Prefetch) & 375 \\
-Stride Prefetch & Memory (Prefetch) & 472 \\
-Tree-based Prefetch (Multi-tenant) & Memory (Multi-tenant) & 454 \\
-Dynamic Timeslice & Scheduling & 408 \\
-Preemption Control & Scheduling & 925 \\
+Global FIFO Eviction & Memory (Eviction) & Host & 145 \\
+Global LFU Eviction & Memory (Eviction) & Host & 304 \\
+Multi-tenant Quota LRU & Memory (Multi-tenant) & Host & 472 \\
+Adaptive Seq. Prefetch & Memory (Prefetch) & Host & 375 \\
+Stride Prefetch & Memory (Prefetch) & Host & 472 \\
+Stride Prefetch & Memory (Prefetch) & Device & 45 \\
+Tree-based Prefetch & Memory (Multi-tenant) & Host & 454 \\
+Dynamic Timeslice & Scheduling & Host & 408 \\
+Preemption Control & Scheduling & Host & 925 \\
+MaxSteals (CLC) & Scheduling (Block) & Device & 19 \\
+SelectiveBlocks (CLC) & Scheduling (Block) & Device & 16 \\
 \bottomrule
 \end{tabularx}
-\caption{Policy Unit support matrix. LOC = Host C + Device eBPF lines.}
+\caption{Policy support matrix. Domain indicates where the policy executes: Host (driver eBPF), Device (GPU eBPF), or both.}
 \label{tab:support-matrix}
 \end{table}
 
