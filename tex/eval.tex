@@ -149,19 +149,18 @@ Crucially, scheduler timeslice policies are \emph{ineffective} for these memory-
 \subsubsection{Case Studies}
 
 \paragraph{Two-Tenant: High-Priority LLM Inference + Background Training.}
-We run two tenants sharing a single GPU and host/CXL memory: T1 is a high-priority \texttt{llama.cpp} inference service (representing Latency Critical LC workloads), and T2 is a background PyTorch GNN training job (representing Best Effort BE workloads). We compare three policy configurations: (1) global FIFO/LRU (driver default + UVM), (2) framework-managed policies (llama.cpp offloading + GNN prefetch, operating in separate planes), and (3) \sys per-tenant policies where each tenant has its own HBM credit and bandwidth budget, with eviction/prefetch hooks respecting tenant quotas and the scheduler prioritizing T1.
+We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp} inference service (LC workload) serving 100 ShareGPT prompts at 0.2 RPS, and T2 is a background PyTorch GNN training job (BE workload) with 8M nodes requiring 36GB peak memory (oversubscribed). We compare default UVM (driver FIFO/LRU) against \sys per-tenant memory policies where the LC tenant receives prefetch priority and the BE tenant yields bandwidth during inference.
 
-% TODO: Add experiment data
-% Metrics: T1 p50/p95/p99 (normalized by solo), T2 throughput, GPU utilization
-% Target: per-tenant gBPF => T1 p99 ~ solo, T2 throughput near baseline
+\Cref{fig:two-tenant} shows the results. For the LC workload, \sys reduces mean TPOT by 45\% (19.7ms $\rightarrow$ 10.9ms) and P99 TPOT by 40\% (56.1ms $\rightarrow$ 33.4ms), bringing token generation latency from 5.4$\times$ single baseline down to 3.0$\times$. TTFT also improves by 20\% (428ms $\rightarrow$ 341ms mean) and 14\% at P99 (1392ms $\rightarrow$ 1203ms). Critically, \sys achieves a \emph{win-win}: GNN training simultaneously improves by 28\% (23.2s $\rightarrow$ 16.7s per epoch), approaching the ideal 2$\times$ single baseline (18.0s). This demonstrates that \sys's tenant-aware policies reduce memory contention for both workloads, rather than simply prioritizing one at the expense of the other.
+
 \begin{figure}
 \centering
-\fbox{\parbox{\columnwidth}{\centering [Figure: Two-Tenant Policy Comparison - T1 p99, T2 Throughput, GPU Util]}}
-\caption{Two-tenant (high-priority \texttt{llama.cpp} + background PyTorch GNN) performance under global FIFO/LRU, framework-managed, and \sys per-tenant policies. \sys achieves near-solo p99 for T1 (within TODO\%) while maintaining T2 throughput (TODO\% of baseline).}
+\includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/fig_colocated_results.pdf}
+\caption{Two-tenant co-location: \texttt{llama.cpp} inference (LC) + GNN training (BE). \sys reduces LC latency by 40--45\% while simultaneously improving BE training by 28\%. Dashed lines show single-tenant baselines; dotted lines show 2$\times$ single (ideal fair share).}
 \label{fig:two-tenant}
 \end{figure}
 
-Overall, \sys's per-tenant policies provide clear tail-latency and fairness benefits in multi-tenant workloads, achieving near-solo performance for high-priority tenants while maintaining reasonable throughput for background jobs.
+Overall, \sys's per-tenant policies provide clear tail-latency and fairness benefits in multi-tenant workloads, achieving significant improvements for high-priority tenants while also benefiting background jobs through reduced memory thrashing.
 
 \subsection{RQ3: Programmability and Mechanism Overhead}
 
@@ -193,20 +192,6 @@ Preemption Control & Scheduling & 925 \\
 \label{tab:support-matrix}
 \end{table}
 
-
-\paragraph{Policy Complexity vs Overhead.}
-\Cref{fig:complexity-overhead} plots policy complexity (approximated by eBPF instruction count, map operations, and helper calls) against runtime overhead measured on a standard workload. Even complex tenant-aware policies incur less than 5\% overhead, demonstrating that \sys's design scales gracefully with policy sophistication.
-
-% TODO: Add actual data points
-% x-axis: policy complexity (instruction count / map ops / helper calls)
-% y-axis: overhead (%)
-% Points: observability tools, simple memory policy, tenant-aware policy, priority scheduler, block scheduler
-\begin{figure}
-\centering
-\fbox{\parbox{\columnwidth}{\centering [Figure: Policy Complexity vs Overhead Scatter Plot]}}
-\caption{Policy complexity vs runtime overhead. Observability tools (mem\_trace, threadhist) cluster at low complexity/overhead; tenant-aware memory and scheduling policies remain under 5\% overhead despite higher complexity.}
-\label{fig:complexity-overhead}
-\end{figure}
 
 \paragraph{Policy Reuse Across Workloads.}
 The region cache policy skeleton used for llama.cpp expert offloading can be adapted to vLLM KV-cache management by changing only the region identification helpers and ID mappings. Similarly, the sequential prefetch policy applies to both GNN adjacency blocks and Faiss index segments with minimal modification (TODO: X lines changed out of Y total). This demonstrates \sys's support for portable, reusable policy components.
