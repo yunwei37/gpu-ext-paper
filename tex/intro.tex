@@ -15,12 +15,22 @@ We present \sys, a unified policy plane that treats the GPU driver and device as
 
 \section{Introduction}
 
+% 1. (General problem) GPU is important (1). Motivate the resources management policy is important (resource mpolicy has emerged as ... 
+% 2. (The problem with current works) Current design rigiet for us to create new resource management policy, some one has try to modify drivers; others are trying to do it in usersapce framwork
+% 3. Our key insight is that the GPU driver is uniquely positiooned in the GPU stack to have transparency into all applications, etc. 
+% 4. (Our claim) In this paper, we present \sys{}, a new system that enables flexible resource management policies for GPU deployments.  Building on our key insight, \sys{} implements a stable set of control plane hooks that allow for flexible resource managment policies...
+% 5. To support flexibile policies, applications must be able to observe an application's behavior on the GPU device. Safety is required... Thus, we implement our SIMT verifier. 
+%6. Finally, to allow the driver and device components to communicate, we need a communication substrate.
+%7. We implemented \sys{} on.... We evaluated on xyz workloads and our results are awesome. 
+%8. Our contributions are as follows: 
+%   a. 
+
+
 GPUs dominate the compute and capital costs of modern systems~\cite{jeon2019analysis}, powering workloads ranging from latency-sensitive LLM inference pipelines to large-scale training, graph analytics~\cite{lin2024towards,chen2020pangolin}, and vector search~\cite{pan2024survey,cao2023gpu}. Across these workloads, overall throughput and latency depend not just on raw FLOPs, but on \emph{policies}: how the system places and migrates data across device and host memory~\cite{sun2024llumnix,zhong2024distserve,patel2024splitwise,strati2024orion}, admits and schedules kernels in multi-tenant environments~\cite{fu2024serverlessllm,shubha2024usher,hu2023lucid,li2022miso,jayaram2023sia}, and collects observability signals for online adaptation~\cite{agrawal2024vidur}. These policies must evolve as models, SLAs, and hardware change~\cite{agrawal2024taming,yu2024orca,kwon2023efficient}.
 % enhance the multi-tenant
 
 % My two-cents, make it focus on policy itself
 \JC{
-
 Effective resource management policies have become increasingly critical in modern computing systems, particularly with the rise of GPU-accelerated workloads~\cite{xiao2018gandiva,yu2020fine,sheng2023flexgen,rasley2020deepspeed}. GPUs have emerged as the dominant platform for a wide range of applications, from latency-sensitive deep learning inference pipelines to large-scale training~\cite{kwon2023efficient,shoeybi2019megatron}, graph analytics~\cite{wang2016gunrock}, and data visualization~\cite{moreland2016vtk}. As GPU-based systems grow in scale and complexity, the policies that govern resource allocation, scheduling, and data movement play a crucial role in determining overall system performance, efficiency, and fairness. Across these diverse workloads, overall system performance depends not just on raw computing power, but crucially on the ability of resource management policies to adapt to the dynamic needs of applications. The importance of adaptive resource management policies has been well-recognized in various domains, such as \weichen{cluster resource allocation~\cite{delimitrou2013paragon,delimitrou2014quasar}, adaptive contention management~\cite{lo2015heracles}, and adaptive scheduling for deep learning workloads~\cite{xiao2018gandiva,qiao2021pollux,narayanan2020heterogeneity}.}
 
 The current state of policy specification and enforcement in GPU systems xxx
@@ -31,29 +41,31 @@ Moreover, xxx
 C1, C2, C3
 }
 
+% 
+
 % cpu ebpf is a background for solution
-GPU stacks, however, remain dominated by vendor drivers and firmware implementing fixed, opaque mechanisms, or by profiling-focused instrumentation frameworks\cite{cupti,villa2019nvbit,neutrino,egpu}. 
+GPU stacks, however, remain dominated by vendor drivers and firmware implementing fixed, opaque mechanisms, or by profiling-focused instrumentation frameworks\cite{cupti,nvbit,neutrino,egpu}. 
 \yusheng{However, this make the performance bad... }
-While academic works like TimeGraph and Gdev have shifted GPU scheduling and memory control into Linux device drivers\cite{timegraph,gdev}\yusheng{to improve performance...}, and recent systems further refactor driver-level control paths\cite{kernelintercept,gpreempt,lithos}, these efforts typically implement policies as static kernel modules. Lacking a safe, programmable interface, adapting policies requires invasive driver changes and operational disruptions. To enable flexibility without kernel modification, recent serving systems retrofit programmability above the driver. \xiangyu{Should we clearly say that the following works are user-space approaches.} Paella\cite{paella} and XSched\cite{xsched} expose software-defined scheduling, while Pie\cite{pie} and KTransformers\cite{ktransformers} offer programmable runtimes for LLM inference. 
+While academic works like TimeGraph and Gdev have shifted GPU scheduling and memory control into Linux device drivers\cite{kato2011timegraph,kato2012gdev}\yusheng{to improve performance...}, and recent systems further refactor driver-level control paths\cite{kernelintercept,gpreempt,lithos,wang2024gcaps}, these efforts typically implement policies as static kernel modules. Lacking a safe, programmable interface, adapting policies requires invasive driver changes and operational disruptions. To enable flexibility without kernel modification, recent serving systems retrofit programmability above the driver in the user-space.
+\xiangyu{Should we clearly say that the following works are user-space approaches.} Paella\cite{paella} and XSched\cite{xsched} expose software-defined scheduling, while Pie\cite{pie} and KTransformers\cite{ktransformers} offer programmable runtimes for LLM inference. 
 % more detail?
 % \xiangyu{User-space sharing and serving frameworks can therefore be programmable in a restricted way to the behavior that the fixed driver and device mechanisms choose to expose.}
 
-However, user-space approaches face three fundamental limitations. First, programmability is application-bound~\cite{ng2023paella,wang2024gcaps}. Policies are tightly coupled to specific serving systems or runtimes and cannot govern arbitrary, unmodified applications. Thus, deploying a new scheduling or memory policy requires invasive code changes or porting applications to a specific stack, preventing broad reuse. Second, user-space runtimes lack global coordination for resource sharing. Confined to process silos, they cannot safely share memory or bandwidth between tenants. To avoid contention and faults, applications must conservatively pre-allocate resources (e.g., memory), preventing dynamic sharing and lowering utilization. Third, user-space systems lack fine-grained execution control. Operating above the driver, they cannot intervene at the granularity of hardware interrupts or device contexts. This confines policies to coarse-grained scheduling at kernel launch boundaries, preventing precise preemption for latency-sensitive tasks or fine-grained compute-transfer overlap.
+However, user-space approaches face three fundamental limitations. First, programmability is application-bound~\cite{ng2023paella,wang2024gcaps}. Policies are tightly coupled to specific serving systems or runtimes and cannot govern arbitrary, unmodified applications. Thus, deploying a new scheduling or memory policy requires invasive code changes or porting applications to a specific stack, preventing broad reuse. Second, user-space runtimes lack global coordination for resource sharing. Confined to process silos, they cannot safely share memory or bandwidth between tenants. To avoid contention and faults, applications must conservatively pre-allocate resources (e.g., memory), preventing dynamic sharing and lowering utilization~\cite{wu2024streambox}.Third, user-space systems lack fine-grained execution control. Operating above the driver, they cannot intervene at the granularity of hardware interrupts or device contexts.This confines policies to coarse-grained scheduling at kernel launch boundaries, preventing precise preemption for latency-sensitive tasks or fine-grained compute-transfer overlap~\cite{fan2025gpreempt}. 
 
 \xiangyu{To remedy the above limitations, we claim} that effective GPU resource management requires an OS-level narrow waist for policy. The GPU driver is uniquely positioned with application transparency, global cross-tenant visibility, and direct control over privileged mechanisms such as page migration, kernel scheduling, and preemption. We propose treating GPU resource management as a first-class, programmable kernel subsystem by exposing a small set of verifiable policy interfaces. 
-
 % On the CPU side, programmability frameworks like eBPF already provide dynamic, safe, kernel-level policies for scheduling, caching, and observability via stable attach points\cite{Bachl21,Zhong22,jia2023programmable,schedext-docs,cacheext-docs}.
-\xiangyu{Fortunately, the recent programmability frameworks on the CPU side such as eBPF offer possibility to do dynamic and safe kernel-level scheduling policies\cite{Bachl21,Zhong22,jia2023programmable,schedext-docs,cacheext-docs}.}
+\xiangyu{Fortunately, the recent programmability frameworks on the CPU side such as eBPF offer possibility to do dynamic and safe kernel-level scheduling policies\cite{Bachl21,Zhong22,jia2023programmable,schedext-docs,cacheext-docs}.} \weichen{What is cacheext-docs}
 % the last sentence can be put in front
 % \xiangyu{
 % Concretely, eBPF's restricted instruction set, verifier guarantees, and rich existing ecosystem uniquely enable such a unified GPU policy substrate, seamlessly extending unified programmability from CPUs to GPUs.}
 % \xiangyu{There are multiple challenges to designing a general substrate for GPU policy programmability.}
 However, host-only eBPF is insufficient in GPU domain because critical decisions like thread-block scheduling and warp execution happen on the device, are invisible to the host. 
-
 \yusheng{We need to say extensiblility: prefetch / scheduler, not just observability}
-
 A practical system must safely expose programmable policy hooks in GPU drivers and support efficient policy execution within GPU kernels. 
 Thus, designing a general GPU policy substrate introduces three challenges.\xiangyu{I have a feeling that we can use ``goals" instead of challenges. We can say sth. such as Thus, designing a general GPU policy substrate should satisfy three goals.}
+
+
 \yusheng{or we should change the words to actually say problems, it seems current we are say it like goals? e.g.  driver side tightly-coupled, device side simt, complex memory hericieay}
 \emph{C1: Safe driver extensibility.} The challenge is to identify minimal\xiangyu{why do we need to say minimal?}, stable hooks (e.g., memory fault handlers, GPU kernel schedule events) within tightly-coupled driver logic to safely introduce dynamic policy customization without compromising stability. \emph{C2: Safe and efficient device-side execution.} Policy must be optimized to run inside GPU kernels on critical paths, while ensuring bounded resource usage and safety in a massively parallel SIMT environment. \emph{C3: Unified state management.} Policies need to correlate host and device events, requiring a unified state management and a single control plane across the CPU-GPU boundary.
 

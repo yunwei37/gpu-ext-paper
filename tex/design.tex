@@ -50,12 +50,17 @@ The absence of a principled, efficient way to maintain shared state across the h
 
 \sys follows three fundamental design principles:
 
-\paragraph{Principle 1: Transparent and Dynamic Policy Programmability.}
+% Any problem in computer systems can be sovled with another layer of indirection
+\paragraph{Principle 1: Programmable Operating System Interface for GPU (os level?)  Programmability through (design Transparent and Dynamic Policy? Driver and DBI).}
 \sys explicitly separates stable, privileged GPU driver mechanisms from dynamically programmable policies. Instead of embedding policies in opaque vendor stacks or application-specific runtimes, \sys provides clearly-defined policy interfaces that allow dynamic updates without requiring driver modifications or invasive application changes.
 
-\paragraph{Principle 2: Unified Policy State and Control Plane.}
+% A single model for exection and programming
+% -> 
+\paragraph{Principle 2: A single execution and programming model across the host and GPU.}
+%execution and programming (a single Policy State and Control Plane)}
 To eliminate the complexity and fragmentation of heterogeneous GPU stacks, \sys offers a unified abstraction for policy state, programming interfaces, and lifecycle management across CPU hosts and GPU devices. This ensures consistent cross-layer coordination, simplifies policy expression, and enables coherent decisions in asynchronous execution environments.
 
+% compile time verifiation and optimization
 \paragraph{Principle 3: Verifiable, SIMT-aware Safe and Efficient Execution.}
 Recognizing the fundamental mismatch between traditional scalar eBPF semantics and GPU's SIMT parallelism, \sys introduces a static verification model explicitly designed for SIMT execution. Through a type discipline that distinguishes warp-uniform from lane-varying values, the verifier statically enforces bounded resource usage, latency constraints, and memory safety, minimizing the need for runtime isolation or instrumentation.
 
