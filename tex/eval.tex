@@ -240,14 +240,26 @@ a total runtime of 32~ms. Switching to CUDA graphs, guided by
 \texttt{launchlate}, reduces this to 7.2~ms, with less than 0.5\% overhead.
 \texttt{mem\_trace} instruments sampled memory operations and recovers per-warp
 bank conflict rates within 2\% of hardware counters, with under 3\% end-to-end
-overhead across GEMM, SpMV and stencil kernels (\Cref{fig:obs-overhead}).
+overhead across GEMM, SpMV and stencil kernels (\Cref{tab:obs-overhead}).
 
-\begin{figure}
+\begin{table}[t]
 \centering
-\fbox{\parbox{\columnwidth}{\centering [Figure: GPU Observability Tools Overhead Comparison]}}
-\caption{Overhead of \sys-based observability tools across workloads.}
-\label{fig:obs-overhead}
-\end{figure}
+\small
+\begin{tabularx}{\columnwidth}{@{} X l c c @{}}
+\toprule
+\textbf{Tool} & \textbf{LOC} & \textbf{Domain} & \textbf{Overhead} \\
+\midrule
+kernelretsnoop & 153 & Device & \\
+launchlate & 347 & Host+Device & \\
+mem\_trace & 110 & Device & \\
+gpu\_sched\_trace & 586 & Host & \\
+prefetch\_trace & 430 & Host & \\
+eviction\_trace & 398 & Host & \\
+\bottomrule
+\end{tabularx}
+\caption{\sys-based observability tools.}
+\label{tab:obs-overhead}
+\end{table}
 
 \paragraph{Comparison to CUPTI and NVBit.}
 \Cref{fig:obs-comparison} compares \sys-based tools against CUPTI and
