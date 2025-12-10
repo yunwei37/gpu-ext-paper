@@ -88,11 +88,7 @@ Native GPU allocation (no UVM) achieves the highest performance when data fits i
 \end{figure}
 
 \paragraph{Faiss Vector Search.}
-We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4096,Flat index. We scale the dataset from 20M (9.5GB, fits in memory) to 50M (24GB, near boundary) and 100M (48GB, exceeds 32GB GPU memory).
-First, we establish the baseline: for the 20M dataset, GPU execution is 21$\times$ faster for index construction and roughly 29$\times$ faster for search compared to CPU, confirming the critical value of GPU acceleration.
-For the larger datasets relying on UVM, we apply a \sys policy implementing adaptive tree-based prefetching.
-For index construction, \sys reduces build time by 21.4\% on SIFT50M (16.77s $\to$ 13.19s) and 28.9\% on SIFT100M (67.77s $\to$ 48.15s). Notably, the benefits scale with dataset size, with build throughput improvement increasing from 27\% to 40\% as memory pressure grows.
-For search workloads on the oversubscribed SIFT100M dataset, \sys reduces latency by 10--16\% across \texttt{nprobe} settings: 15.9\% improvement at nprobe=1 (14.04s $\to$ 11.80s) and 10.5\% at nprobe=16 (57.44s $\to$ 51.42s). The policy hides latency by proactively fetching posting lists, increasing QPS by 11.7\% at nprobe=16 despite the random access patterns inherent in ANN search.
+We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4096,Flat index. We scale the dataset from 20M (9.5GB, fits in memory) to 50M (24GB, near boundary) and 100M (48GB, exceeds 32GB GPU memory). For the 20M dataset, GPU execution is 21$\times$ faster for index construction and roughly 29$\times$ faster for search compared to CPU, confirming the value of GPU acceleration. For the larger datasets relying on UVM, we apply a \sys policy implementing adaptive tree-based prefetching. For index construction, \sys reduces build time by 21.4\% on SIFT50M (16.77s $\to$ 13.19s) and 28.9\% on SIFT100M (67.77s $\to$ 48.15s). Notably, the benefits scale with dataset size, with build throughput improvement increasing from 27\% to 40\% as memory pressure grows. For search workloads on the largest SIFT100M dataset, \sys reduces latency by 10--16\% across \texttt{nprobe} settings: 15.9\% improvement at nprobe=1 (14.04s $\to$ 11.80s) and 10.5\% at nprobe=16 (57.44s $\to$ 51.42s). The policy hides latency by proactively fetching posting lists, increasing QPS by 11.7\% at nprobe=16 despite the random access patterns inherent in ANN search.
 
 \begin{figure}
 \centering
