@@ -165,10 +165,8 @@ Overall, \sys's per-tenant policies provide clear tail-latency and fairness bene
 
 We evaluate \sys's programmability by examining policy complexity and reuse, and quantify the efficiency of its core mechanisms and observability capabilities.
 
-\paragraph{Support Matrix.}
-\Cref{tab:support-matrix} 
-\xiangyu{why do we name it Support Matrix?} 
-shows the policies implemented for each workload, along with lines of code (host eBPF + device eBPF) and measured overhead. All policies attach to unmodified frameworks via \sys's runtime instrumentation. The key takeaway is that a few hundred lines of policy code can implement sophisticated cross-layer resource management without application changes.
+\paragraph{Policy Building Blocks.}
+\Cref{tab:support-matrix} shows individual policy building blocks implemented using \sys, along with their lines of code and execution domain. These components can be composed to construct comprehensive resource management policies for realistic workloads. For example, a multi-tenant inference serving scenario may combine Multi-tenant Quota LRU, Stride Prefetch (both host and device), and Dynamic Timeslice to achieve coordinated memory and scheduling control across the host-device boundary. All policies attach to unmodified frameworks via \sys's runtime instrumentation. Individual building blocks require only tens to hundreds of lines of code, demonstrating that sophisticated cross-layer resource management can be achieved without application changes.
 
 \begin{table}[t]
 \centering
