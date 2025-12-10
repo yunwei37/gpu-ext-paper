@@ -16,7 +16,7 @@ We evaluate \sys using three key questions:
 We evaluated \sys on two machines.\xiangyu{There is only one machine here?} Server~A is a single-socket Intel Core
 Ultra~9 285K processor (24 cores) with 128~GB DDR5 RAM and an NVIDIA RTX~5090
 GPU.  average each metric over
-10 trials; when averaging speedups we use geometric means. We compare against
+10 trials; when averaging speedups we use geometric meaernel and Device Runtime.s. We compare against
 default UVM
 memory management, modify application to add hints to the default uvm policy, and the native GPU scheduler without \sys-based policies, as
 well as framework-managed offloading policy where applicable. We use PyTorch (version 2.9.0), vLLM (version 0.11.0), llama.cpp (version 7101), and Faiss (version 1.13.0) for our evaluation. Faiss and llama.cpp support UVM directly, and we use custom allocator to allow vllm and pytorch support the UVM. All test with our eBPF policy does not require any application modifications.
