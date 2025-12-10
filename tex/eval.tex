@@ -40,7 +40,7 @@ via \texttt{should\_try\_steal}, we evaluate three scheduling policies: FixedWor
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/clc_policies_comparison.pdf}
-\caption{Impact of \sys block-scheduling policies across workload regimes. (a) Under moderate imbalance (GEMM), simple always-steal policies reduce latency by $\sim$11\% and behave essentially identically. (b) Under clustered heavy tails, Greedy becomes pathological (+20.3\% latency) while LatencyBudget matches baseline performance, demonstrating the need for workload-aware policy selection.}
+\caption{Impact of \sys block-scheduling policies across workload regimes. (a) Under moderate imbalance (GEMM), simple always-steal policies reduce latency by $\sim$11\% and behave identically. (b) Under clustered heavy tails, Greedy becomes pathological (+20.3\% latency) while LatencyBudget matches baseline performance, demonstrating the need for workload-aware policy selection.}
 \label{fig:clc-policies}
 \end{figure}
 

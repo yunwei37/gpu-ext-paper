@@ -24,7 +24,7 @@ We reuse Linux's existing eBPF verifier to enforce standard memory safety, bound
 
 \paragraph{Warp-level Execution Implementation}
 
-Warp-level execution aggregation is implemented by inserting lightweight trampolines at kernel entry, synchronization barriers, and critical memory instructions (such as global loads and atomic operations). In each trampoline, per-lane inputs are aggregated using GPU warp-level hardware primitives, specifically \texttt{\_\_ballot\_sync} to gather active lane masks and \texttt{\_\_shfl\_sync} for efficient value reductions. An active warp leader is selected via \texttt{\_\_ffs(\_\_activemask())}, which executes the scalar eBPF handler exactly once per warp. The warp leader's result is broadcast back to all warp lanes through shuffle instructions. During JIT compilation, we also inline helper functions and map accesses directly into handler code.
+Warp-level execution aggregation is implemented by inserting lightweight trampolines at kernel entry, synchronization barriers, and critical memory instructions (such as global loads and atomic operations). In each trampoline, per-lane inputs are aggregated using GPU warp-level hardware primitives, specifically \texttt{\_\_ballot\_sync} to gather active lane masks and \texttt{\_\_shfl\_sync} for efficient value reductions. An active warp leader is selected via \texttt{\_\_ffs(\_\_activemask())}, which executes the scalar eBPF handler exactly once per warp. The warp leader's result is broadcast back to all warp lanes through shuffle instructions. During JIT compilation, we inline helper functions and map accesses into handler code, reducing call overhead.
 
 \paragraph{Hierarchical Maps and Cross-Domain State}
 
