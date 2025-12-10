@@ -33,9 +33,16 @@ We evaluate \sys's memory policies on three representative kernels: \texttt{HotS
 We apply a \sys-based block scheduler driven by the GPU-side interface
 (Section~\ref{sec:design-sched}) to workloads with significant load imbalance.
 Using a cluster-style launch where persistent worker blocks pull work units
-via \texttt{should\_try\_steal}, we evaluate on GEMM with variable matrix sizes where static block assignment leads to some blocks being overloaded while others idle.
+via \texttt{should\_try\_steal}, we evaluate three scheduling policies: FixedWork (static block assignment), Greedy (always-steal), and LatencyBudget (workload-aware with per-block time limits).
 
-We compare three scheduling policies: FixedWork (static block assignment), CLC Baseline (cooperative launch control), and TokenBucket (workload-aware). On imbalanced GEMM with variable MxNxK configurations, TokenBucket achieves 51~µs compared to 67~µs for FixedWork, a 24\% improvement.
+\Cref{fig:clc-policies} compares these policies across two workload regimes. On a moderately imbalanced GEMM (\Cref{fig:clc-policies}a) with skewed matrix size distribution (5\% 64$^3$, 15\% 48$^3$, 30\% 32$^3$, 50\% 16$^3$) and 2,097,152 work items, both Greedy and LatencyBudget reduce latency by approximately 10.7--10.8\% over FixedWork (0.091~ms vs 0.102~ms), with negligible difference between the two dynamic policies (<1\%). This demonstrates that simple always-steal scheduling is sufficient to reclaim wasted tail time under moderate imbalance. However, on a clustered heavy-tail workload (\Cref{fig:clc-policies}b) where 10\% of blocks perform 100--200$\times$ more work and are placed contiguously at the grid tail, the same Greedy policy becomes pathological: it increases latency by 20.3\% over FixedWork (17.8~ms vs 14.8~ms) due to contention on the small set of remaining heavy blocks. In contrast, LatencyBudget---which uses \sys's programmable control plane to cap per-block stealing time---matches the baseline performance within 1\% (14.7~ms). This result highlights a key limitation of naive always-steal policies and demonstrates that no single policy dominates across all workload regimes; \sys's programmable policy interface enables selection of appropriate strategies for each scenario.
+
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{img/results-raw/clc_policies_comparison.pdf}
+\caption{Impact of \sys block-scheduling policies across workload regimes. (a) Under moderate imbalance (GEMM), simple always-steal policies reduce latency by $\sim$11\% and behave essentially identically. (b) Under clustered heavy tails, Greedy becomes pathological (+20.3\% latency) while LatencyBudget matches baseline performance, demonstrating the need for workload-aware policy selection.}
+\label{fig:clc-policies}
+\end{figure}
 
 \subsubsection{Case Studies}
 

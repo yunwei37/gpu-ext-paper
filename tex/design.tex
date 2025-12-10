@@ -44,25 +44,13 @@ Unlike CPUs—where extension frameworks such as eBPF provide stable, safe, and 
 We identify three core challenges that make GPU programmability hard.
 
 \subsubsection{C1: Lack of a Safe and Expressive OS-Level GPU Policy Interface}
-GPU resource management has to run at the driver layer to be effective, but GPU drivers and firmware were never designed to expose a programmable interface. Naively surfacing low-level mechanisms (page tables, command buffers, interrupt handlers) to eBPF would give policies a lot of power but make the driver brittle, version‑dependent, and unsafe in multi‑tenant settings. The challenge is to carve out a narrow, stable, and verifiable GPU policy interface—rich enough to express real memory and scheduling policies, yet constrained enough that misbehaving policies cannot corrupt device state or crash the kernel.
+GPU resource management needs to run at the driver layer to be effective, but GPU drivers and firmware were never designed to expose a programmable interface. Directly exposing low-level mechanisms (page tables, command buffers, interrupt handlers) to eBPF would give policies maximum expressiveness but compromise driver stability and tenant isolation, risking kernel crashes and device state corruption. Conversely, constraining programmability to high-level abstractions ensures safety but severely limits the expressiveness needed for complex memory placement and scheduling decisions. Thus, the fundamental challenge lies in carving out a narrow, stable, and verifiable GPU policy interface—expressive enough to implement rich, real-world policies, yet constrained enough to prevent misbehaving policies from corrupting device state or crashing the kernel.
 
-\subsubsection{C2: Mismatch Between CPU Extension Semantics and the SIMT GPU Execution Model}
+\subsubsection{C2: Mismatch Between CPU Extension Semantics and the GPU SIMT Execution Model}
+Directly applying existing CPU-oriented eBPF mechanisms to GPU device remains hard due to semantic mismatches with the GPU Single Instruction Multiple Threads (SIMT) execution model. CPU-side eBPF assumes single-threaded execution, strong memory consistency, and bounded execution enforced by a CPU-oriented verifier, whereas GPU kernels execute in warps of 32 threads that must follow warp-uniform control paths. Running scalar eBPF logic per thread introduces warp divergence, serialization overhead, and correctness risks from thousands of concurrent memory operations unchecked by the CPU-side verifier. Furthermore, GPUs lack isolation, recovery points, or preemption mechanisms, meaning an unbounded loop or invalid access in policy logic can halt the entire device. This semantic mismatch makes straightforward reuse of CPU-oriented eBPF unsafe and inevitably slow.
 
-\yusheng{mismatch between verify extension single thread CPU model vs SIMT GPU model, kernel concurrency / extension, not eBPF Semantics}
-
-Even if GPU drivers exposed extensible interfaces, directly applying existing programmable CPU-oriented eBPF mechanisms does not work because of the conflict between eBPF semantics and the GPU Single Instruction Multiple Threads (SIMT) execution model execution model. 
-Concretely, eBPF programs assume single-threaded control flow, strong memory consistency, and bounded execution enforced by a CPU-oriented verifier, whereas GPU kernels execute in warps of 32 threads that must follow largely uniform control paths. 
-Naively running scalar eBPF logic per thread introduces warp divergence, unbounded serialization, and correctness risks stemming from thousands of simultaneous memory operations that the CPU-side verifier do not check. 
-Furthermore, GPUs lack isolation, recovery points, or preemption mechanisms for misbehaving device-side code, meaning an unbounded loop or invalid access in policy logic can halt an entire device. 
-The architectural and semantic mismatch makes straightforward reuse of eBPF unsafe and inevitably slow.
-
-\subsubsection{C3: Absence of Efficient Mechanisms for Host–Device Shared State Status}
-
-Even with GPU-side programmability that respects SIMT constraints, real GPU clusters require coordinated host–device resource management, which today lacks an efficient abstraction for shared policy state. 
-GPU-accessible host memory suffers from orders-of-magnitude higher latency than GPU global memory, while GPU memory is capacity-limited and optimized for throughput, creating a fundamental mismatch in memory hierarchies. 
-Meanwhile, CPU and GPU components operate asynchronously on vastly different timescales, causing policy decisions to rely on inconsistent state unless carefully synchronized. 
-Existing systems force developers to manually manage DMA transfers, data replication, and consistency across devices, resulting in brittle, application-specific mechanisms that do not generalize.
-The absence of a principled, efficient way to maintain shared state across the host–device boundary remains a major barrier to deploying practical programmable resource management on GPU clusters.
+\subsubsection{C3: Absence of Efficient Mechanisms for Host–Device Shared State}
+Real GPU clusters require coordinated host–device resource management, which today lacks efficient and consistent abstractions for shared policy state. GPU-accessible host memory suffers from orders-of-magnitude higher latency than GPU global memory, while GPU memory is capacity-limited and optimized for throughput, creating a fundamental mismatch in memory hierarchies. Meanwhile, CPU and GPU components operate asynchronously at vastly different timescales, causing policy decisions to rely on stale or inconsistent state unless carefully synchronized. Existing systems force developers to manually manage DMA transfers, data replication, and consistency across devices, resulting in brittle, application-specific mechanisms that do not generalize. This lack of a principled, efficient mechanism to maintain consistent shared state across the host–device boundary remains a major barrier to practical programmable GPU resource management.
 
 
 \subsection{\sys{} Policy Interfaces}
