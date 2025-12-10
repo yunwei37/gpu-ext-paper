@@ -1,7 +1,7 @@
 \section{Evaluation}
 \label{sec:eval}
 
-We evaluate \sys using four key questions:
+We evaluate \sys using three key questions:
 
 \begin{itemize}[leftmargin=*]
   \item \textbf{RQ1 (Single-Tenant Memory/Scheduling):} How much performance gain can \sys's programmable memory and scheduling policies provide on oversubscribed single-tenant workloads?
@@ -9,18 +9,17 @@ We evaluate \sys using four key questions:
   \item \textbf{RQ3 (Programmability \& Mechanism Overhead):} Is \sys sufficiently programmable to support diverse policies, and what is the overhead of its core mechanisms and observability capabilities?
 \end{itemize}
 
+\xiangyu{We choose them because ...? Talk about reasons to select these questions.}
+
 \subsection{Methodology and Setup}
 
-We evaluated \sys on two machines. Server~A is a single-socket Intel Core
+We evaluated \sys on two machines.\xiangyu{There is only one machine here?} Server~A is a single-socket Intel Core
 Ultra~9 285K processor (24 cores) with 128~GB DDR5 RAM and an NVIDIA RTX~5090
-GPU. Server~B is a single-socket Intel Xeon~6787P (86~cores, 2.0~GHz, 336~MB
-LLC) with 768~GB DDR5 RAM (512~GB CXL module) and an NVIDIA H100 GPU. Unless
-otherwise noted, we report results on Server~A and average each metric over
+GPU.  average each metric over
 10 trials; when averaging speedups we use geometric means. We compare against
-NVIDIA's CUPTI and NVTX-based profiler stack, NVBit gpumemtrace, default UVM
-memory management, and the native GPU scheduler without \sys-based policies, as
-well as framework-managed offloading where applicable. We use PyTorch (version 2.9.0), vLLM (version 0.11.0), llama.cpp (version 7101), and Faiss (version 1.13.0) for our evaluation.
-
+default UVM
+memory management, modify application to add hints to the default uvm policy, and the native GPU scheduler without \sys-based policies, as
+well as framework-managed offloading policy where applicable. We use PyTorch (version 2.9.0), vLLM (version 0.11.0), llama.cpp (version 7101), and Faiss (version 1.13.0) for our evaluation. Faiss and llama.cpp support UVM directly, and we use custom allocator to allow vllm and pytorch support the UVM. All test with our eBPF policy does not require any application modifications.
 
 
 \subsection{RQ1: Single-Tenant Memory and Scheduling Policies}
@@ -50,7 +49,7 @@ We evaluate \sys on the GPT-OSS-120B MXFP4 MoE model (59~GiB, 116.83B parameters
 \begin{itemize}[leftmargin=*]
   \item \textbf{Decode (memory-bound):} \sys achieves 86.89~t/s, \textbf{4.8$\times$ faster} than framework offloading (18.18~t/s with ncmoe=32). The eBPF policy predicts expert activation patterns and prefetches weights before GPU access, effectively hiding PCIe transfer latency. In contrast, framework offloading incurs per-token CPU-GPU transfer overhead during autoregressive decoding.
   \item \textbf{Prefill (compute-bound):} Framework offloading achieves slightly higher throughput (260.14~t/s vs 229.67~t/s, +13\%) by explicitly managing expert placement and avoiding UVM page faults. However, \sys's 12\% prefill overhead is acceptable given the 4.8$\times$ decode improvement---decode dominates end-to-end latency in interactive serving.
-  \item \textbf{User hints degrade performance:} Naive \texttt{cudaMemAdviseSetPreferredLocation} causes 39.6\% prefill regression due to eager migration overhead, demonstrating that effective UVM policies require workload-aware prefetching rather than static hints.
+  \item \textbf{User hints degrade performance:} Naive \texttt{cudaMemAdviseSetPreferredLocation} causes 39.6\% prefill regression due to eager migration overhead, demonstrating that effective UVM policies require workload-aware prefetching rather than static hints.\xiangyu{Are those hints easy to find in many scenarios? Maybe we should clarify it. Otherwise, it seems that \sys{} uses some tricks to win the competition.}
 \end{itemize}
 
 This policy is expressed as eBPF callbacks in the driver plus device-side handlers that mark expert regions as ``will-use soon'' or ``cold'' without modifying the application.
@@ -88,7 +87,7 @@ The key findings demonstrate that prefetching and eBPF scheduling are \emph{comp
 Native GPU allocation (no UVM) achieves the best performance when data fits in memory (1.89~s at 5M nodes) but fails with OOM beyond $\sim$8M nodes. UVM with \sys prefetching enables training at 15M nodes (2.17$\times$ oversubscription) with acceptable overhead. The CPU-side framework overhead for these policies is around 1\%, and device-side instrumentation adds 2--3\%.
 
 \begin{figure}
-\centering
+\centeringOn imbalanced GEMM with variable MxNxK configurations, TokenBucket achieve
 \includegraphics[width=\columnwidth]{img/results-raw/pytorch/uvm_benchmark_comparison.pdf}
 \caption{GCN training epoch time vs graph size. Native GPU allocation (green) OOMs at $\sim$8M nodes. UVM without prefetch (red) suffers 30$\times$ overhead from page faults; \sys eBPF scheduling (dashed red) provides 2.65$\times$ speedup. UVM with prefetch (blue) achieves 5.5$\times$ speedup; at severe oversubscription (15M nodes), \sys (dashed blue) provides additional 1.44$\times$ improvement.}
 \label{fig:gnn-epoch}
@@ -147,7 +146,7 @@ Crucially, scheduler timeslice policies are \emph{ineffective} for these memory-
 \end{figure}
 
 \subsubsection{Case Studies}
-
+\xiangyu{Use one sentence to highlight the relationship between 6.3.2 and 6.3.1? Does 6.3.2 include typical examples of 6.3.1?}
 \paragraph{Two-Tenant: High-Priority LLM Inference + Background Training.}
 We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp} inference service (LC workload) serving 100 ShareGPT prompts at 0.2 RPS, and T2 is a background PyTorch GNN training job (BE workload) with 8M nodes requiring 36GB peak memory (oversubscribed). We compare default UVM (driver FIFO/LRU) against \sys per-tenant memory policies where the LC tenant receives prefetch priority and the BE tenant yields bandwidth during inference.
 
@@ -167,7 +166,9 @@ Overall, \sys's per-tenant policies provide clear tail-latency and fairness bene
 We evaluate \sys's programmability by examining policy complexity and reuse, and quantify the efficiency of its core mechanisms and observability capabilities.
 
 \paragraph{Support Matrix.}
-\Cref{tab:support-matrix} shows the policies implemented for each workload, along with lines of code (host eBPF + device eBPF) and measured overhead. All policies attach to unmodified frameworks via \sys's runtime instrumentation. The key takeaway is that a few hundred lines of policy code can implement sophisticated cross-layer resource management without application changes.
+\Cref{tab:support-matrix} 
+\xiangyu{why do we name it Support Matrix?} 
+shows the policies implemented for each workload, along with lines of code (host eBPF + device eBPF) and measured overhead. All policies attach to unmodified frameworks via \sys's runtime instrumentation. The key takeaway is that a few hundred lines of policy code can implement sophisticated cross-layer resource management without application changes.
 
 \begin{table}[t]
 \centering
@@ -247,7 +248,7 @@ overhead across GEMM, SpMV and stencil kernels (\Cref{tab:obs-overhead}).
 \small
 \begin{tabularx}{\columnwidth}{@{} X l c c @{}}
 \toprule
-\textbf{Tool} & \textbf{LOC} & \textbf{Domain} & \textbf{Overhead} \\
+\textbf{Tool} & \textbf{LOC} & \textbf{Domain} & \textbf{Overhead(\sys vs baseline vs Nvbit)} \\
 \midrule
 kernelretsnoop & 153 & Device & \\
 launchlate & 347 & Host+Device & \\
@@ -258,7 +259,7 @@ prefetch\_trace & 430 & Host & \\
 eviction\_trace & 398 & Host & \\
 \bottomrule
 \end{tabularx}
-\caption{\sys-based observability tools.}
+\caption{\sys-based observability tools.\xiangyu{Add one column to say its functionality?}}
 \label{tab:obs-overhead}
 \end{table}
 
@@ -277,6 +278,7 @@ live instrumentation without interrupting execution.
 \end{figure}
 
 \paragraph{Device-side Microbenchmarks and Optimization Effects.}
+\xiangyu{Should we make it as a separate subsection?}
 We evaluate device-side \sys mechanisms using a vector-add microbenchmark (32 elements, 10K iterations) on RTX 5090. \Cref{fig:microbench}(a) compares latency before and after our SIMT-aware warp-level execution optimizations (\S\ref{sec:verification}), with a baseline of 5.2~$\mu$s. Empty probe latency drops from 6.2~$\mu$s to 5.5~$\mu$s (-11\%), and exit probe from 6.2~$\mu$s to 5.3~$\mu$s (-14\%). More complex operations show larger improvements: array map lookup drops from 8.2~$\mu$s to 5.8~$\mu$s (-30\%), array map update from 11.1~$\mu$s to 7.0~$\mu$s (-37\%), and Memtrace from 9.4~$\mu$s to 6.1~$\mu$s (-35\%). \Cref{fig:microbench}(b) shows CPU map access via PCIe incurs ~33,700~$\mu$s latency---approximately 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU.
 
 \begin{figure*}
