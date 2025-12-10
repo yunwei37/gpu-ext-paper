@@ -1,21 +1,14 @@
 \section{Design Principles}
 
 \sys follows three key design principles:
+\paragraph{Principle 1: Transparent and Dynamically Programmable GPU OS Interface.}
+Given the rapidly evolving and diverse GPU application landscape, relying on userspace policies significantly limits transparency, adaptability, and robustness. Effective GPU resource management also requires policies to be dynamically updated at runtime without restarting user applications. We thus embed dynamic, transparent policy mechanisms directly into GPU driver and OS layers, employing dynamic binary instrumentation to transparently instrument GPU device code, enabling seamless runtime policy updates across diverse, unmodified applications.
 
-% Any problem in computer systems can be sovled with another layer of indirection
-\paragraph{Principle 1: Programmable Operating System Interface for GPU (os level?)  Programmability through (design Transparent and Dynamic Policy? Driver and DBI).}
-Given the rapidly evolving and diverse GPU application landscape, relying on userspace policies significantly limits transparency, adaptability, and robustness. Also, effective GPU resource management requires policies that can be dynamically updated at runtime without restarting user applications.
-We thus embed dynamic, transparent policy mechanisms directly into GPU driver and OS layers, offering GPU device code instructions throught dynamic binary instrucmentation enabling seamless runtime policy updates across diverse, unmodified applications.
+\paragraph{Principle 2: Single Programming and Execution Model Across Host and GPU.}
+Traditional separation between CPU and GPU policy execution models introduces complexity, fragmentation, and hinders coherent resource management. We therefore unify host and GPU execution contexts under a single programming abstraction and control plane, simplifying policy expression and enabling consistent, coordinated resource management decisions.
 
-% A single model for exection and programming
-% -> 
-\paragraph{Principle 2: A single execution and programming model across the host and GPU.}
-%execution and programming (a single Policy State and Control Plane)}
-The traditional separation between host-side and device-side policy models introduces fragmentation and complexity, making coherent policy decisions difficult. Our design explicitly provides a unified abstraction across CPU and GPU execution contexts, simplifying resource management and ensuring consistent, coordinated decisions across layers.
-
-% SIMT-Aware load time verifiation and optimization
-\paragraph{Principle 3: SIMT-Aware load time verifiation and optimization.}
-GPU architectures' SIMT parallelism fundamentally differs from traditional CPU execution models, requiring explicit safety and efficiency guarantees that conventional scalar eBPF extension verification hard to deliver. Alos, du e to the resource limitaion, reuntime isolation become expensive, Thus, we incorporate load time SIMT-aware static verification and optimization principles into our design to ensure robust safety, bounded resource usage, and predictable performance with minimal runtime overhead.
+\paragraph{Principle 3: SIMT-Aware Load-Time Verification and Optimization.}
+GPU's SIMT architecture fundamentally differs from traditional scalar CPU execution, making conventional scalar eBPF verification inadequate and runtime isolation prohibitively expensive due to limited GPU resources. We therefore adopt load-time static verification and optimization explicitly designed for SIMT semantics, ensuring safe execution, bounded resource usage, predictable latency, and minimal runtime overhead.
 
 \section{\sys{} Policy Interfaces}
 \label{sec:design-interfaces}
