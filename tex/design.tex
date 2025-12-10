@@ -43,10 +43,8 @@ Achieving programmable resource management on GPUs remains fundamentally difficu
 Unlike CPUs—where extension frameworks such as eBPF provide stable, safe, and well-defined programmability points—GPU software stacks were not designed with similar goals. 
 We identify three core challenges that make GPU programmability hard.
 
-\subsubsection{C1: Lack of Safe and Stable Extension Points in Monolithic GPU Drivers}
-Modern GPU drivers are large, monolithic vendor-controlled codebases that tightly intertwine low-level hardware mechanisms with proprietary resource-management policies, offering no stable hooks for user-defined logic. 
-GPU drivers were not architected with programmable resource management in mind—partly due to historical assumptions about GPU usage, and partly due to strict safety constraints, as incorrect driver logic can stall the device or crash an entire node. 
-As a result, developers cannot inject new scheduling policies, memory-placement strategies, or custom instrumentation without invasive modifications to vendor drivers. This absence of safe, stable extension points naturally limits any attempt to retrofit programmability into today's GPU stacks.
+\subsubsection{C1: Lack of a Safe and Expressive OS-Level GPU Policy Interface}
+GPU resource management has to run at the driver layer to be effective, but GPU drivers and firmware were never designed to expose a programmable interface. Naively surfacing low-level mechanisms (page tables, command buffers, interrupt handlers) to eBPF would give policies a lot of power but make the driver brittle, version‑dependent, and unsafe in multi‑tenant settings. The challenge is to carve out a narrow, stable, and verifiable GPU policy interface—rich enough to express real memory and scheduling policies, yet constrained enough that misbehaving policies cannot corrupt device state or crash the kernel.
 
 \subsubsection{C2: Mismatch Between CPU Extension Semantics and the SIMT GPU Execution Model}
 
