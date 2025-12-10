@@ -76,12 +76,12 @@ The absence of a principled, efficient way to maintain shared state across the h
 \subsection{Policy Interfaces}
 \label{sec:design-interfaces}
 
-\sys introduces three eBPF program types for GPU resource management: two driver‑level types, \texttt{BPF_PROG_TYPE_GPU_MEM} for memory‑placement policy and \texttt{BPF_PROG_TYPE_GPU_SCHED} for scheduling decisions, and one device‑level type, \texttt{BPF_PROG_TYPE_GPU_DEV}, for in‑kernel GPU instrumentation. These program types coexist with existing kernel eBPF program types and are distinguished solely by their attach points and their SIMT‑specific verification rules.
+\sys introduces three eBPF program types for GPU resource management: two driver‑level types, \texttt{BPF\_PROG\_TYPE\_GPU\_MEM} for memory‑placement policy and \texttt{BPF\_PROG\_TYPE\_GPU\_SCHED} for scheduling decisions, and one device‑level type, \texttt{BPF\_PROG\_TYPE\_GPU\_DEV}, for in‑kernel GPU instrumentation. These program types coexist with existing kernel eBPF program types and are distinguished solely by their attach points and their SIMT‑specific verification rules.
 
 \subsubsection{Memory Interface}
 \label{sec:design-mem}
 
-\sys treats memory placement as a programmable region cache. It exposes four region‑level events like \emph{add}, \emph{access}, \emph{removal}, and \emph{prefetch} and allows host and device policies to cooperate. The host driver exports these events through a small \texttt{struct_ops} table. Handlers encode decisions through an enum field in the context and may reorder—but never remove—regions in the kernel‑maintained eviction list. The kernel always enforces safety and correctness, including fallback FIFO eviction under pressure. Policies maintain their own metadata in hierarchical maps and express placement and prefetch decisions through these callbacks. Device‑side kernels observe memory operations and express future‑use hints through a device‑level interface. Device handlers receive a compact warp‑uniform context and operate at warp granularity. Operation like prefetch can be performed on device and then trigger host-side prefetch callbacks, enabling the host to combine cross‑kernel information with device‑side predictive logic.
+\sys treats memory placement as a programmable region cache. It exposes four region‑level events like \emph{add}, \emph{access}, \emph{removal}, and \emph{prefetch} and allows host and device policies to cooperate. The host driver exports these events through a small \texttt{struct\_ops} table. Handlers encode decisions through an enum field in the context and may reorder—but never remove—regions in the kernel‑maintained eviction list. The kernel always enforces safety and correctness, including fallback FIFO eviction under pressure. Policies maintain their own metadata in hierarchical maps and express placement and prefetch decisions through these callbacks. Device‑side kernels observe memory operations and express future‑use hints through a device‑level interface. Device handlers receive a compact warp‑uniform context and operate at warp granularity. Operation like prefetch can be performed on device and then trigger host-side prefetch callbacks, enabling the host to combine cross‑kernel information with device‑side predictive logic.
 
 
 \begin{minted}[
@@ -141,37 +141,12 @@ struct gdev_mem_ops {
 %  int gdev_mem_pin_hint(gmem_region_t* r, int dev_id);
 % int gdev_mem_use_hint(gmem_region_t* r, int dev_id);
 
-% \paragraph{Host-side region events and decisions.}
-% On the host, \sys models memory as a set of logical regions and exposes attach points for three
-% canonical cache events. Handlers encode decisions via an enum field in the context (e.g., \texttt{ctx->decision = GDRV\_ADMIT} or \texttt{GDRV\_BYPASS}) and return 0 on success or a negative error code. \sys maintains all device-resident regions in a kernel-owned doubly linked list. The memory subsystem always inserts newly admitted regions at the tail and evicts from the head when under pressure. Even if eBPF handlers never select a region for eviction, memory pressure will still trigger kernel-driven FIFO eviction of head regions. eBPF handlers may only reorder regions via \texttt{gdrv\_mem\_list\_*} helpers; handlers cannot remove regions, and the kernel retains sole authority to evict. Together, these events realize a
-% general region-cache interface: policies implemented as eBPF handlers maintain their
-% own state in hierarchical maps (for example, MRU lists, LFU counters, or tenant budgets),
-% and respond to add/access/remove and prefetch callbacks with compact decisions. The underlying memory subsystem enforces these decisions
-% and maintains correct mappings, but delegates replacement and prefetch policy to
-% \sys.
-
-% \paragraph{Device-side memory events.}
-
-% On the GPU, \sys exposes a single device-side memory event interface that kernels
-% use both to report observed accesses and to express future-use hints. Device-side
-% handlers receive a compact, warp-uniform context struct with fields such as address , warp and SM identifiers. e.g. At selected memory operation sites, \sys injects lightweight hooks that operate at
-% warp granularity and invoke the device-side \texttt{access} handler.
-% % Each handler is verified to be warp-uniform and executes via a single warp-leader lane; other lanes remain idle at the hook, avoiding divergence and per-lane serialization (\S\ref{sec:verification}). The handler updates hierarchical maps with per-region statistics such as access counts, approximate working-set membership, and simple locality signatures.
-
-% The device-side interface also supports \emph{HINT} events, which device side eBPF 
-% invoke explicitly via helpers such as \texttt{gdev\_mem\_prefetch\_hint} and \texttt{gdev\_mem\_pin\_hint} when they have domain knowledge about future region usage. For
-% example, a mixture-of-experts kernel can compute the identifiers of experts it
-% will access for the next batch and call \texttt{gdev\_mem\_prefetch\_hint} to mark
-% the corresponding regions as ``will-use soon'';
-% a KV-cache kernel can emit hints that mark segments as cold and suitable for
-% demotion. device side HINT events like prefetch are recorded in control queues and can further trigger host side prefetch callbacks to do actual decisions.
-
 \subsubsection{Scheduling Interface}
 \label{sec:design-sched}
 
-\sys exposes policy control at two levels: hardware‑queue lifecycle (host‑side) and thread‑block scheduling (device‑side). The host participates in GPU queue admission and priority control through Policies set queue priority, timeslice, and may reject or defer queue creation, enabling true admission control. Properties are written directly into firmware‑visible structures, ensuring enforcement beyond user‑space hints. Policies may also invoke the \texttt{gdrv_sched_preempt} kfunc to trigger cooperative preemption through the driver’s native context‑switch mechanism.
+\sys exposes policy control at two levels: hardware‑queue lifecycle (host‑side) and thread‑block scheduling (device‑side). The host participates in GPU queue admission and priority control through Policies set queue priority, timeslice, and may reject or defer queue creation, enabling true admission control. Properties are written directly into firmware‑visible structures, ensuring enforcement beyond user‑space hints. Policies may also invoke the \texttt{gdrv\_sched\_preempt} kfunc to trigger cooperative preemption through the driver’s native context‑switch mechanism.
 
-Within the GPU, \sys provides a work‑stealing thread‑block scheduler. Kernels expose their logical work units; persistent worker blocks select and process units while device‑side eBPF handlers steer scheduling decisions via \texttt{gdev_block_ctx}. The verifier ensures that scheduling decisions respect kernel invariants (e.g., selecting only local work units). \sys can inject this scheduler via binary rewriting or allow developers to integrate it explicitly.
+Within the GPU, \sys provides a work‑stealing thread‑block scheduler. Kernels expose their logical work units; persistent worker blocks select and process units while device‑side eBPF handlers steer scheduling decisions via \texttt{gdev\_block\_ctx}. The verifier ensures that scheduling decisions respect kernel invariants (e.g., selecting only local work units). \sys can inject this scheduler via binary rewriting or allow developers to integrate it explicitly.
 
 \begin{minted}[highlightlines=false,fontsize=\footnotesize]{c}
 // Host-side policy callbacks for GPU hardware
@@ -201,12 +176,6 @@ struct gdev_sched_ops {
   bool (*should_try_steal)(gdev_block_ctx_t *ctx);
 };
 \end{minted}
-
-% \paragraph{Host-side scheduling hooks.}
-% Modern GPU runtimes bypass the kernel for individual kernel launches, writing directly to command queues without syscalls. On the host, \sys exposes attach points for hardware queue lifecycle management. A hardware queue is the fundamental unit of GPU command submission, representing an independent channel bound to a process or context. The \texttt{queue\_create} handler is invoked when a new hardware queue is created; policies can set queue properties (e.g., priority, timeslice) via context fields and return 0 to accept or $<$0 to reject/defer creation, enabling admission control. The \texttt{queue\_destroy} handler runs when a queue is torn down, allowing policies to clean up associated state. Policies can also request preemption of an active queue via the \texttt{gdrv\_sched\_preempt} kfunc, which triggers a best-effort cooperative context switch. The host-side interface thus controls which queues exist, their scheduling properties, and how they are multiplexed across tenants. Thus, unlike user-space priority hints that driver may ignore, queue-level properties (priority, timeslice) are written directly into hardware scheduling structures and enforced by the GPU firmware, enabling policies to command rather than merely request scheduling behavior.
-
-% \paragraph{Device-side thread-block scheduler and signals.} Inside the GPU, \sys exposes a work stealing style interface that operates at the level of thread blocks or tiles, aligning with the SIMT execution model. Each kernel that uses \sys's internal scheduler is modeled as a pool of \emph{work units} (e.g., tiles or logical block indices) consumed by \emph{worker blocks}. Device-side policies observe and steer this internal scheduler via a \texttt{gdev\_block\_ctx} that includes the kernel identifier, tenant identifier, and a logical work-unit or block identifier. The verifier ensures that block-level scheduling decisions do not violate per-kernel invariants (e.g., blocks only select from their kernel's own work queue); detailed rules are described in \S\ref{sec:verification}. \sys support dynamic binary rewrite the kernel to use the thread block scheduler without source code access and recompile, or developer can integrate the scheduler framework themselves.
-
 
 \subsection{Runtime Verification and Optimizations}
 \label{sec:verification}
