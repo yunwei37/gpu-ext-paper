@@ -1,6 +1,7 @@
 \section{Design Principles}
 
 \sys follows three key design principles:
+
 \paragraph{Principle 1: Transparent and Dynamically Programmable GPU OS Interface.}
 Given the rapidly evolving and diverse GPU application landscape, relying on userspace policies significantly limits transparency, adaptability, and robustness. Effective GPU resource management also requires policies to be dynamically updated at runtime without restarting user applications. We thus embed dynamic, transparent policy mechanisms directly into GPU driver and OS layers, employing dynamic binary instrumentation to transparently instrument GPU device code, enabling seamless runtime policy updates across diverse, unmodified applications.
 
