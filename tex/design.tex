@@ -128,7 +128,7 @@ struct gdev_sched_ops {
 \label{fig:system-design}
 \end{figure}
 
-Figure~\ref{fig:system-design} shows the high-level architecture of \sys, composed of a user-space control plane and a unified kernel-and device-side execution path. \sys policies form distributed applications consisting of host- and device-side eBPF programs, hierarchical cross-layer maps, and a user-space control plane for lifecycle management.
+Figure~\ref{fig:system-design} shows the high-level architecture of \sys, composed of a user-space control plane and a unified kernel-and device-side execution path. policies in \sys consist of coordinated host- and device-side eBPF programs, hierarchical cross-layer maps, and a user-space control plane for lifecycle management.
 
 \sys exposes \emph{hierarchical cross-layer maps}: logical eBPF map abstractions whose backing storage is automatically partitioned and replicated across host DRAM, GPU global memory, and optionally per-SM scratch space, with consistency and placement managed transparently by the runtime. Policy developers access maps via standard eBPF helpers regardless of execution context, without manual DMA transfers, memory placement, or address translation.
 
