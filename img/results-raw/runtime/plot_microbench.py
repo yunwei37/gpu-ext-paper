@@ -115,9 +115,9 @@ def main():
     gpu_old_overhead = [t - baseline_time for t in gpu_old_time]
     gpu_new_overhead = [t - baseline_time for t in gpu_new_time]
 
-    ax_left.bar(x_gpu - width/2, gpu_old_overhead, width, label='Before Optimization',
+    ax_left.bar(x_gpu - width/2, gpu_old_overhead, width, label='eGPU-style',
                 color='#7f7f7f', edgecolor='black', linewidth=0.5)
-    ax_left.bar(x_gpu + width/2, gpu_new_overhead, width, label='After Optimization',
+    ax_left.bar(x_gpu + width/2, gpu_new_overhead, width, label='gBPF (ours)',
                 color='#2ca02c', edgecolor='black', linewidth=0.5)
 
     ax_left.set_ylabel('Overhead (μs)', fontsize=20)
@@ -126,7 +126,7 @@ def main():
     ax_left.set_xticklabels(gpu_labels, fontsize=16, rotation=20, ha='center')
     ax_left.tick_params(axis='y', labelsize=16)
     ax_left.legend(fontsize=16, loc='upper right')
-    ax_left.set_title('(a) GPU-side Operations (Overhead vs Baseline)', fontsize=20, fontweight='bold')
+    ax_left.set_title('(a) GPU-side Operations Overhead', fontsize=20, fontweight='bold')
 
     # Add improvement percentage annotations
     for i, (old, new) in enumerate(zip(gpu_old_overhead, gpu_new_overhead)):

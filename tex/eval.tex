@@ -277,13 +277,12 @@ live instrumentation without interrupting execution.
 \label{fig:obs-comparison}
 \end{figure}
 
-\paragraph{Device-side Microbenchmarks and Optimization Effects.}
-\xiangyu{Should we make it as a separate subsection?}
-We evaluate device-side \sys mechanisms using a vector-add microbenchmark (32 elements, 10K iterations) on RTX 5090. \Cref{fig:microbench}(a) compares latency before and after our SIMT-aware warp-level execution optimizations (\S\ref{sec:verification}), with a baseline of 5.2~$\mu$s. Empty probe latency drops from 6.2~$\mu$s to 5.5~$\mu$s (-11\%), and exit probe from 6.2~$\mu$s to 5.3~$\mu$s (-14\%). More complex operations show larger improvements: array map lookup drops from 8.2~$\mu$s to 5.8~$\mu$s (-30\%), array map update from 11.1~$\mu$s to 7.0~$\mu$s (-37\%), and Memtrace from 9.4~$\mu$s to 6.1~$\mu$s (-35\%). \Cref{fig:microbench}(b) shows CPU map access via PCIe incurs ~33,700~$\mu$s latency---approximately 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU.
+\paragraph{Device-side Optimization.}
+We evaluate device-side \sys mechanisms using a vector-add microbenchmark (32 elements, 10K iterations) on RTX 5090. \Cref{fig:microbench}(a) compares the overhead of \sys's SIMT-aware warp-level execution (\S\ref{sec:verification}) against an eGPU baseline~\cite{egpu} that naively injects eBPF bytecode into GPU kernels without SIMT-specific optimizations. The uninstrumented kernel baseline is 5.2~$\mu$s. The eGPU-style approach incurs significant overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead substantially. Empty probe overhead drops from 1.0~$\mu$s to 0.4~$\mu$s (-60\%), and exit probe from 1.0~$\mu$s to 0.2~$\mu$s (-80\%). More complex operations show larger absolute reductions: array map lookup overhead drops from 2.9~$\mu$s to 0.6~$\mu$s (-79\%), array map update from 5.9~$\mu$s to 1.8~$\mu$s (-69\%), and Memtrace from 4.2~$\mu$s to 1.0~$\mu$s (-76\%). \Cref{fig:microbench}(b) shows The eGPU CPU map access via PCIe incurs ~33,700~$\mu$s latency, approximately 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU.
 
 \begin{figure*}
 \centering
 \includegraphics[width=\textwidth]{img/results-raw/runtime/microbench_comparison.pdf}
-\caption{Device-side microbenchmark latency. (a) GPU-side operations before/after SIMT-aware optimizations show 11--37\% latency reduction. (b) CPU map access via PCIe is ~6000$\times$ slower than GPU-side operations.}
+\caption{Device-side microbenchmark overhead. (a) GPU-side operation overhead comparing eGPU naive injection vs \sys's SIMT-aware execution, showing 60--79\% overhead reduction. (b) CPU map access via PCIe is ~6000$\times$ slower than GPU-side operations.}
 \label{fig:microbench}
 \end{figure*}
