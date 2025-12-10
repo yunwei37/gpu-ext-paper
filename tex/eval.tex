@@ -195,53 +195,20 @@ SelectiveBlocks (CLC) & Scheduling (Block) & Device & 16 \\
 \label{tab:support-matrix}
 \end{table}
 
+\subsubsection{Host Runtime Oberhead}
 
-\paragraph{Policy Reuse Across Workloads.}
-The region cache policy skeleton used for llama.cpp expert offloading can be adapted to vLLM KV-cache management by changing only the region identification helpers and ID mappings. Similarly, the sequential prefetch policy applies to both GNN adjacency blocks and Faiss index segments with minimal modification (TODO: X lines changed out of Y total). This demonstrates \sys's support for portable, reusable policy components.
-
-\subsubsection{Runtime and Shared State Overhead}
-
-We first quantify the overhead of the \sys runtime itself, independent of any
-specific policy logic. We use a load/store latency benchmark that issues controlled memory accesses from GPU kernels, instrumented with \sys and with NVBit gpumemtrace.
-
-Our measurements show per-access latency slowdown under
-\sys and NVBit as access sizes increase. \sys adds substantially less latency
-than NVBit, remaining low and stable below 128~KB and increasing modestly
-thereafter. Lightweight launch-time injection and warp-level execution of \sys handlers keep overhead low.
+We first quantify the overhead of the \sys driver runtime itself, independent of any specific policy logic. 
 
 \subsubsection{Low-overhead GPU Observability}
 
-We evaluate the suite of bcc-style observability tools built on \sys, measuring
-accuracy, overhead, and practical utility across diverse workloads.
-
-\paragraph{Thread divergence and workload balance.}
-\texttt{kernelretsnoop} attaches to kernel return paths and records per-thread
-timestamps. Applied to a matrix multiply kernel with boundary checks, it shows
-that threads handling edge cases (5\% of total) incur 600--850~ns longer
-execution than interior threads, with timestamps within 10~ns of hardware
-performance counters and 2.1\% overhead. Refactoring boundary handling based on
-this insight improves overall kernel performance by 8\%. \texttt{threadhist}
-reveals load imbalance in a particle simulation with 1M particles across 256
-blocks: it identifies a bimodal distribution of iterations per thread;
-rebalancing particles based on this information yields an 18\% throughput
-improvement with 1.8\% tool overhead.
-
-\paragraph{Launch latency and memory behavior.}
-\texttt{launchlate} combines host and device hooks to measure kernel launch
-latency. On a pipeline of 50 small kernels (each around 100~µs execution time),
-default synchronous execution yields 150--550~µs launch latency per kernel, for
-a total runtime of 32~ms. Switching to CUDA graphs, guided by
-\texttt{launchlate}, reduces this to 7.2~ms, with less than 0.5\% overhead.
-\texttt{mem\_trace} instruments sampled memory operations and recovers per-warp
-bank conflict rates within 2\% of hardware counters, with under 3\% end-to-end
-overhead across GEMM, SpMV and stencil kernels (\Cref{tab:obs-overhead}).
+We evaluate bcc-style observability tools built on \sys across diverse workloads. \texttt{kernelretsnoop} attaches to kernel return paths to record per-thread timestamps, identifying performance variations across threads. \texttt{threadhist} reveals load imbalance across thread blocks, achieving 3\% overhead while enabling workload rebalancing optimizations. \texttt{launchlate} combines host and device hooks to measure kernel launch latency, guiding optimization decisions such as switching to CUDA graphs. \texttt{mem\_trace} instruments sampled memory operations to detect per-warp bank conflicts. Additional tools including \texttt{threadscheduling}, \texttt{gpu\_sched\_trace}, \texttt{prefetch\_trace}, and \texttt{eviction\_trace} provide host-side observability for scheduling and memory management policies (\Cref{tab:obs-overhead}).
 
 \begin{table}[t]
 \centering
 \small
 \begin{tabularx}{\columnwidth}{@{} X l c c c @{}}
 \toprule
-\textbf{Tool} & \textbf{LOC} & \textbf{Domain} & \textbf{\sys Overhead} & \textbf{vs NVBit} \\
+\textbf{Tool} & \textbf{LOC} & \textbf{Domain} & \textbf{\sys Overhead} & \textbf{NVBit Overhead} \\
 \midrule
 kernelretsnoop & 153 & Device & & \\
 threadhist & TBD & Device & 3\% & 86\% \\
@@ -257,13 +224,7 @@ eviction\_trace & 398 & Host & & \\
 \label{tab:obs-overhead}
 \end{table}
 
-\paragraph{Comparison to CUPTI and NVBit.}
-Comparing \sys-based tools against CUPTI and NVBit for common profiling tasks across GEMM, SpMV, and stencil kernels shows significant performance advantages. CUPTI-based profiling incurs 15--25\%
-overhead and typically requires kernel restarts; NVBit adds 30--45\%
-overhead for similar metrics. \sys tools average 2--3\% overhead and support
-live instrumentation without interrupting execution.
-
-\paragraph{Device-side Optimization.}
+\paragraph{Device-side Runtime Overhead and Optimization.}
 We evaluate device-side \sys mechanisms using a vector-add microbenchmark (32 elements, 10K iterations) on RTX 5090. \Cref{fig:microbench}(a) compares the overhead of \sys's SIMT-aware warp-level execution (\S\ref{sec:verification}) against an eGPU baseline~\cite{egpu} that naively injects eBPF bytecode into GPU kernels without SIMT-specific optimizations. The uninstrumented kernel baseline is 5.2~$\mu$s. The eGPU-style approach incurs significant overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead substantially. Empty probe overhead drops from 1.0~$\mu$s to 0.4~$\mu$s (-60\%), and exit probe from 1.0~$\mu$s to 0.2~$\mu$s (-80\%). More complex operations show larger absolute reductions: array map lookup overhead drops from 2.9~$\mu$s to 0.6~$\mu$s (-79\%), array map update from 5.9~$\mu$s to 1.8~$\mu$s (-69\%), and Memtrace from 4.2~$\mu$s to 1.0~$\mu$s (-76\%). \Cref{fig:microbench}(b) shows The eGPU CPU map access via PCIe incurs ~33,700~$\mu$s latency, approximately 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU.
 
 \begin{figure*}
