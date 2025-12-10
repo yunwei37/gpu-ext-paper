@@ -3,13 +3,13 @@
 \sys follows three key design principles:
 
 \paragraph{Principle 1: Transparent and Dynamically Programmable GPU OS Interface.}
-Given the rapidly evolving and diverse GPU application landscape, relying on userspace policies significantly limits transparency, adaptability, and robustness. Effective GPU resource management also requires policies to be dynamically updated at runtime without restarting user applications. We thus embed dynamic, transparent policy mechanisms directly into GPU driver and OS layers, employing dynamic binary instrumentation to transparently instrument GPU device code, enabling seamless runtime policy updates across diverse, unmodified applications.
+Userspace policies hard to provide transparent or robust control across rapidly evolving and diverse GPU applications. \sys therefore embeds dynamically programmable, transparent policy interfaces at the GPU OS and driver layers, using lightweight dynamic binary instrumentation for device code and enable seamless policy evolution.
 
 \paragraph{Principle 2: Single Programming and Execution Model Across Host and GPU.}
-Traditional separation between CPU and GPU policy execution models introduces complexity, fragmentation, and hinders coherent resource management. We therefore unify host and GPU execution contexts under a single programming abstraction and control plane, simplifying policy expression and enabling consistent, coordinated resource management decisions.
+Fragmented CPU–GPU policy models complicate coordination and lead to inconsistent resource-management behavior. \sys unifies host and GPU policy execution under a single programming abstraction and control plane, simplifying policy expression and enabling coherent, cross-layer decisions.
 
 \paragraph{Principle 3: SIMT-Aware Load-Time Verification and Optimization.}
-GPU's SIMT architecture fundamentally differs from traditional scalar CPU execution, making conventional scalar eBPF verification inadequate and runtime isolation prohibitively expensive due to limited GPU resources. We therefore adopt load-time static verification and optimization explicitly designed for SIMT semantics, ensuring safe execution, bounded resource usage, predictable latency, and minimal runtime overhead.
+GPU SIMT execution fundamentally diverges from scalar CPU semantics, making traditional eBPF verification insufficient and runtime isolation prohibitively expensive on resource-constrained GPUs. \sys introduces load-time SIMT‑aware verification and optimization to ensure safe execution, bounded resource usage, predictable latency, and minimal runtime overhead.
 
 \section{\sys{} Policy Interfaces}
 \label{sec:design-interfaces}
