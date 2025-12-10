@@ -176,17 +176,17 @@ We evaluate \sys's programmability by examining policy complexity and reuse, and
 \toprule
 \textbf{Policy} & \textbf{Tag} & \textbf{Domain} & \textbf{LOC} \\
 \midrule
-Global FIFO Eviction & Memory (Eviction) & Host & 145 \\
-Global LFU Eviction & Memory (Eviction) & Host & 304 \\
-Multi-tenant Quota LRU & Memory (Multi-tenant) & Host & 472 \\
-Adaptive Seq. Prefetch & Memory (Prefetch) & Host & 375 \\
-Stride Prefetch & Memory (Prefetch) & Host & 472 \\
-Stride Prefetch & Memory (Prefetch) & Device & 45 \\
-Tree-based Prefetch & Memory (Multi-tenant) & Host & 454 \\
+Global FIFO Eviction & Memory Eviction & Host & 145 \\
+Global LFU Eviction & Memory Eviction & Host & 304 \\
+Multi-tenant Quota LRU & Memory Multi-tenant & Host & 472 \\
+Adaptive Seq. Prefetch & Memory Prefetch & Host & 375 \\
+Stride Prefetch & Memory Prefetch & Host & 472 \\
+GPU L2 Stride Prefetch & Memory Prefetch & Device & 45 \\
+Tree-based Prefetch & Memory Multi-tenant & Host & 454 \\
 Dynamic Timeslice & Scheduling & Host & 408 \\
 Preemption Control & Scheduling & Host & 925 \\
-MaxSteals (CLC) & Scheduling (Block) & Device & 19 \\
-SelectiveBlocks (CLC) & Scheduling (Block) & Device & 16 \\
+MaxSteals (CLC) & Scheduling Block & Device & 19 \\
+SelectiveBlocks (CLC) & Scheduling Block & Device & 16 \\
 \bottomrule
 \end{tabularx}
 \caption{Policy support matrix. Domain indicates where the policy executes: Host (driver eBPF), Device (GPU eBPF), or both.}
