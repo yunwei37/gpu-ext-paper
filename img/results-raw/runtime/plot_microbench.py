@@ -104,51 +104,53 @@ def main():
             gpu_new_time.append(new_time)
 
     # Create figure with two subplots
-    fig, (ax_left, ax_right) = plt.subplots(1, 2, figsize=(14, 3.5),
+    fig, (ax_left, ax_right) = plt.subplots(1, 2, figsize=(16, 5),
                                              gridspec_kw={'width_ratios': [5, 1]})
 
-    # Left subplot: GPU latency comparison
+    # Left subplot: GPU overhead comparison (relative to baseline)
     x_gpu = np.arange(len(gpu_labels))
     width = 0.35
 
-    ax_left.bar(x_gpu - width/2, gpu_old_time, width, label='Before Optimization',
+    # Calculate overhead (time - baseline)
+    gpu_old_overhead = [t - baseline_time for t in gpu_old_time]
+    gpu_new_overhead = [t - baseline_time for t in gpu_new_time]
+
+    ax_left.bar(x_gpu - width/2, gpu_old_overhead, width, label='Before Optimization',
                 color='#7f7f7f', edgecolor='black', linewidth=0.5)
-    ax_left.bar(x_gpu + width/2, gpu_new_time, width, label='After Optimization',
+    ax_left.bar(x_gpu + width/2, gpu_new_overhead, width, label='After Optimization',
                 color='#2ca02c', edgecolor='black', linewidth=0.5)
 
-    # Add baseline reference line
-    if baseline_time:
-        ax_left.axhline(y=baseline_time, color='blue', linestyle='--', linewidth=1, alpha=0.7, label=f'Baseline ({baseline_time:.1f}μs)')
-
-    ax_left.set_ylabel('Latency (μs)', fontsize=14)
-    ax_left.set_xlabel('GPU-side Operation Type', fontsize=14)
+    ax_left.set_ylabel('Overhead (μs)', fontsize=20)
+    ax_left.set_xlabel('GPU-side Operation Type', fontsize=20)
     ax_left.set_xticks(x_gpu)
-    ax_left.set_xticklabels(gpu_labels, fontsize=11, rotation=45, ha='right')
-    ax_left.legend(fontsize=11, loc='upper right')
-    ax_left.set_title('(a) GPU-side Operations', fontsize=14, fontweight='bold')
+    ax_left.set_xticklabels(gpu_labels, fontsize=16, rotation=20, ha='center')
+    ax_left.tick_params(axis='y', labelsize=16)
+    ax_left.legend(fontsize=16, loc='upper right')
+    ax_left.set_title('(a) GPU-side Operations (Overhead vs Baseline)', fontsize=20, fontweight='bold')
 
     # Add improvement percentage annotations
-    for i, (old, new) in enumerate(zip(gpu_old_time, gpu_new_time)):
+    for i, (old, new) in enumerate(zip(gpu_old_overhead, gpu_new_overhead)):
         if old > 0:
             reduction = ((old - new) / old) * 100
             if reduction > 0:
                 ax_left.annotate(f'-{reduction:.0f}%',
-                                xy=(x_gpu[i], max(old, new) + 0.3),
-                                ha='center', va='bottom', fontsize=9, color='red', fontweight='bold')
+                                xy=(x_gpu[i], max(old, new) + 0.1),
+                                ha='center', va='bottom', fontsize=14, color='red', fontweight='bold')
 
     ax_left.set_axisbelow(True)
     ax_left.yaxis.grid(True, linestyle='--', alpha=0.7)
-    ax_left.set_ylim(0, max(gpu_old_time) * 1.2)
+    ax_left.set_ylim(0, max(gpu_old_overhead) * 1.25)
 
     # Right subplot: CPU map access latency
     x_cpu = np.arange(len(cpu_labels))
     bars_cpu = ax_right.bar(x_cpu, cpu_time, 0.6, color='#d62728', edgecolor='black', linewidth=0.5)
 
-    ax_right.set_ylabel('Latency (μs)', fontsize=14)
-    ax_right.set_xlabel('CPU Map Op', fontsize=14)
+    ax_right.set_ylabel('Latency (μs)', fontsize=20)
+    ax_right.set_xlabel('CPU Map Op', fontsize=20)
     ax_right.set_xticks(x_cpu)
-    ax_right.set_xticklabels(cpu_labels, fontsize=11, rotation=45, ha='right')
-    ax_right.set_title('(b) CPU Map (PCIe)', fontsize=14, fontweight='bold')
+    ax_right.set_xticklabels(cpu_labels, fontsize=16, rotation=20, ha='center')
+    ax_right.tick_params(axis='y', labelsize=16)
+    ax_right.set_title('(b) CPU Map (PCIe)', fontsize=20, fontweight='bold')
 
     # Add value labels on CPU bars
     for i, bar in enumerate(bars_cpu):
@@ -157,7 +159,7 @@ def main():
                          xy=(bar.get_x() + bar.get_width() / 2, height),
                          xytext=(0, 2),
                          textcoords="offset points",
-                         ha='center', va='bottom', fontsize=10)
+                         ha='center', va='bottom', fontsize=14)
 
     ax_right.set_axisbelow(True)
     ax_right.yaxis.grid(True, linestyle='--', alpha=0.7)
