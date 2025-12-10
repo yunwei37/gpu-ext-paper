@@ -78,7 +78,7 @@ We evaluate \sys on PyTorch-based GCN training with random graphs of varying siz
 
 Findings demonstrate that prefetching and eBPF scheduling are \emph{complementary} optimizations targeting different bottlenecks. First, prefetching eliminates page faults: at 10M nodes (1.43$\times$ oversubscription), UVM without prefetch takes 70.06~s/epoch due to lazy page migration, while adding \texttt{cudaMemPrefetchAsync} reduces this to 12.76~s (\textbf{5.5$\times$ speedup}) by proactively migrating pages before GPU access. Second, eBPF optimizes page fault handling: when prefetching is disabled, \sys's eBPF scheduler prioritizes the driver's page fault handling threads, reducing epoch time from 70.06~s to 26.47~s (\textbf{2.65$\times$ speedup}). This optimization is orthogonal to prefetching---when data fits in GPU memory with prefetch enabled, eBPF provides no additional benefit (12.76~s vs 12.17~s). Third, severe oversubscription benefits from both: at 15M nodes (2.17$\times$ oversubscription), runtime page faults occur even with prefetching, and here \sys reduces epoch time from 215.82~s to 150.11~s (\textbf{1.44$\times$ speedup}), demonstrating that eBPF scheduling remains effective when memory pressure causes evictions during execution.
 
-Native GPU allocation (no UVM) achieves the best performance when data fits in memory (1.89~s at 5M nodes) but fails with OOM beyond $\sim$8M nodes. UVM with \sys prefetching enables training at 15M nodes (2.17$\times$ oversubscription) with acceptable overhead. The CPU-side framework overhead for these policies is around 1\%, and device-side instrumentation adds 2--3\%.
+Native GPU allocation (no UVM) achieves the highest performance when data fits in memory (1.89~s at 5M nodes) but fails with OOM beyond $\sim$8M nodes. UVM with \sys prefetching enables training at 15M nodes (2.17$\times$ oversubscription) with acceptable overhead. The CPU-side framework overhead for these policies is around 1\%, and device-side instrumentation adds 2--3\%.
 
 \begin{figure}
 \centering
@@ -149,7 +149,7 @@ We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp
 \label{fig:two-tenant}
 \end{figure}
 
-Overall, \sys's per-tenant policies provide clear tail-latency and fairness benefits in multi-tenant workloads, achieving significant improvements for high-priority tenants while also benefiting background jobs through reduced memory thrashing.
+Overall, \sys's per-tenant policies provide clear tail-latency and fairness benefits in multi-tenant workloads, achieving improvements for high-priority tenants while also benefiting background jobs through reduced memory thrashing.
 
 \subsection{RQ3: Programmability and Mechanism Overhead}
 

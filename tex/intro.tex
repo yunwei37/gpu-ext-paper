@@ -74,5 +74,5 @@ Our contributions can be summarized as following:
   \item We identify key programmability gaps in GPU stacks for memory management, scheduling, and observability, showing how the lack of a programmable, kernel-anchored policy waist at the GPU driver and device layer impedes adaptation to customized requirements. % evolving workloads and SLAs.
   \arq{Where in the paper do we present this novel contribution?} \yusheng{Fig1 and Fig2?}
   \item We design and implement \sys, an eBPF-based policy runtime treating the GPU driver and device execution layer as a unified OS subsystem. \sys exposes verified driver hooks for memory and scheduling, executes the same eBPF IR inside GPU kernels via a device-side JIT, and shares state through unified-memory-backed BPF maps under a single verifier and control plane.
-  \item We demonstrate that \sys enables adaptive, workload-specific policies that significantly improve performance, resource utilization, and tail latency on realistic LLM inference, training, and vector-search workloads, with low overhead and without requiring application or driver restarts.
+  \item We demonstrate that \sys enables adaptive, workload-specific policies that improve performance, resource utilization, and tail latency on realistic LLM inference, training, and vector-search workloads.
 \end{itemize}
