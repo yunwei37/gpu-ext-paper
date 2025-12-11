@@ -18,7 +18,7 @@ We evaluate \sys on two machines: Server~A with Intel Core Ultra~9 285K (24 core
 
 \subsection{RQ1: Single-Tenant Memory and Scheduling Policies}
 
-We evaluate \sys's memory policy interface on the application workloads introduced in Section~\ref{sec:eval-app-workloads}, focusing on oversubscribed single-tenant setups where memory placement and prefetching dominate performance.
+We evaluate \sys's memory policy interface on oversubscribed single-tenant setups where memory placement and prefetching dominate performance.
 
 \subsubsection{Microbenchmarks}
 
@@ -31,7 +31,7 @@ We apply a \sys-based block scheduler driven by the GPU-side interface
 Using a cluster-style launch where persistent worker blocks pull work units
 via \texttt{should\_try\_steal}, we evaluate three scheduling policies: FixedWork (static block assignment), Greedy (always-steal), and LatencyBudget (workload-aware with per-block time limits).
 
-\Cref{fig:clc-policies} compares these policies across two workload regimes of GEMM kernel, demonstrating that no single policy dominates all scenarios. We use fix work amount of each thread as baseline. Under moderate imbalance (\Cref{fig:clc-policies}a), both Greedy and LatencyBudget reduce latency by $\sim$11\% with negligible difference between them, showing that always-steal scheduling suffices to reclaim wasted tail time. However, under heavy-tail workloads where 10\% of blocks perform 100--200$\times$ more work (\Cref{fig:clc-policies}b), Greedy becomes pathological, increasing latency by 20\% due to contention on remaining heavy blocks. LatencyBudget, which caps per-block stealing time via \sys's programmable control plane, matches fix work baseline performance. This highlights the value of \sys's programmable policy interface: different workload characteristics require different thread block level scheduling strategies on GPU device.
+\Cref{fig:clc-policies} compares these policies across two workload regimes of GEMM kernel, demonstrating that no single policy dominates all scenarios. We use fix work amount of each thread as baseline. Under moderate imbalance (\Cref{fig:clc-policies}a), both Greedy and LatencyBudget reduce latency by $\sim$11\%, showing that always-steal scheduling suffices to reclaim wasted tail time. However, under heavy-tail workloads where 10\% of blocks perform 100--200$\times$ more work (\Cref{fig:clc-policies}b), Greedy becomes pathological, increasing latency by 20\% due to contention on remaining heavy blocks. LatencyBudget, which caps per-block stealing time via \sys's programmable control plane, matches fix work baseline performance. This highlights the value of \sys's programmable policy interface: different workload characteristics require different thread block level scheduling strategies on GPU device.
 
 \begin{figure}
 \centering
@@ -135,7 +135,7 @@ Critically, for these \emph{memory-bound} workloads, gpreempt-style scheduler ti
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/all_kernels_stacked.pdf}
 \vspace{-1ex}
-\caption{Multi-tenant memory priority differentiation on oversubscribed UVM workloads. \sys memory policies improve total completion time by 55--92\% and enforce priority differentiation. Critically, scheduler policies are ineffective on these memory-bound workloads, highlighting the need to match policy types to workload bottlenecks. Single 1$\times$ shows ideal single-process time; 2$\times$Single 1$\times$ is the theoretical lower bound.}
+\caption{Multi-tenant memory priority differentiation on oversubscribed UVM workloads. \sys memory policies improve total completion time by 55--92\% and enforce priority differentiation; scheduler policies are ineffective on these memory-bound workloads. Single 1$\times$: ideal single-process time; 2$\times$Single 1$\times$: theoretical lower bound.}
 \label{fig:all-kernels-priority}
 \vspace{-2ex}
 \end{figure}
@@ -152,7 +152,7 @@ We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/fig_colocated_results.pdf}
 \vspace{-1ex}
-\caption{Two-tenant co-location: \texttt{llama.cpp} inference (LC) + GNN training (BE). \sys achieves mutual improvement for both tenants, with LC latency approaching single-tenant performance while BE training also improves, approaching ideal fair share. Tenant-aware policies reduce contention rather than simply prioritizing one workload at the expense of the other.}
+\caption{Two-tenant co-location: \texttt{llama.cpp} inference (LC) + GNN training (BE). \sys achieves mutual improvement: LC latency better than single-tenant performance while BE training improves by 28\%. Tenant-aware policies reduce contention rather than prioritizing one workload at the expense of another.}
 \label{fig:two-tenant}
 \vspace{-2ex}
 \end{figure}
@@ -227,6 +227,6 @@ We evaluate device-side \sys mechanisms using a vector-add microbenchmark (32 el
 \begin{figure*}
 \centering
 \includegraphics[width=\textwidth]{img/results-raw/runtime/microbench_comparison.pdf}
-\caption{Device-side microbenchmark overhead. (a) GPU-side operation overhead comparing eGPU naive injection vs \sys's SIMT-aware execution, showing significant overhead reduction across operations. (b) CPU map access via PCIe incurs orders-of-magnitude higher latency than GPU-side operations, motivating \sys's hierarchical map design.}
+\caption{Device-side microbenchmark overhead. (a) GPU-side operation overhead comparing eGPU naive injection vs \sys's SIMT-aware execution, showing 60--80\% overhead reduction. (b) CPU map access via PCIe incurs 6000$\times$ higher latency than GPU-side operations, motivating \sys's hierarchical map design.}
 \label{fig:microbench}
 \end{figure*}

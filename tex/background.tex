@@ -8,7 +8,7 @@ Modern GPU systems run diverse workloads with conflicting resource demands. Gene
 \begin{figure*}[t]
     \centering
     \includegraphics[width=\textwidth]{img/pattern/combined_patterns_1x5.pdf}
-    \caption{Memory access(Page Fault) patterns vary significantly across GPU workloads. faiss Build exhibits sequential scans; faiss Query random accesses; llama.cpp MoE Prefill demonstrates periodic sequential patterns, and Decode exhibits more sparse random accesses; PyTorch DNN shows periodic block accesses. Such diversity necessitates adaptive memory management policies.}
+    \caption{Memory access (page fault) patterns vary across GPU workloads: faiss Build exhibits sequential scans; faiss Query random accesses; llama.cpp MoE Prefill shows periodic sequential patterns while Decode exhibits sparse random accesses; PyTorch DNN shows periodic block accesses.}
     \label{fig:access_patterns}
 \end{figure*}
 
