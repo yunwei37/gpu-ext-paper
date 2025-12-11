@@ -23,7 +23,7 @@ We evaluate \sys's memory policy interface on the application workloads introduc
 \subsubsection{Microbenchmarks}
 
 \paragraph{Memory Policy Microbenchmarks.}
-We evaluate \sys's memory policies on three representative kernels: \texttt{HotSpot} (stencil-like structured access), \texttt{GEMM} (dense matrix multiplication), and \texttt{KMeans} (sparse/irregular access). We configure varying oversubscription ratios (0.6--0.9$\times$ of working set) to stress UVM migration. We compare \sys policies (e.g., Stride Prefetch, LFU Eviction) against the default driver-managed LRU, measuring execution time and fault reduction. \ys{TODO: Add results or remove this paragraph if microbenchmark results are not available.}
+We evaluate \sys's memory policies on three representative kernels: \texttt{HotSpot} (stencil-like structured access), \texttt{GEMM} (dense matrix multiplication), and \texttt{KMeans} (sparse/irregular access). We configure varying oversubscription ratios (0.6--0.9$\times$ of working set) to stress UVM migration. We compare \sys policies (e.g., Stride Prefetch, LFU Eviction) against the default driver-managed LRU, measuring execution time and fault reduction. \yusheng{TODO: Add results or remove this paragraph if microbenchmark results are not available.}
 
 \paragraph{Single-Tenant Block Scheduler.}
 We apply a \sys-based block scheduler driven by the GPU-side interface
@@ -45,7 +45,7 @@ via \texttt{should\_try\_steal}, we evaluate three scheduling policies: FixedWor
 \paragraph{Expert Offloading (llama.cpp GPT-OSS-120B).}
 We evaluate \sys on the GPT-OSS-120B MXFP4 MoE model (59~GiB, 116.83B parameters) in \texttt{llama.cpp}, running on RTX 5090 (32GB). The model requires 1.84$\times$ oversubscription, necessitating CPU-GPU memory tiering. We compare five configurations: framework-managed CPU offloading (\texttt{ncmoe=32/64}), default UVM, UVM with user-space hints (\texttt{cudaMemAdvise}), and \sys with eBPF-based expert prefetching.
 
-\Cref{fig:llama-expert-offload} shows prefill and decode throughput across configurations. For decode (memory-bound), \sys achieves \textbf{4.8$\times$ speedup} over framework offloading. The eBPF policy predicts expert activation patterns by \ys{TODO: explain prediction mechanism - how does it know which experts will be activated?} and prefetches weights before GPU access, hiding PCIe transfer latency. Framework offloading incurs per-token CPU-GPU transfer overhead during autoregressive decoding. For prefill (compute-bound), framework offloading achieves 13\% higher throughput by explicitly managing expert placement. However, since decode dominates end-to-end latency in interactive serving and local deployment, the 4.8$\times$ decode improvement outweighs the 12\% prefill overhead. User hints degrade performance significantly, demonstrating that UVM requires workload-aware prefetching rather than static hints.
+\Cref{fig:llama-expert-offload} shows prefill and decode throughput across configurations. For decode (memory-bound), \sys achieves \textbf{4.8$\times$ speedup} over framework offloading. The eBPF policy predicts expert activation patterns by \yusheng{TODO: explain prediction mechanism - how does it know which experts will be activated?} and prefetches weights before GPU access, hiding PCIe transfer latency. Framework offloading incurs per-token CPU-GPU transfer overhead during autoregressive decoding. For prefill (compute-bound), framework offloading achieves 13\% higher throughput by explicitly managing expert placement. However, since decode dominates end-to-end latency in interactive serving and local deployment, the 4.8$\times$ decode improvement outweighs the 12\% prefill overhead. User hints degrade performance significantly, demonstrating that UVM requires workload-aware prefetching rather than static hints.
 % \xiangyu{Are those hints easy to find in many scenarios? Maybe we should clarify it. Otherwise, it seems that \sys{} uses some tricks to win the competition.}
 
 This policy is expressed as eBPF handlers in the driver plus device-side handlers that mark expert regions as ``will-use soon'' or ``cold'' without modifying the application.
@@ -85,7 +85,7 @@ Native GPU allocation (no UVM) achieves the highest performance when data fits i
 \end{figure}
 
 \paragraph{Faiss Vector Search.}
-We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4096,Flat index, scaling from 20M (9.5GB, fits in memory) to 50M (24GB, near boundary) and 100M (48GB, exceeds 32GB GPU memory). For oversubscribed datasets, we apply a \sys policy implementing adaptive tree-based prefetching. \ys{TODO: Explain what "adaptive tree-based" means and why it works for this workload pattern.} For index construction, \sys reduces build time by 21--29\%, with benefits scaling from 27\% to 40\% as memory pressure grows. For search workloads, \sys reduces latency by 10--16\% across different \texttt{nprobe} settings despite the random access patterns inherent in ANN search.
+We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4096,Flat index, scaling from 20M (9.5GB, fits in memory) to 50M (24GB, near boundary) and 100M (48GB, exceeds 32GB GPU memory). For oversubscribed datasets, we apply a \sys policy implementing adaptive tree-based prefetching. \yusheng{TODO: Explain what "adaptive tree-based" means and why it works for this workload pattern.} For index construction, \sys reduces build time by 21--29\%, with benefits scaling from 27\% to 40\% as memory pressure grows. For search workloads, \sys reduces latency by 10--16\% across different \texttt{nprobe} settings despite the random access patterns inherent in ANN search.
 
 \begin{figure}
 \centering
@@ -178,11 +178,11 @@ SelectiveBlocks (CLC) & Scheduling Block & Device & 16 \\
 \subsubsection{Host Runtime Overhead}
 
 We first quantify the overhead of the \sys driver runtime itself, independent of any specific policy logic. 
-\ys{TODO: Add host runtime overhead results or remove this section.} 
+\yusheng{TODO: Add host runtime overhead results or remove this section.} 
 
 \subsubsection{Low-overhead GPU Observability}
 
-We evaluate observability tools built on \sys across diverse workloads. Representative tools include \texttt{kernelretsnoop} for per-thread block finish timestamp recording, \texttt{threadhist} for load imbalance detection, and \texttt{launchlate} for kernel launch latency measurement. Additional tools including \texttt{threadscheduling}, \texttt{gpu\_sched\_trace}, \texttt{prefetch\_trace}, and \texttt{eviction\_trace} provide host-side observability for scheduling and memory management policies (\Cref{tab:obs-overhead}). \ys{TODO: Complete table data or remove incomplete rows (TBD entries).} The device-side \sys tools show significantly lower overhead than NVBit~\cite{nvbit}.
+We evaluate observability tools built on \sys across diverse workloads. Representative tools include \texttt{kernelretsnoop} for per-thread block finish timestamp recording, \texttt{threadhist} for load imbalance detection, and \texttt{launchlate} for kernel launch latency measurement. Additional tools including \texttt{threadscheduling}, \texttt{gpu\_sched\_trace}, \texttt{prefetch\_trace}, and \texttt{eviction\_trace} provide host-side observability for scheduling and memory management policies (\Cref{tab:obs-overhead}). \yusheng{TODO: Complete table data or remove incomplete rows (TBD entries).} The device-side \sys tools show significantly lower overhead than NVBit~\cite{nvbit}.
 
 \begin{table}[t]
 \centering
