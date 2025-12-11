@@ -4,6 +4,67 @@
 
 ---
 
+## \sys 架构概述
+
+### 核心设计：eBPF + struct_ops 风格的策略接口
+
+\sys 使用 **eBPF** 在 GPU 驱动层定义了 **struct_ops 风格的接口**，允许 policy 开发者：
+1. **定义自定义策略**：实现 prefetch/eviction 的决策逻辑
+2. **修改运行时行为**：在不修改应用二进制的情况下改变内存管理行为
+3. **获取运行时信息**：通过 uprobe/kprobe 获取语义信息
+
+```
+\sys 架构：
+┌─────────────────────────────────────────────────────────────┐
+│                      User Space                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │ Application │  │ Policy Dev  │  │ Control Plane       │  │
+│  │ (unmodified)│  │ (eBPF code) │  │ (config/标记)        │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+├─────────────────────────────────────────────────────────────┤
+│                      eBPF Layer                              │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ struct_ops 风格接口：                                    ││
+│  │  - on_page_fault(addr, ctx) → prefetch_decision         ││
+│  │  - on_eviction_needed(pressure) → evict_pages           ││
+│  │  - on_alloc(addr, size, tag) → placement_hint           ││
+│  │  - ...                                                   ││
+│  └─────────────────────────────────────────────────────────┘│
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │ eBPF Maps   │  │ Uprobe Hooks│  │ Kprobe Hooks        │  │
+│  │ (状态存储)   │  │ (应用语义)   │  │ (驱动事件)          │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+├─────────────────────────────────────────────────────────────┤
+│                    GPU Driver (UVM)                          │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ 原有行为被 eBPF policy 覆盖/增强                         ││
+│  │  - Page fault handling → 调用 on_page_fault()           ││
+│  │  - Eviction → 调用 on_eviction_needed()                 ││
+│  │  - Migration → 受 policy 控制                           ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 语义获取的多种方式
+
+| 方式 | 描述 | 精度 | 开销 | 使用场景 |
+|------|------|------|------|----------|
+| **纯 pattern-based** | 仅基于 page fault 地址序列 | 低-中 | 最低 | 通用场景 |
+| **Control plane 标记** | 管理员预先配置内存区域语义 | 中 | 低 | 已知内存布局 |
+| **Uprobe hook** | Hook 应用函数获取运行时语义 | 高 | 中 | 需要精确语义 |
+| **框架集成** | 框架主动通知 \sys | 最高 | 依赖框架 | 框架愿意配合时 |
+
+### 和现有方案的关键区别
+
+| 方案 | 修改应用？ | 获取语义？ | 粒度 |
+|------|----------|----------|------|
+| **Framework-level offload** | ✓ 需要 | ✓ 有 | Expert/Layer |
+| **UVM default** | ✗ 不需要 | ✗ 无 | Page (LRU) |
+| **cudaMemAdvise** | ✓ 需要 | ✓ 静态 | Region |
+| **\sys** | ✗ 不需要 | ✓ 可选 | Page (可编程) |
+
+---
+
 ## 0. Page Fault Pattern 可视化分析
 
 基于 `img/pattern/` 目录下的 VA Access Density Heatmap（X轴=时间，Y轴=虚拟地址，颜色=访问频率），我们观察到以下 pattern：
@@ -103,7 +164,21 @@
 
 ### 1.4 \sys Policy 设计
 
-**核心思想**：不需要知道 expert 语义，纯粹基于 page fault pattern
+**核心思想**：结合 page fault pattern 检测与可选的语义信息
+
+\sys 提供**多层次的语义获取能力**，policy 开发者可以根据需要选择：
+
+```
+语义获取方式（从低到高）：
+├── Level 0：纯 pattern-based
+│   └── 仅基于 page fault 地址序列检测 stride/temporal locality
+├── Level 1：Control plane 标记
+│   └── 管理员预先标记内存区域（如：expert 0 = [addr_start, addr_end]）
+├── Level 2：Uprobe hook
+│   └── Hook llama.cpp 的内存分配函数，动态获取 expert/KV 边界
+└── Level 3：框架集成
+    └── 框架主动通知 \sys 即将访问的区域（最高精度，但需框架配合）
+```
 
 ```
 Prefetch 策略：
@@ -111,20 +186,25 @@ Prefetch 策略：
 │   └── 观察连续 page fault 地址，预测下 N 个 pages
 ├── Adaptive Prefetch：根据 PCIe 带宽利用率动态调整
 │   └── 带宽空闲时更激进，拥塞时保守
-└── 基于 fault history 的 speculative prefetch
-    └── eBPF maps 记录最近访问的 page regions
+├── 基于 fault history 的 speculative prefetch
+│   └── eBPF maps 记录最近访问的 page regions
+└── （可选）语义增强的 prefetch
+    └── 如果通过 uprobe 知道当前在哪个 expert，可以预取相邻 expert
 
 Eviction 策略：
 ├── LFU (Least Frequently Used)：page 粒度的 frequency tracking
 │   └── 保留 hot pages，驱逐 cold pages
-└── 打破 expert 作为 atomic unit 的假设
-    └── 同一个 expert 的 hot pages 留 GPU，cold pages 放 CPU
+├── 打破 expert 作为 atomic unit 的假设
+│   └── 同一个 expert 的 hot pages 留 GPU，cold pages 放 CPU
+└── （可选）语义感知的差异化驱逐
+    └── 如果知道 KV vs weights，可以用不同的驱逐策略
 ```
 
 **关键优势**：
 - Page 粒度的 fine-grained tiering，而非 expert 粒度
 - Prefetch 和 compute 可以 overlap（不在 critical path 上）
-- 不需要修改应用
+- **不需要修改应用二进制**：语义通过外部 policy/uprobe 获取
+- **灵活性**：从纯 pattern-based 到语义增强，按需选择精度-复杂度 tradeoff
 
 ### 1.5 论文中的解释建议
 
@@ -349,15 +429,30 @@ Level 1: Posting Lists (leaf nodes)
 Query → 访问 centroid → 选择 top-k centroids → 访问对应 posting lists
 ```
 
+**Policy 开发者如何利用 IVF 知识**：
+
+\sys 的 policy 开发者**知道 IVF 的层次结构**，可以设计专用算法：
+
+```
+语义获取方式：
+├── Uprobe hook Faiss 的索引加载函数
+│   └── 获取 centroid 地址范围、每个 posting list 的起始地址
+├── Control plane 配置
+│   └── 预先标记 centroid region 和 posting list regions
+└── Pattern 观察验证
+    └── Heatmap 中的"亮线"确认是 centroids
+```
+
 **Adaptive tree-based prefetching 的含义**：
 
 ```
-Prefetch 策略：
+Prefetch 策略（基于 IVF 领域知识）：
 ├── Level 0 (Centroids)：
-│   └── 所有 queries 都需要，预热时 prefetch 到 GPU
+│   └── Policy 知道 centroid 地址范围，标记为"常驻 GPU"
 ├── Level 1 (Posting Lists)：
-│   ├── 观察 centroid access pattern
-│   ├── 当 centroid i 被访问时，prefetch posting list i
+│   ├── 通过 uprobe 或 pattern 检测到 centroid i 被访问
+│   ├── Policy 知道 centroid i 对应 posting list i 的地址
+│   ├── 主动 prefetch posting list i
 │   └── Adaptive：根据 posting list 大小和 PCIe 带宽调整 prefetch 量
 └── 内部 Sequential prefetch：
     └── Posting list 内部是 sequential scan，做 stride prefetch
@@ -368,6 +463,10 @@ Prefetch 策略：
 - 大的 posting list：分批 prefetch，避免 thrash 其他数据
 - 小的 posting list：可以完整 prefetch
 - 根据 PCIe traffic 动态调整
+
+**和 Framework-level 的区别**：
+- Framework-level 需要修改 Faiss 代码来添加 prefetch 调用
+- \sys 通过 uprobe hook + policy 实现，**不改 Faiss 二进制**
 
 ### 4.5 \sys Policy 设计
 
@@ -417,11 +516,16 @@ posting lists while fully prefetching small ones.
 
 3. **Adaptive 是关键**：根据 PCIe traffic、数据大小、访问 pattern 动态调整
 
-4. **不需要语义知识**：\sys 基于 page fault pattern，不需要知道这是 expert/KV/posting list
+4. **灵活的语义获取**：\sys 可以通过多种方式获取语义信息：
+   - **纯 pattern-based**：仅基于 page fault 轨迹，无需任何语义
+   - **Control plane 标记**：管理员预先标记内存区域（KV-cache、expert weights 等）
+   - **Uprobe hook**：动态获取应用运行时信息（如内存分配的用途）
+   - **Policy 开发者领域知识**：针对特定应用（如 IVF 索引）设计专用策略
 
-5. **和 framework-level 互补**：
-   - Framework 知道语义，但 transfer 在 critical path
-   - \sys 不知道语义，但可以 overlap 和做 fine-grained 优化
+5. **和 framework-level 的关键区别**：
+   - **Framework-level**：需要**修改应用代码**来实现 offload
+   - **\sys**：**不改应用二进制**，通过外部 policy + uprobe/标记获取语义
+   - 两者可以互补：framework 做粗粒度 offload，\sys 做 page-level 优化
 
 下面把你文档里“**\sys 与框架级(offload)是互补的**”这句话掰开揉碎，给出技术判定、边界条件与对比，并补一组可引用的相关工作。先下结论，然后展开。
 
