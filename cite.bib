@@ -817,22 +817,6 @@ note= {\url{https://www.langchain.com/}}
   note = {Available: \url{https://github.com/iovisor/bcc}},
 }
 
-@article{Bachl21,
-  author       = {Maximilian Bachl and
-                  Joachim Fabini and
-                  Tanja Zseby},
-  title        = {A flow-based {IDS} using Machine Learning in eBPF},
-  journal      = {CoRR},
-  volume       = {abs/2102.09980},
-  year         = {2021},
-  url          = {https://arxiv.org/abs/2102.09980},
-  eprinttype    = {arXiv},
-  eprint       = {2102.09980},
-  timestamp    = {Wed, 24 Feb 2021 15:42:45 +0100},
-  biburl       = {https://dblp.org/rec/journals/corr/abs-2102-09980.bib},
-  bibsource    = {dblp computer science bibliography, https://dblp.org}
-}
-
 @inproceedings {Zhong22,
 author = {Yuhong Zhong and Haoyu Li and Yu Jian Wu and Ioannis Zarkadas and Jeffrey Tao and Evan Mesterhazy and Michael Makris and Junfeng Yang and Amy Tai and Ryan Stutsman and Asaf Cidon},
 title = {{XRP}: {In-Kernel} Storage Functions with {eBPF}},
@@ -1574,12 +1558,6 @@ series = {SIGSOFT '04/FSE-12}
   year={2012}
 }
 
-@inproceedings{salus,
-  author    = {Peifeng Yu and Mosharaf Chowdhury},
-  title     = {Salus: Fine-Grained {GPU} Sharing Primitives for Deep Learning Applications},
-  booktitle = {MLSys},
-  year      = {2020},
-}
 
 @inproceedings{pilot,
   author    = {Jayanth Ravi and Tri Nguyen and Michela Becchi},
@@ -1595,12 +1573,6 @@ series = {SIGSOFT '04/FSE-12}
   year      = {2025},
 }
 
-@inproceedings{gandiva,
-  author    = {Wencong Xiao and others},
-  title     = {Gandiva: Introspective Cluster Scheduling for Deep Learning},
-  booktitle = {USENIX Symposium on Operating Systems Design and Implementation (OSDI)},
-  year      = {2018},
-}
 
 @inproceedings{tiresias,
   author    = {Jianguo Gu and others},
@@ -1654,29 +1626,6 @@ series = {SIGSOFT '04/FSE-12}
   year={2025}
 }
 
-@inproceedings{xsched,
-  author    = {Weihang Shen and Mingcong Han and Jialong Liu and Rong Chen and Haibo Chen},
-  title     = {{XSched}: Preemptive Scheduling for Diverse {XPUs}},
-  booktitle = {Proceedings of the 19th USENIX Symposium on Operating Systems Design and Implementation (OSDI)},
-  year      = {2025},
-}
-
-@inproceedings{ktransformers,
-  author    = {Hongtao Chen and Weiyu Xie and Boxin Zhang and Jingqi Tang and Jiahao Wang
-               and Jianwei Dong and Shaoyuan Chen and Ziwei Yuan and Chen Lin and Chengyu Qiu
-               and Yuening Zhu and Qingliang Ou and Jiaqi Liao and Xianglin Chen and Zhiyuan Ai
-               and Yongwei Wu and Mingxing Zhang},
-  title     = {KTransformers: Unleashing the Full Potential of {CPU/GPU} Hybrid Inference for {MoE} Models},
-  booktitle = {Proceedings of the 31st ACM Symposium on Operating Systems Principles (SOSP)},
-  year      = {2025},
-}
-
-@inproceedings{pie,
-  author    = {In Gim and Zhiyao Ma and Seung-seob Lee and Lin Zhong},
-  title     = {Pie: A Programmable Serving System for Emerging {LLM} Applications},
-  booktitle = {Proceedings of the 31st ACM Symposium on Operating Systems Principles (SOSP)},
-  year      = {2025},
-}
 
 @inproceedings{yu2024orca,
   title={Orca: A distributed serving system for $\{$Transformer-Based$\}$ generative models},
@@ -1843,11 +1792,52 @@ series = {SIGSOFT '04/FSE-12}
   year={2025}
 }
 
-@article{yu2020fine,
-  title={Fine-grained GPU sharing primitives for deep learning applications},
-  author={Yu, Peifeng and Chowdhury, Mosharaf},
-  journal={Proceedings of Machine Learning and Systems},
-  volume={2},
-  pages={98--111},
-  year={2020}
+
+@article{bachl2021flow,
+  title={A flow-based IDS using Machine Learning in eBPF},
+  author={Bachl, Maximilian and Fabini, Joachim and Zseby, Tanja},
+  journal={arXiv preprint arXiv:2102.09980},
+  year={2021}
+}
+
+
+@inproceedings{chen2025ktransformers,
+  title={KTransformers: Unleashing the Full Potential of CPU/GPU Hybrid Inference for MoE Models},
+  author={Chen, Hongtao and Xie, Weiyu and Zhang, Boxin and Tang, Jingqi and Wang, Jiahao and Dong, Jianwei and Chen, Shaoyuan and Yuan, Ziwei and Lin, Chen and Qiu, Chengyu and others},
+  booktitle={Proceedings of the ACM SIGOPS 31st Symposium on Operating Systems Principles},
+  pages={1014--1029},
+  year={2025}
+}
+
+@inproceedings{gim2025pie,
+  title={Pie: A Programmable Serving System for Emerging LLM Applications},
+  author={Gim, In and Ma, Zhiyao and Lee, Seung-seob and Zhong, Lin},
+  booktitle={Proceedings of the ACM SIGOPS 31st Symposium on Operating Systems Principles},
+  pages={415--430},
+  year={2025}
+}
+
+@inproceedings{ravi2021pilot,
+  title={PILOT: a Runtime System to Manage Multi-tenant GPU Unified Memory Footprint},
+  author={Ravi, John and Nguyen, Tri and Zhou, Huiyang and Becchi, Michela},
+  booktitle={2021 IEEE 28th International Conference on High Performance Computing, Data, and Analytics (HiPC)},
+  pages={442--447},
+  year={2021},
+  organization={IEEE}
+}
+
+@inproceedings{shen2025xsched,
+  title={$\{$XSched$\}$: Preemptive scheduling for diverse $\{$XPUs$\}$},
+  author={Shen, Weihang and Han, Mingcong and Liu, Jialong and Chen, Rong and Chen, Haibo},
+  booktitle={19th USENIX Symposium on Operating Systems Design and Implementation (OSDI 25)},
+  pages={671--692},
+  year={2025}
+}
+
+@inproceedings{coppock2025lithos,
+  title={LithOS: An operating system for efficient machine learning on GPUs},
+  author={Coppock, Patrick H and Zhang, Brian and Solomon, Eliot H and Kypriotis, Vasilis and Yang, Leon and Sharma, Bikash and Schatzberg, Dan and Mowry, Todd C and Skarlatos, Dimitrios},
+  booktitle={Proceedings of the ACM SIGOPS 31st Symposium on Operating Systems Principles},
+  pages={1--17},
+  year={2025}
 }
