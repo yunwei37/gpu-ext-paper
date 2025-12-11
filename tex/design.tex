@@ -47,14 +47,14 @@ Figure~\ref{fig:system-design} shows the architecture of \sys.
 \paragraph{User-space Control Plane.}
 Policy authors use standard eBPF tooling (e.g., \texttt{clang/libbpf}, \texttt{bpftool}) to build policy bytecode. The control-plane links against a loader library that installs policies and configures eBPF maps. It enables runtime policy redeployment and reconfiguration (e.g., eviction thresholds, sampling rates, priorities) without application or kernel restarts, and exports runtime metrics (e.g., region hotness, tenant latencies).
 
-\paragraph{Kernel and Device Runtime.}
-\sys provides a unified runtime across kernel and GPU contexts, managing verification, compilation, and map placement. It employs a SIMT-aware verifier (\S\ref{sec:verification}) that extends standard eBPF checks to verify warp-uniformity, SIMT control flow, and GPU synchronization constraints. Verified programs are JIT-compiled into native host code or GPU-compatible instructions (e.g., PTX). The runtime manages hierarchical logical eBPF map abstractions whose backing storage is automatically partitioned and replicated across host and device with consistency.
-Policy execution occurs at structured hook points defined in GPU drivers and device. On the host, \sysdriver exposes \texttt{struct\_ops}-style hooks (e.g., region add/eviction, kernel scheduling). Host policies return concise policy decisions enforced via trusted kfuncs. On the GPU device, \sys injects trampolines at hook points and invokes device-side handlers at warp granularity. Device handlers update cross-layer maps with performance signals and make control decisions (e.g., prefetch, block-level scheduling) via trusted helpers that the runtime enforces.
+\paragraph{Host Driver and Device Runtime.}
+\sys provides a unified runtime across host driver and GPU device contexts, managing verification, compilation, and map placement. It employs a SIMT-aware verifier (\S\ref{sec:verification}) that extends standard eBPF checks to verify warp-uniformity, SIMT control flow, and GPU synchronization constraints. Verified programs are JIT-compiled into native host code or GPU-compatible instructions (e.g., PTX). The runtime manages hierarchical logical eBPF map abstractions whose backing storage is automatically partitioned and replicated across host and device with consistency.
+Policy execution occurs at structured hook points defined in GPU drivers and device. On the host, \sysdriver exposes \texttt{struct\_ops}-style hooks (e.g., region add/eviction, GPU kernel scheduling). Host policies return concise policy decisions enforced via trusted kfuncs. On the GPU device, \sys injects trampolines at hook points and invokes device-side handlers at warp granularity. Device handlers update cross-layer maps with performance signals and make control decisions (e.g., prefetch, block-level scheduling) via trusted helpers that the runtime enforces.
 
 \subsection{\sys{} Policy Interfaces}
 \label{sec:design-interfaces}
 
-\sys introduces three eBPF program types: two in the driver‑level ( \texttt{BPF\_PROG\_TYPE\_GPU\_MEM} for memory‑placement policy and \texttt{BPF\_PROG\_TYPE\_GPU\_SCHED} for scheduling decisions), and one in the device‑level ( \texttt{BPF\_PROG\_TYPE\_GPU\_DEV} for in‑kernel GPU instrumentation).
+\sys introduces three eBPF program types: two in the driver‑level ( \texttt{BPF\_PROG\_TYPE\_GPU\_MEM} for memory‑placement policy and \texttt{BPF\_PROG\_TYPE\_GPU\_SCHED} for scheduling decisions), and one in the device‑level ( \texttt{BPF\_PROG\_TYPE\_GPU\_DEV} for GPU kernel instrumentation).
 These program types coexist with existing kernel eBPF program types and have different SIMT‑specific verification rules.
 
 \subsubsection{Memory Interface}
@@ -100,7 +100,7 @@ struct gdev_mem_ops {
 };
 
 // Device-side helpers
-// Request prefetch, triggers handler in kernel
+// Request prefetch, triggers handler in host driver
  int gdev_mem_prefetch(gmem_region_t* r);
 \end{minted}
 
@@ -109,7 +109,7 @@ struct gdev_mem_ops {
 
 \sys exposes scheduling policy control at two levels: hardware‑queue lifecycle (host‑side) and thread‑block scheduling (device‑side). The host participates in GPU queue admission and priority control through policies. Policies set queue priority, timeslice, and may reject or defer queue creation. Properties are written directly into firmware‑visible structures, ensuring enforcement beyond user‑space hints. Policies may also invoke the \texttt{gdrv\_sched\_preempt} kfunc to trigger cooperative preemption through the driver's native context‑switch mechanism.
 
-Within the GPU, \sys provides a work‑stealing thread‑block scheduler. Kernels expose their logical work units; persistent worker blocks select and process units while device‑side eBPF handlers steer scheduling decisions via \texttt{gdev\_block\_ctx}. The verifier ensures that scheduling decisions respect kernel invariants (e.g., selecting only local work units). \sys can inject this scheduler via binary rewriting or allow developers to integrate it.
+Within the GPU, \sys provides a work‑stealing thread‑block scheduler. GPU kernels expose their logical work units; persistent worker blocks select and process units while device‑side eBPF handlers steer scheduling decisions via \texttt{gdev\_block\_ctx}. The verifier ensures that scheduling decisions respect GPU kernel invariants (e.g., selecting only local work units). \sys can inject this scheduler via binary rewriting or allow developers to integrate it.
 
 \begin{minted}[highlightlines=false,fontsize=\footnotesize]{c}
 // Host-side policy handlers for GPU hardware
