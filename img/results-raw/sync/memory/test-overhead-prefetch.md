@@ -84,3 +84,27 @@ Results:
   Bandwidth: 9.73939 GB/s
   Results written to: results.csv
 
+$ sudo /home/yunwei37/workspace/gpu/co-processor-demo/gpu_ext_policy/microbench/memory/uvmbench --kernel=hotspot --mode=uvm --size_factor=1.1 --iterations=10
+UVM Microbenchmark - Tier 0 Synthetic Kernels
+==============================================
+GPU Memory: 32109 MB
+Size Factor: 1.1 (oversubscription)
+Total Working Set: 35320 MB
+Stride Bytes: 4096 (page-level)
+Kernel: hotspot
+Mode: uvm
+Iterations: 10
+
+Hotspot config: grid=55552x55552, iterations=10
+  Allocated: 35316.8 MB, Total access: 353167.5 MB
+
+Results:
+  Kernel: hotspot
+  Mode: uvm
+  Working Set: 35320 MB
+  Bytes Accessed: 353167 MB
+  Median time: 10417.3 ms
+  Min time: 10262.9 ms
+  Max time: 10511.6 ms
+  Bandwidth: 35.5487 GB/s
+  Results written to: results.csv
