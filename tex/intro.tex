@@ -1,7 +1,7 @@
 \begin{abstract}
-Performance in modern GPU-centric systems increasingly depends on resource management policies, such as memory placement, scheduling, and observability, rather than raw compute alone. Existing solutions force developers into a tradeoff: user-space runtimes offer programmability but lack cross-tenant visibility and fine-grained hardware control, while kernel-level approaches provide control but are hard-coded into static drivers, raising safety risks. We argue that the GPU driver and device layer must serve as an extensible OS policy interface. Recent emerging eBPF offers a possibility, but naively transplanting host-side eBPF is insufficient: it cannot observe critical device-side events, and directly injecting policy code into GPU kernels affects safety and efficiency.
+Performance in modern GPU-centric systems increasingly depends on resource management policies, such as memory placement, scheduling, and observability, rather than raw compute alone. Existing solutions force developers into a tradeoff: user-space runtimes offer programmability but lack cross-tenant visibility and fine-grained hardware control, while kernel-level approaches provide control but are hard-coded into static drivers, raising safety risks. We argue that the GPU driver and device layer must serve as an extensible OS policy interface. eBPF offers a possibility, but naively transplanting host-side eBPF is insufficient: it cannot observe critical device-side events, and directly injecting policy code into GPU kernels affects safety and efficiency.
 
-We present \sys, a cross-layer policy runtime that treats the GPU driver and device as a unified programmable OS subsystem. \sys extends GPU drivers to expose safe hooks and introduces a device-side eBPF runtime that executes verified policy logic within GPU kernels, enabling coherent, application-transparent policies across the host-device boundary. Evaluation on realistic workloads, including inference, training, and vector search, shows that \sys improves throughput by up to $4.8\times$ and reduces tail latency by up to $2\times$ with $2$--$3\%$ overhead, without modifying applications or restarting drivers.
+We present \sys, an eBPF-based policy runtime that treats the GPU driver and device as a programmable OS subsystem. \sys extends GPU drivers to expose safe hooks and introduces a device-side eBPF runtime that executes verified policy logic within GPU kernels, enabling coherent, application-transparent policies. Evaluation on realistic workloads, including inference, training, and vector search, shows that \sys improves throughput by up to $4.8\times$ and reduces tail latency by up to $2\times$ with $2$--$3\%$ overhead, without modifying applications or restarting drivers.
 % \xiangyu{I think it is better to reduce the abstract content by 50-60\% by removing some example details.}
 % \yusheng{should we use general "policy" or make it resources management policy? we are also doing  optimization for a single application and doing observability/tracing}
 % \JC{
@@ -49,7 +49,7 @@ We implement \sys{} on Linux by extending the NVIDIA open GPU kernel modules~\ci
 \begin{itemize}[leftmargin=*,itemsep=0pt]
   \item We design an extensible OS policy interface for GPU memory, scheduling, and observability.
 
-  \item We implement \sys, a cross-layer eBPF runtime with SIMT-aware verification spanning host driver and GPU device.
+  \item We implement \sys, an eBPF runtime with SIMT-aware verification spanning host driver and GPU device.
 
   \item We show \sys policies improve throughput and reduce tail latency across inference, training, and search workloads.
 \end{itemize}
