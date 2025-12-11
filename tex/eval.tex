@@ -36,7 +36,7 @@ via \texttt{should\_try\_steal}, we evaluate three scheduling policies: FixedWor
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/clc_policies_comparison.pdf}
-\caption{Impact of \sys block-scheduling policies across workload regimes. (a) Under moderate imbalance (GEMM), simple always-steal policies reduce latency by $\sim$11\% and behave identically. (b) Under clustered heavy tails, Greedy becomes pathological (+20.3\% latency) while LatencyBudget matches baseline performance, demonstrating the need for workload-aware policy selection.}
+\caption{\sys block-scheduling policies across workload regimes. No single policy dominates: always-steal works well under moderate imbalance (a) but becomes pathological under clustered heavy tails (b), where LatencyBudget matches baseline performance.}
 \label{fig:clc-policies}
 \end{figure}
 
@@ -53,7 +53,7 @@ This policy is expressed as eBPF handlers in the driver plus device-side handler
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/llama.cpp/llama_uvm_combined_color.pdf}
-\caption{Prefill (pp512) and decode (tg128) throughput for GPT-OSS-120B MoE (59~GiB) on RTX 5090 (32GB). \sys eBPF prefetching achieves \textbf{4.8$\times$ decode speedup} over llama.cpp's framework offloading (ncmoe=32), while maintaining competitive prefill performance (-12\%).}
+\caption{Prefill (pp512) and decode (tg128) throughput for GPT-OSS-120B MoE (59~GiB) on RTX 5090 (32GB). \sys eBPF prefetching achieves 4.8$\times$ speedup on decode (memory-bound) over framework offloading while maintaining competitive prefill performance.}
 \label{fig:llama-expert-offload}
 \end{figure}
 
@@ -65,7 +65,7 @@ We compare vLLM's CPU-offload mode (\texttt{--cpu-offload-gb 8}) against \sys wi
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/vllm/ttft_tpot_combined.pdf}
-\caption{Time-to-first-token and decoding throughput for \sys KV-aware sequential prefetch policy vs vLLM CPU-offload on Qwen-30B FP8 MoE with 100 concurrent requests ($\approx$60K tokens KV-cache).}
+\caption{Time-to-first-token and decoding throughput on Qwen-30B FP8 MoE with 100 concurrent requests ($\approx$60K tokens KV-cache). \sys KV-aware sequential prefetch improves mean and p99 TTFT by 1.7--2$\times$ and decoding throughput by 1.3$\times$ over vLLM CPU-offload.}
 \label{fig:vllm-kv-offload}
 \end{figure}
 
@@ -80,7 +80,7 @@ Native GPU allocation (no UVM) achieves the highest performance when data fits i
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/pytorch/uvm_benchmark_comparison.pdf}
-\caption{GCN training epoch time vs graph size. Native GPU allocation (green) OOMs at $\sim$8M nodes. UVM without prefetch (red) suffers 30$\times$ overhead from page faults; \sys eBPF scheduling (dashed red) provides 2.65$\times$ speedup. UVM with prefetch (blue) achieves 5.5$\times$ speedup; at severe oversubscription (15M nodes), \sys (dashed blue) provides additional 1.44$\times$ improvement.}
+\caption{GCN training epoch time vs graph size. Native GPU allocation (green) OOMs beyond memory capacity. Prefetching (blue) and eBPF scheduling (dashed lines) are complementary optimizations: eBPF accelerates page fault handling when prefetching is unavailable (red), while combined approaches (dashed blue) provide additional benefits under severe oversubscription.}
 \label{fig:gnn-epoch}
 \end{figure}
 
@@ -90,7 +90,7 @@ We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/faiss/faiss_benchmark_results.pdf}
-\caption{Faiss index build time and query throughput with \sys adaptive prefetch policy vs default UVM under oversubscribed index segments ($\approx$1.5$\times$ speedup).}
+\caption{Faiss index build time and query throughput under oversubscription. \sys adaptive prefetch reduces build time by 21--29\% and query latency by 10--16\% compared to default UVM.}
 \label{fig:faiss-perf}
 \end{figure}
 
@@ -108,7 +108,7 @@ We evaluate \sys's BPF struct\_ops scheduling policies on \emph{compute-bound} m
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/scheduler_latency_throughput.pdf}
-\caption{Multi-tenant GPU scheduling with \sys BPF struct\_ops policies on compute-bound workloads. LC P99 launch latency drops 95.5\% (1188$\mu$s $\rightarrow$ 53$\mu$s) with 99\% lower variance, while BE throughput remains unchanged (+0.8\%).}
+\caption{Multi-tenant GPU scheduling with \sys BPF struct\_ops policies on compute-bound workloads. \sys reduces latency-critical (LC) P99 launch latency by 95\% and variance by 99\% while maintaining best-effort (BE) throughput.}
 \label{fig:scheduler-latency}
 \end{figure}
 
@@ -122,7 +122,7 @@ Critically, for these \emph{memory-bound} workloads, gpreempt-style scheduler ti
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/all_kernels_stacked.pdf}
-\caption{Multi-tenant memory priority differentiation on oversubscribed UVM workloads. \sys policies reduce total completion time by 55--92\% and enforce 6--19\% faster completion for high-priority tenants. Scheduler policies are ineffective (<1\%) on these memory-bound workloads. Single 1$\times$ shows ideal single-process time; 2$\times$Single 1$\times$ is the theoretical lower bound.}
+\caption{Multi-tenant memory priority differentiation on oversubscribed UVM workloads. \sys memory policies improve total completion time by 55--92\% and enforce priority differentiation. Critically, scheduler policies are ineffective on these memory-bound workloads, highlighting the need to match policy types to workload bottlenecks. Single 1$\times$ shows ideal single-process time; 2$\times$Single 1$\times$ is the theoretical lower bound.}
 \label{fig:all-kernels-priority}
 \end{figure}
 
@@ -137,7 +137,7 @@ We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/fig_colocated_results.pdf}
-\caption{Two-tenant co-location: \texttt{llama.cpp} inference (LC) + GNN training (BE). \sys reduces LC latency by 40--45\% while simultaneously improving BE training by 28\%. Dashed lines show single-tenant baselines; dotted lines show 2$\times$ single (ideal fair share).}
+\caption{Two-tenant co-location: \texttt{llama.cpp} inference (LC) + GNN training (BE). \sys achieves mutual improvement for both tenants, with LC latency approaching single-tenant performance while BE training also improves, approaching ideal fair share. Tenant-aware policies reduce contention rather than simply prioritizing one workload at the expense of the other.}
 \label{fig:two-tenant}
 \end{figure}
 
@@ -211,6 +211,6 @@ We evaluate device-side \sys mechanisms using a vector-add microbenchmark (32 el
 \begin{figure*}
 \centering
 \includegraphics[width=\textwidth]{img/results-raw/runtime/microbench_comparison.pdf}
-\caption{Device-side microbenchmark overhead. (a) GPU-side operation overhead comparing eGPU naive injection vs \sys's SIMT-aware execution, showing 60--79\% overhead reduction. (b) CPU map access via PCIe is ~6000$\times$ slower than GPU-side operations.}
+\caption{Device-side microbenchmark overhead. (a) GPU-side operation overhead comparing eGPU naive injection vs \sys's SIMT-aware execution, showing significant overhead reduction across operations. (b) CPU map access via PCIe incurs orders-of-magnitude higher latency than GPU-side operations, motivating \sys's hierarchical map design.}
 \label{fig:microbench}
 \end{figure*}
