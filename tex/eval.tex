@@ -91,7 +91,7 @@ Native GPU allocation (no UVM) achieves the highest performance when data fits i
 \end{figure}
 
 \paragraph{Faiss Vector Search.}
-We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4096,Flat index, scaling from 20M (9.5GB, fits in memory) to 50M (24GB, near boundary) and 100M (48GB, exceeds 32GB GPU memory). For oversubscribed datasets, we apply a \sys policy implementing adaptive tree-based prefetching. \sys reduces build time by 21--29\%, with benefits scaling from 27\% to 40\% as memory pressure grows. For search workloads, \sys reduces latency by 10--16\% across different \texttt{nprobe} settings despite the random access patterns inherent in ANN search.
+We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4096,Flat index, scaling from 20M (9.5GB, fits in memory) to 50M (24GB, near boundary) and 100M (48GB, exceeds 32GB GPU memory). IVF indexes have a two-level structure: frequently-accessed centroids and larger posting lists. For oversubscribed datasets, we apply a \sys policy that exploits this hierarchy: centroid pages are protected by LRU due to frequent access, while posting lists are prefetched sequentially rather than UVM's default address-tree-based policy. For index construction, K-means iterations produce sequential scans that \sys detects and prefetches using stride prediction. \sys reduces build time by 21--29\%, with benefits scaling from 27\% to 40\% as memory pressure grows. For search workloads, \sys reduces latency by 10--16\% across different \texttt{nprobe} settings despite the random access patterns inherent in ANN search.
 
 \begin{figure}
 \centering
