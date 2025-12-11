@@ -83,7 +83,7 @@ Native GPU allocation (no UVM) achieves the highest performance when data fits i
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/pytorch/uvm_benchmark_comparison.pdf}
 \vspace{-1ex}
-\caption{GCN training epoch time vs graph size. Native GPU allocation (green) OOMs beyond memory capacity. Prefetching (blue) and eBPF scheduling (dashed lines) are complementary optimizations: eBPF accelerates page fault handling when prefetching is unavailable (red), while combined approaches (dashed blue) provide additional benefits under severe oversubscription.}
+\caption{GCN training epoch time vs graph size. Native GPU allocation (green) OOMs beyond memory capacity. User-space prefetching (blue) eliminates page faults but requires application modification; \sys eBPF prefetching (red) achieves similar benefits transparently. Combined approaches (dashed blue) provide additional benefits under severe oversubscription.}
 \label{fig:gnn-epoch}
 \end{figure}
 
@@ -118,7 +118,7 @@ We evaluate \sys's BPF struct\_ops scheduling policies on \emph{compute-bound} m
 \end{figure}
 
 \paragraph{Multi-Tenant Memory Priority Differentiation.}
-We evaluate \sys's memory policies for priority differentiation on \emph{memory-bound} workloads under UVM oversubscription using HotSpot~\cite{che2009rodinia} (spatial locality), GEMM~\cite{grauer2012auto} (compute-intensive), and K-Means~\cite{gu2020uvmbench} (sparse access). Each experiment runs two concurrent processes competing for GPU memory. Policy labels use priority values 0--100 (lower value = higher priority): \texttt{Prefetch(lo,hi)} prefetches pages for processes in that range, while \texttt{Evict(lo,hi)} selects eviction victims accordingly. We compare against: (1) no-policy execution, (2) single-process runtime (Single 1$\times$), and (3) theoretical optimum (2$\times$Single 1$\times$).
+We evaluate \sys's memory policies for priority differentiation on \emph{memory-bound} workloads under UVM oversubscription using HotSpot~\cite{che2009rodinia} (spatial locality), GEMM from PolyBench~\cite{grauer2012auto} (compute-intensive), and K-Means~\cite{gu2020uvmbench} (sparse access). Each experiment runs two concurrent processes competing for GPU memory. Policy labels use priority values 0--100 (lower value = higher priority): \texttt{Prefetch(lo,hi)} prefetches pages for processes in that range, while \texttt{Evict(lo,hi)} selects eviction victims accordingly. We compare against: (1) no-policy execution, (2) single-process runtime (Single 1$\times$), and (3) theoretical optimum (2$\times$Single 1$\times$).
 
 \Cref{fig:all-kernels-priority} shows that without policies, both processes degrade severely due to memory thrashing. With \sys memory priority policies, total completion time improves by 55--92\%, and high-priority processes complete 6--19\% faster. Critically, for these \emph{memory-bound} workloads, GPREEMPT-style~\cite{fan2025gpreempt} scheduler timeslice policies are \emph{ineffective} (<1\% improvement) because the bottleneck is UVM page faults and PCIe bandwidth, not GPU compute time. This contrasts with compute-bound workloads where scheduler policies are effective. \sys's layered runtime allows applying appropriate policies based on workload characteristics.
 
@@ -191,7 +191,7 @@ LatencyBudget (CLC) & Scheduling Block & Device & 19 \\
 
 \subsubsection{Host Runtime Overhead}
 
-We quantify the overhead of the \sys driver runtime independent of policy logic using GEMM~\cite{grauer2012auto} and HotSpot~\cite{che2009rodinia} (1.1$\times$ oversubscription, 35~GB working set) on RTX 5090. With hooks enabled but no policy attached, the overhead is less than 0.2\%. 
+We quantify the overhead of the \sys driver runtime independent of policy logic using GEMM from PolyBench~\cite{grauer2012auto} and HotSpot~\cite{che2009rodinia} (1.1$\times$ oversubscription, 35~GB working set) on RTX 5090. With hooks enabled but no policy attached, the overhead is less than 0.2\%. 
 
 \subsubsection{Low-overhead GPU Observability}
 
