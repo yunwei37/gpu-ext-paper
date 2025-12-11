@@ -203,7 +203,7 @@ We quantify the overhead of the \sys driver runtime independent of policy logic 
 
 \subsubsection{Low-overhead GPU Observability}
 
-We evaluate device-side observability tools built on \sys (\Cref{tab:obs-overhead}) on NVIDIA P40 GPU using llama.cpp prefill (Llama 1B, IO3, sequence-mixed). Tools include \texttt{kernelretsnoop} for per-thread block finish timestamp recording, \texttt{threadhist} for load imbalance detection, and \texttt{launchlate} for kernel launch latency measurement. Overhead is measured as token/s degradation during prefill. These tools show significantly lower overhead than NVBit~\cite{nvbit} (3--14\% vs 85--87\%) due to \sys's warp-uniform execution avoiding divergent control flow and unnecessary memory accesses.
+We evaluate device-side observability tools built on \sys (\Cref{tab:obs-overhead}) on NVIDIA P40 GPU using llama.cpp prefill (Llama 1B, IO3, sequence-mixed). Tools include \texttt{kernelretsnoop} for per-thread block finish timestamp recording, \texttt{threadhist} for load imbalance detection, and \texttt{launchlate} for kernel launch latency measurement. Overhead is measured as token/s degradation during prefill. These tools show significantly lower overhead than NVBit~\cite{villa2019nvbit} (3--14\% vs 85--87\%) due to \sys's warp-uniform execution avoiding divergent control flow and unnecessary memory accesses.
 
 % \texttt{gpu\_sched\_trace}, \texttt{prefetch\_trace}, and \texttt{eviction\_trace} provide host-side observability for scheduling and memory management policies (\Cref{tab:obs-overhead}).
 \begin{table}[t]
