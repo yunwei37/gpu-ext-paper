@@ -9,7 +9,7 @@ We evaluate \sys using three research questions:
   \item \textbf{RQ3 (Programmability \& Mechanism Overhead):} Is \sys sufficiently programmable to support diverse policies, and what is the overhead of its core mechanisms and observability capabilities?
 \end{itemize}
 
-These questions reflect the key claims of \sys by covering single-tenant optimization (RQ1), multi-tenant coordination (RQ2), and system costs (RQ3).
+These questions cover single-tenant optimization (RQ1), multi-tenant coordination (RQ2), and system costs (RQ3).
 
 \subsection{Methodology and Setup}
 
@@ -102,11 +102,11 @@ Across these applications, programmable region-based placement and prefetch poli
 
 \subsection{RQ2: Multi-Tenant Memory, Bandwidth, and Scheduling}
 
-We evaluate \sys's cross-layer policy runtime on multi-tenant GPU workloads, comparing per-tenant policies against global policies and framework-managed approaches.
+We evaluate \sys on multi-tenant GPU workloads, comparing per-tenant policies against global and framework-managed approaches.
 
 \subsubsection{Microbenchmarks}
 
-\paragraph{Multi-Tenant Timeslice Scheduler (LC + BE).}
+\paragraph{Compute-bound Timeslice Scheduler (LC + BE).}
 We evaluate \sys's BPF struct\_ops scheduling policies on \emph{compute-bound} multi-tenant workloads where the bottleneck is GPU SM time rather than memory bandwidth. 2 latency-critical (LC) processes and 4 best-effort (BE) processes run concurrently, each with 4 CUDA streams submitting 50 compute kernels. We compare the native scheduler against \sys with differentiated timeslices (LC: 1s, BE: 200$\mu$s) using a gpreempt-style preemption policy. \Cref{fig:scheduler-latency} shows that \sys reduces LC P99 launch latency by 95\%, demonstrating scheduling stability. BE throughput remains unchanged, confirming that \sys reduces LC tail latency without sacrificing BE throughput.
 
 \begin{figure}
@@ -117,7 +117,7 @@ We evaluate \sys's BPF struct\_ops scheduling policies on \emph{compute-bound} m
 \label{fig:scheduler-latency}
 \end{figure}
 
-\paragraph{Multi-Tenant Memory Priority Differentiation.}
+\paragraph{Memory-bound Memory Priority Differentiation.}
 We evaluate \sys's memory policies for priority differentiation on \emph{memory-bound} workloads under UVM oversubscription using HotSpot~\cite{che2009rodinia} (spatial locality), GEMM from PolyBench~\cite{grauer2012auto} (compute-intensive), and K-Means~\cite{gu2020uvmbench} (sparse access). Each experiment runs two concurrent processes competing for GPU memory. Policy labels use priority values 0--100 (lower value = higher priority): \texttt{Prefetch(lo,hi)} prefetches pages for processes in that range, while \texttt{Evict(lo,hi)} selects eviction victims accordingly. We compare against: (1) no-policy execution, (2) single-process runtime (Single 1$\times$), and (3) theoretical optimum (2$\times$Single 1$\times$).
 
 \Cref{fig:all-kernels-priority} shows that without policies, both processes degrade severely due to memory thrashing. With \sys memory priority policies, total completion time improves by 55--92\%, and high-priority processes complete 6--19\% faster. Critically, for these \emph{memory-bound} workloads, GPREEMPT-style~\cite{fan2025gpreempt} scheduler timeslice policies are \emph{ineffective} (<1\% improvement) because the bottleneck is UVM page faults and PCIe bandwidth, not GPU compute time. This contrasts with compute-bound workloads where scheduler policies are effective. \sys's layered runtime allows applying appropriate policies based on workload characteristics.
@@ -148,7 +148,7 @@ We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp
 \vspace{-2ex}
 \end{figure}
 
-Overall, \sys's per-tenant policies provide clear tail-latency and fairness benefits in multi-tenant workloads, achieving improvements for high-priority tenants while also benefiting background jobs through reduced memory thrashing.
+\sys's per-tenant policies improve both tail latency and fairness, benefiting high-priority tenants while reducing memory thrashing for background jobs.
 
 \begin{figure*}[!t]
 \centering
@@ -162,7 +162,7 @@ Overall, \sys's per-tenant policies provide clear tail-latency and fairness bene
 We evaluate \sys's programmability by examining policy complexity and reuse, and quantify the efficiency of its core mechanisms and observability capabilities.
 
 \paragraph{Policy Building Blocks.}
-\Cref{tab:support-matrix} shows policy building blocks implemented using \sys, along with their lines of code and execution domain. These components can be composed to construct resource management policies. For example, multi-tenant inference serving may combine Multi-tenant Quota LRU, Stride Prefetch, and Dynamic Timeslice to achieve coordinated memory and scheduling control across the host-device boundary. All policies attach to unmodified frameworks via \sys's runtime instrumentation. Individual building blocks require only tens to hundreds of lines of code.
+\Cref{tab:support-matrix} shows policy building blocks with lines of code and execution domain. These components can be composed to construct policies; for example, multi-tenant benchmark in RQ2 combines Quota LRU, Priority Tree Prefetch, and Dynamic Timeslice. All policies attach to unmodified frameworks via runtime instrumentation, requiring only tens to hundreds of lines.
 
 \begin{table}[t]
 \centering
