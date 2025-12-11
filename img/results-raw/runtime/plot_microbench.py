@@ -104,7 +104,7 @@ def main():
             gpu_new_time.append(new_time)
 
     # Create figure with two subplots
-    fig, (ax_left, ax_right) = plt.subplots(1, 2, figsize=(16, 5),
+    fig, (ax_left, ax_right) = plt.subplots(1, 2, figsize=(16, 3.2),
                                              gridspec_kw={'width_ratios': [5, 1]})
 
     # Left subplot: GPU overhead comparison (relative to baseline)
@@ -125,17 +125,17 @@ def main():
     ax_left.set_xticks(x_gpu)
     ax_left.set_xticklabels(gpu_labels, fontsize=16, rotation=20, ha='center')
     ax_left.tick_params(axis='y', labelsize=16)
-    ax_left.legend(fontsize=16, loc='upper right')
+    ax_left.legend(fontsize=14, loc='upper left')
     ax_left.set_title('(a) GPU-side Operations Overhead', fontsize=20, fontweight='bold')
 
-    # Add improvement percentage annotations
+    # Add improvement percentage annotations (above old bars to avoid overlap)
     for i, (old, new) in enumerate(zip(gpu_old_overhead, gpu_new_overhead)):
         if old > 0:
             reduction = ((old - new) / old) * 100
             if reduction > 0:
                 ax_left.annotate(f'-{reduction:.0f}%',
-                                xy=(x_gpu[i], max(old, new) + 0.1),
-                                ha='center', va='bottom', fontsize=14, color='red', fontweight='bold')
+                                xy=(x_gpu[i], old + 0.15),
+                                ha='center', va='bottom', fontsize=11, color='red', fontweight='bold')
 
     ax_left.set_axisbelow(True)
     ax_left.yaxis.grid(True, linestyle='--', alpha=0.7)
@@ -152,18 +152,18 @@ def main():
     ax_right.tick_params(axis='y', labelsize=16)
     ax_right.set_title('(b) CPU Map (PCIe)', fontsize=20, fontweight='bold')
 
-    # Add value labels on CPU bars
+    # Add value labels on CPU bars (needed to show ~33ms = 6000x difference)
     for i, bar in enumerate(bars_cpu):
         height = bar.get_height()
-        ax_right.annotate(f'{cpu_time[i]:.0f}μs',
+        ax_right.annotate(f'{cpu_time[i]/1000:.0f}ms',
                          xy=(bar.get_x() + bar.get_width() / 2, height),
                          xytext=(0, 2),
                          textcoords="offset points",
-                         ha='center', va='bottom', fontsize=14)
+                         ha='center', va='bottom', fontsize=12, fontweight='bold')
 
     ax_right.set_axisbelow(True)
     ax_right.yaxis.grid(True, linestyle='--', alpha=0.7)
-    ax_right.set_ylim(0, max(cpu_time) * 1.15)
+    ax_right.set_ylim(0, max(cpu_time) * 1.2)
 
     plt.tight_layout()
     output_path = script_dir / 'microbench_comparison.pdf'

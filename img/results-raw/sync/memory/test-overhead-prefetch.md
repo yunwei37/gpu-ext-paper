@@ -57,3 +57,30 @@ Results:
 
 # gbpf 
 
+ sudo /home/yunwei37/workspace/gpu/co-processor-demo/gpu_ext_policy/microbench/memory/uvmbench --kernel=gemm --mode=uvm --size_factor=1.1 --iterations=10
+UVM Microbenchmark - Tier 0 Synthetic Kernels
+==============================================
+GPU Memory: 32109 MB
+Size Factor: 1.1 (oversubscription)
+Total Working Set: 35320 MB
+Stride Bytes: 4096 (page-level)
+Kernel: gemm
+Mode: uvm
+Iterations: 10
+
+Initializing weights (34400 MB)...
+  100% complete
+GEMM config: dim=4096, hidden=11008, layers=200, tokens=10
+  Layer size: 172.0 MB, Total weights: 34400.0 MB
+
+Results:
+  Kernel: gemm
+  Mode: uvm
+  Working Set: 35320 MB
+  Bytes Accessed: 344000 MB
+  Median time: 37036.2 ms
+  Min time: 37025.8 ms
+  Max time: 37069.3 ms
+  Bandwidth: 9.73939 GB/s
+  Results written to: results.csv
+
