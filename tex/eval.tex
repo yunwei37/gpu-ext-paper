@@ -87,11 +87,10 @@ Native GPU allocation (no UVM) achieves the highest performance when data fits i
 \vspace{-1ex}
 \caption{GCN training epoch time vs graph size. Native GPU allocation (green) OOMs beyond memory capacity. Prefetching (blue) and eBPF scheduling (dashed lines) are complementary optimizations: eBPF accelerates page fault handling when prefetching is unavailable (red), while combined approaches (dashed blue) provide additional benefits under severe oversubscription.}
 \label{fig:gnn-epoch}
-\vspace{-2ex}
 \end{figure}
 
 \paragraph{Faiss Vector Search.}
-We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4096,Flat index, scaling from 20M (9.5GB, fits in memory) to 50M (24GB, near boundary) and 100M (48GB, exceeds 32GB GPU memory). IVF indexes have a two-level structure: frequently-accessed centroids and larger posting lists. For oversubscribed datasets, we apply a \sys policy that exploits this hierarchy: centroid pages are protected by LRU due to frequent access, while posting lists are prefetched sequentially rather than UVM's default address-tree-based policy; device-side hooks also can trigger prefetching of corresponding posting lists. For index construction, K-means iterations produce sequential scans that \sys detects and prefetches using stride prediction. \sys reduces build time by 21--29\%, with benefits scaling from 27\% to 40\% as memory pressure grows. For search workloads, \sys reduces latency by 10--16\% across different \texttt{nprobe} settings despite the random access patterns inherent in ANN search.
+We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4096,Flat index, scaling from 20M (9.5GB, fits in memory) to 50M (24GB, near boundary) and 100M (48GB, exceeds 32GB GPU memory). IVF indexes have a two-level structure: frequently-accessed centroids and larger posting lists. For oversubscribed datasets, we apply a \sys policy that exploits this hierarchy: centroid pages are protected by LRU due to frequent access, while posting lists are prefetched sequentially rather than UVM's default address-tree-based policy; device-side hooks can also trigger prefetching of corresponding posting lists. For index construction, K-means iterations produce sequential scans that \sys detects and prefetches using stride prediction. \sys reduces build time by 21--29\%, with benefits scaling from 27\% to 40\% as memory pressure grows. For search workloads, \sys reduces latency by 10--16\% across different \texttt{nprobe} settings despite the random access patterns inherent in ANN search.
 
 \begin{figure}
 \centering
@@ -99,7 +98,6 @@ We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4
 \vspace{-1ex}
 \caption{Faiss index build time and query throughput under oversubscription. \sys adaptive prefetch reduces build time by 21--29\% and query latency by 10--16\% compared to default UVM.}
 \label{fig:faiss-perf}
-\vspace{-2ex}
 \end{figure}
 
 Across these applications, programmable region-based placement and prefetch policies in \sys exploit workload structure (experts, KV-cache, graph structure, index layout) that existing UVM policies and framework-level offload mechanisms cannot leverage.
@@ -119,13 +117,12 @@ We evaluate \sys's BPF struct\_ops scheduling policies on \emph{compute-bound} m
 \vspace{-1ex}
 \caption{Multi-tenant GPU scheduling with \sys BPF struct\_ops policies on compute-bound workloads. \sys reduces latency-critical (LC) P99 launch latency by 95\% and variance by 99\% while maintaining best-effort (BE) throughput.}
 \label{fig:scheduler-latency}
-\vspace{-2ex}
 \end{figure}
 
 \paragraph{Multi-Tenant Memory Priority Differentiation.}
-We evaluate \sys's memory policies for priority differentiation on \emph{memory-bound} workloads under UVM oversubscription using HotSpot~\cite{che2009rodinia} (spatial locality), GEMM~\cite{grauer2012polybench} (compute-intensive), and K-Means~\cite{uvmbench} (sparse access). Each experiment runs two concurrent processes competing for GPU memory. Policy labels use priority values 0--100 (lower is higher priority): \texttt{Prefetch(lo,hi)} prefetches pages for processes in that priority range, while \texttt{Evict(lo,hi)} selects eviction victims accordingly. We compare against: (1) no-policy execution, (2) single-process runtime (Single 1$\times$), and (3) theoretical optimum (2$\times$Single 1$\times$).
+We evaluate \sys's memory policies for priority differentiation on \emph{memory-bound} workloads under UVM oversubscription using HotSpot~\cite{che2009rodinia} (spatial locality), GEMM~\cite{grauer2012polybench} (compute-intensive), and K-Means~\cite{uvmbench} (sparse access). Each experiment runs two concurrent processes competing for GPU memory. Policy labels use priority values 0--100 (lower value = higher priority): \texttt{Prefetch(lo,hi)} prefetches pages for processes in that range, while \texttt{Evict(lo,hi)} selects eviction victims accordingly. We compare against: (1) no-policy execution, (2) single-process runtime (Single 1$\times$), and (3) theoretical optimum (2$\times$Single 1$\times$).
 
-\Cref{fig:all-kernels-priority} shows that without policies, both processes degrade severely due to memory thrashing. With \sys memory priority policies, total completion time improves by 55--92\%, and high-priority processes complete 6--19\% faster. Critically, for these \emph{memory-bound} workloads, gpreempt-style scheduler timeslice policies are \emph{ineffective} (<1\% improvement) because the bottleneck is UVM page faults and PCIe bandwidth, not GPU compute time. This contrasts with compute-bound workloads where scheduler policies are effective. \sys's layered runtime allows operators to apply appropriate policies based on workload characteristics.
+\Cref{fig:all-kernels-priority} shows that without policies, both processes degrade severely due to memory thrashing. With \sys memory priority policies, total completion time improves by 55--92\%, and high-priority processes complete 6--19\% faster. Critically, for these \emph{memory-bound} workloads, GPREEMPT-style~\cite{fan2025gpreempt} scheduler timeslice policies are \emph{ineffective} (<1\% improvement) because the bottleneck is UVM page faults and PCIe bandwidth, not GPU compute time. This contrasts with compute-bound workloads where scheduler policies are effective. \sys's layered runtime allows applying appropriate policies based on workload characteristics.
 
 \begin{figure}
 \centering
