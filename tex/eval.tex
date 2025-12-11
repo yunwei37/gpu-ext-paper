@@ -5,7 +5,7 @@ We evaluate \sys using three key questions:
 
 \begin{itemize}[leftmargin=*]
   \item \textbf{RQ1 (Single-Tenant Management):} How much performance gain can \sys's programmable memory and scheduling policies provide on oversubscribed single-tenant workloads?
-  \item \textbf{RQ2 (Multi-Tenant Management):} Does \sys's cross-layer policy framework improve tail latency, throughput, and resource fairness compared to user-space and global policies in multi-tenant settings?
+  \item \textbf{RQ2 (Multi-Tenant Management):} Does \sys's cross-layer policy runtime improve tail latency, throughput, and resource fairness compared to user-space and global policies in multi-tenant settings?
   \item \textbf{RQ3 (Programmability \& Mechanism Overhead):} Is \sys sufficiently programmable to support diverse policies, and what is the overhead of its core mechanisms and observability capabilities?
 \end{itemize}
 
@@ -13,7 +13,7 @@ These questions cover single-tenant optimization (RQ1), multi-tenant coordinatio
 
 \subsection{Methodology and Setup}
 
-We evaluate \sys on two machines: Server~A with Intel Core Ultra~9 285K (24 cores), 128~GB DDR5 RAM, and NVIDIA RTX~5090 GPU; Server~B with dual Intel Gold 6138 (80 cores), 256~GB RAM, and NVIDIA P40 GPU. Unless otherwise specified, experiments run on Server~A, averaging 10 trials using geometric mean. We compare against default UVM, UVM with user-space hints, native GPU scheduler, and framework-managed offloading where applicable.  We use PyTorch (version 2.9.0) and vLLM (version 0.11.0) with custom allocator, llama.cpp (version 7101), and Faiss (version 1.13.0) with UVM build config for our evaluation. All tests with \sys policies require no application modifications.
+We evaluate \sys on two machines: Server~A with Intel Core Ultra~9 285K (24 cores), 128~GB DDR5 RAM, and NVIDIA RTX~5090 GPU; Server~B with dual Intel Gold 6138 (80 cores), 256~GB RAM, and NVIDIA P40 GPU. Unless otherwise specified, experiments run on Server~A, averaging 10 trials using geometric mean. We compare against default UVM, UVM with user-space hints, native GPU scheduler, and framework-managed offloading where applicable. We use PyTorch (version 2.9.0) and vLLM (version 0.11.0) with custom allocator, llama.cpp (version 7101), and Faiss (version 1.13.0) with UVM build config for our evaluation. All tests with \sys policies require no application modifications.
 
 
 \subsection{RQ1: Single-Tenant Memory and Scheduling Policies}
@@ -108,7 +108,7 @@ Across these applications, programmable region-based placement and prefetch poli
 
 \subsection{RQ2: Multi-Tenant Memory, Bandwidth, and Scheduling}
 
-We evaluate \sys's cross-layer policy framework on multi-tenant GPU workloads, comparing per-tenant policies against global policies and framework-managed approaches.
+We evaluate \sys's cross-layer policy runtime on multi-tenant GPU workloads, comparing per-tenant policies against global policies and framework-managed approaches.
 
 \subsubsection{Microbenchmarks}
 
@@ -129,7 +129,7 @@ We evaluate \sys's eBPF-based memory policies for priority differentiation on \e
 
 \Cref{fig:all-kernels-priority} demonstrates the importance of matching policy types to workload bottlenecks. Without policies, both processes degrade severely due to memory thrashing. With \sys memory priority policies, total completion time improves by 55--92\%, and high-priority processes complete 6--19\% faster, demonstrating priority enforcement.
 
-Critically, for these \emph{memory-bound} workloads, gpreempt-style scheduler timeslice policies are \emph{ineffective} (<1\% improvement), because the bottleneck is UVM page faults rather than GPU compute time. Memory policies directly control prefetch/eviction behavior, addressing the bottleneck. This contrasts with compute-bound workloads (shown above) where scheduler policies are effective. \sys's layered policy framework allows operators to apply appropriate policies based on workload characteristics.
+Critically, for these \emph{memory-bound} workloads, gpreempt-style scheduler timeslice policies are \emph{ineffective} (<1\% improvement), because the bottleneck is UVM page faults rather than GPU compute time. Memory policies directly control prefetch/eviction behavior, addressing the bottleneck. This contrasts with compute-bound workloads (shown above) where scheduler policies are effective. \sys's layered policy runtime allows operators to apply appropriate policies based on workload characteristics.
 
 \begin{figure}
 \centering
