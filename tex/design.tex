@@ -36,7 +36,7 @@ GPU policies require coordinated host–device resource management, which today 
 \centering
     \includegraphics[width=\columnwidth]{img/gpu-ebpf-arch.png}
 \vspace{-.5ex}
-\caption{\sys high-level design: unified eBPF runtime spanning CPU and GPU.\xiangyu{Given that this is the most important figure, should we add more descriptions into the caption? This can be a summary of Sec 4}}
+\caption{\sys architecture: cross-layer eBPF runtime spanning kernel driver and GPU device. The control plane deploys policies via (a) bpf syscall to verifier and driver hooks (b) GPU JIT after verification; (c) DBI injects trampolines into GPU kernels. Shared maps enable state coordination across layers.}
 \label{fig:system-design}
 \end{figure}
 
@@ -62,9 +62,7 @@ These program types coexist with existing kernel eBPF program types and have dif
 
 \sys treats memory placement as a programmable cache. It exposes four events (\emph{add}, \emph{access}, \emph{removal}, and \emph{prefetch}) and allows host and device policies to cooperate. \sys regions correspond to GPU hardware-managed units, such as 2MB physical UVM chunks or VA blocks, and finer-grained 4KB pages. This granularity balances fine-grained memory behavior against the overhead of per-page metadata, enabling efficient policy decisions aligned with underlying GPU hardware. Using the regions abstraction, \sys hides vendor-specific and hardware complexities. The host driver exports these events through a \texttt{struct\_ops} table. Handlers encode decisions through an enum field in the context and may reorder but never remove regions in the kernel‑maintained eviction list. The kernel enforces safety and correctness, including fallback FIFO eviction under pressure. Policies maintain their own metadata in maps and express placement and prefetch decisions through these handlers.
 
-Device policies can be triggered at given memory operations and receive a compact warp‑uniform context. Operations like prefetch can be performed on device and then trigger host-side prefetch handlers, enabling the host to combine cross‑kernel information with device‑side predictive logic. 
-\xiangyu{Should we build the connection between the paragraph above and the code shown below?}
-
+Device policies can be triggered at given memory operations and receive a compact warp‑uniform context. Operations like prefetch can be performed on device and then trigger host-side prefetch handlers, enabling the host to combine cross‑kernel information with device‑side predictive logic. The following interface illustrates the host and device memory policy hooks:
 
 \begin{minted}[
     highlightlines=false,

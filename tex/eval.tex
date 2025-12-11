@@ -222,7 +222,7 @@ eviction\_trace & 398 & Host & & \\
 \end{table}
 
 \paragraph{Device-side Runtime Overhead and Optimization.}
-We evaluate device-side \sys mechanisms using a vector-add microbenchmark (32 elements, 10K iterations) from cuda-sample\cite{cuda-sample} on RTX 5090. \Cref{fig:microbench}(a) compares \sys's SIMT-aware warp-level execution against an eGPU baseline~\cite{egpu} that injects eBPF bytecode without SIMT-specific optimizations. The eGPU-style approach incurs overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead by 60--80\% across operations. \Cref{fig:microbench}(b) shows CPU map access via PCIe is 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU.
+We evaluate device-side \sys mechanisms using a vector-add microbenchmark (32 elements, 10K iterations) from cuda-sample~\cite{cuda-sample} on RTX 5090. \Cref{fig:microbench}(a) compares \sys's SIMT-aware warp-level execution against an eGPU baseline~\cite{egpu} that injects eBPF bytecode without SIMT-specific optimizations. The eGPU-style approach incurs overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead by 60--80\% across operations. \Cref{fig:microbench}(b) shows CPU map access via PCIe is 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU.
 
 \begin{figure*}
 \centering
