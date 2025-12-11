@@ -9,7 +9,7 @@ We evaluate \sys using three research questions:
   \item \textbf{RQ3 (Programmability \& Mechanism Overhead):} Is \sys sufficiently programmable to support diverse policies, and what is the overhead of its core mechanisms and observability capabilities?
 \end{itemize}
 
-These questions cover single-tenant optimization (RQ1), multi-tenant coordination (RQ2), and system costs (RQ3), reflecting the key claims of \sys.
+These questions reflect the key claims of \sys by covering single-tenant optimization (RQ1), multi-tenant coordination (RQ2), and system costs (RQ3).
 
 \subsection{Methodology and Setup}
 
@@ -30,15 +30,6 @@ We apply a \sys-based block scheduler driven by the GPU-side interface (Section~
 
 \Cref{fig:clc-policies} compares these policies across two GEMM workload regimes. Under moderate imbalance (\Cref{fig:clc-policies}a), both Greedy and LatencyBudget reduce latency by $\sim$11\%, as always-steal scheduling reclaims wasted tail time. Under heavy-tail workloads where 10\% of blocks perform 100--200$\times$ more work (\Cref{fig:clc-policies}b), Greedy increases latency by 20\% due to contention on heavy blocks. LatencyBudget, which caps per-block stealing time, matches fixed-work baseline. This highlights \sys's programmability: different workloads require different scheduling strategies.
 
-\begin{figure}
-\centering
-\includegraphics[width=\columnwidth]{img/results-raw/clc_policies_comparison.pdf}
-\vspace{-1ex}
-\caption{\sys block-scheduling policies across workload regimes. No single policy dominates: always-steal works well under moderate imbalance (a) but becomes pathological under clustered heavy tails (b), where LatencyBudget matches baseline performance.}
-\label{fig:clc-policies}
-\vspace{-2ex}
-\end{figure}
-
 \subsubsection{Case Studies}
 
 \paragraph{Expert Offloading (llama.cpp GPT-OSS-120B).}
@@ -46,6 +37,14 @@ We evaluate \sys on GPT-OSS-120B MXFP4 MoE (59~GiB, 116.83B parameters) in llama
 \Cref{fig:llama-expert-offload} shows prefill and decode throughput. For decode (memory-bound), \sys achieves \textbf{4.8$\times$ speedup} over framework offloading. For prefill (compute-bound), framework offloading achieves 13\% higher throughput, but decode dominates end-to-end latency, so the 4.8$\times$ decode improvement outweighs the 13\% prefill overhead. Static hints can affect default LRU algorithms to pin most of the memory on GPU to improve performance, but still falls behind our policy, confirming that UVM requires new algorithms. 
 
 The eBPF policy exploits two observations: (1) prefill exhibits clear stride patterns while decode shows temporal locality with less regular but still predictable access progression; (2) page-level access frequency is non-uniform within each expert. Thus, \sys detects patterns from fault addresses and uses stride prefetch. For eviction, \sys uses LFU rather than LRU to leverage temporal locality even within the same expert. This relaxes the assumption in existing MoE frameworks that experts are migrated as atomic units, enabling finer-grained compute transfer overlap at page granularity.
+
+\begin{figure}
+\centering
+\includegraphics[width=0.9\columnwidth]{img/results-raw/clc_policies_comparison.pdf}
+\caption{\sys block-scheduling policies across workload regimes. No single policy dominates: always-steal works well under moderate imbalance (a) but becomes pathological under clustered heavy tails (b), where LatencyBudget matches baseline performance.}
+\label{fig:clc-policies}
+\vspace{-2ex}
+\end{figure}
 
 % \xiangyu{Are those hints easy to find in many scenarios? Maybe we should clarify it. Otherwise, it seems that \sys{} uses some tricks to win the competition.}
 
@@ -120,7 +119,7 @@ We evaluate \sys's BPF struct\_ops scheduling policies on \emph{compute-bound} m
 \end{figure}
 
 \paragraph{Multi-Tenant Memory Priority Differentiation.}
-We evaluate \sys's memory policies for priority differentiation on \emph{memory-bound} workloads under UVM oversubscription using HotSpot~\cite{che2009rodinia} (spatial locality), GEMM~\cite{grauer2012polybench} (compute-intensive), and K-Means~\cite{uvmbench} (sparse access). Each experiment runs two concurrent processes competing for GPU memory. Policy labels use priority values 0--100 (lower value = higher priority): \texttt{Prefetch(lo,hi)} prefetches pages for processes in that range, while \texttt{Evict(lo,hi)} selects eviction victims accordingly. We compare against: (1) no-policy execution, (2) single-process runtime (Single 1$\times$), and (3) theoretical optimum (2$\times$Single 1$\times$).
+We evaluate \sys's memory policies for priority differentiation on \emph{memory-bound} workloads under UVM oversubscription using HotSpot~\cite{che2009rodinia} (spatial locality), GEMM~\cite{grauer2012auto} (compute-intensive), and K-Means~\cite{gu2020uvmbench} (sparse access). Each experiment runs two concurrent processes competing for GPU memory. Policy labels use priority values 0--100 (lower value = higher priority): \texttt{Prefetch(lo,hi)} prefetches pages for processes in that range, while \texttt{Evict(lo,hi)} selects eviction victims accordingly. We compare against: (1) no-policy execution, (2) single-process runtime (Single 1$\times$), and (3) theoretical optimum (2$\times$Single 1$\times$).
 
 \Cref{fig:all-kernels-priority} shows that without policies, both processes degrade severely due to memory thrashing. With \sys memory priority policies, total completion time improves by 55--92\%, and high-priority processes complete 6--19\% faster. Critically, for these \emph{memory-bound} workloads, GPREEMPT-style~\cite{fan2025gpreempt} scheduler timeslice policies are \emph{ineffective} (<1\% improvement) because the bottleneck is UVM page faults and PCIe bandwidth, not GPU compute time. This contrasts with compute-bound workloads where scheduler policies are effective. \sys's layered runtime allows applying appropriate policies based on workload characteristics.
 
@@ -193,7 +192,7 @@ SelectiveBlocks (CLC) & Scheduling Block & Device & 16 \\
 
 \subsubsection{Host Runtime Overhead}
 
-We quantify the overhead of the \sys driver runtime independent of policy logic using GEMM~\cite{grauer2012polybench} and HotSpot~\cite{che2009rodinia} (1.1$\times$ oversubscription, 35~GB working set) on RTX 5090. With hooks enabled but no policy attached, the overhead is less than 0.2\%. 
+We quantify the overhead of the \sys driver runtime independent of policy logic using GEMM~\cite{grauer2012auto} and HotSpot~\cite{che2009rodinia} (1.1$\times$ oversubscription, 35~GB working set) on RTX 5090. With hooks enabled but no policy attached, the overhead is less than 0.2\%. 
 
 \subsubsection{Low-overhead GPU Observability}
 
@@ -222,4 +221,4 @@ launchlate & 347 & Host+Device & 14\% & 93\% \\
 \end{table}
 
 \paragraph{Device-side Runtime Overhead and Optimization.}
-We evaluate device-side \sys mechanisms using a vector-add microbenchmark (32 elements, 10K iterations) from cuda-sample~\cite{cuda-sample} on RTX 5090. \Cref{fig:microbench}(a) compares \sys's SIMT-aware warp-level execution against an eGPU baseline~\cite{egpu} that injects eBPF bytecode without SIMT-specific optimizations. The eGPU-style approach incurs overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead by 60--80\% across operations. \Cref{fig:microbench}(b) shows CPU map access via PCIe is 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU. We do not compare policy-level performance against eGPU or Neutrino because they limited to read-only observability (\S\ref{sec:background}).
+We evaluate device-side \sys mechanisms using a vector-add microbenchmark (32 elements, 10K iterations) from cuda-sample~\cite{nvidia_cuda_samples} on RTX 5090. \Cref{fig:microbench}(a) compares \sys's SIMT-aware warp-level execution against an eGPU baseline~\cite{egpu} that injects eBPF bytecode without SIMT-specific optimizations. The eGPU-style approach incurs overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead by 60--80\% across operations. \Cref{fig:microbench}(b) shows CPU map access via PCIe is 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU. We do not compare policy-level performance against eGPU or Neutrino because they limited to read-only observability (\S\ref{sec:background}).

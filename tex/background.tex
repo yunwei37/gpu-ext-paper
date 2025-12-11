@@ -26,7 +26,7 @@ Modern GPU systems run diverse workloads with conflicting resource demands. Gene
 
 \subsection{GPU Systems Architecture}
 
-Modern GPU software stacks consist of three major abstraction layers:
+Modern GPU software stacks consist of three major layers:
 
 % \begin{figure}[t]
 %     \centering
@@ -76,6 +76,7 @@ Second, user-space runtimes lack global visibility and coordination across multi
 Third, user-space frameworks lack privileged access to low-level driver mechanisms, leaving policies constrained to coarse-grained kernel-launch boundaries. This precludes precise preemption for latency-sensitive tasks and prevents fine-grained compute–transfer overlap. Moreover, they cannot execute policy logic on latency-critical paths (e.g., page-fault handlers), nor exploit GPU-side warp-level or barrier-level access patterns.
 
 \paragraph{Binary Instrumentation and Profiling Tools on Device}
+\label{sec:background}
 Tools such as NVBit~\cite{villa2019nvbit} and Neutrino~\cite{neutrino} inject logic directly into GPU binaries. NVBit supports dynamic SASS-level instrumentation, while Neutrino provides instruction-level profiling via programmable assembly-layer probes with an eBPF-like interface. Despite high kernel visibility, these tools face three limitations. First, they lack safety guarantees, as injected logic can cause crashes or deadlocks. Second, they target offline profiling rather than online policy enforcement, operating in read-only modes that cannot control memory placement or thread scheduling. Third, lacking host-side integration, they cannot coordinate policies across processes. Additionally, assembly-level instrumentation restricts expressiveness and portability~\cite{neutrino}. Recent approaches like eGPU~\cite{egpu} extend eBPF to GPU instrumentation but remain limited to observability with prohibitive overhead (see \S\ref{sec:eval}).
 
 \paragraph{Host-Based Kernel Programmability (CPU eBPF)}
