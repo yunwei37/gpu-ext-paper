@@ -4,12 +4,12 @@
 We evaluate \sys using three key questions:
 
 \begin{itemize}[leftmargin=*]
-  \item \textbf{RQ1 (Single-Tenant Memory/Scheduling):} How much performance gain can \sys's programmable memory and scheduling policies provide on oversubscribed single-tenant workloads?
+  \item \textbf{RQ1 (Single-Tenant Management):} How much performance gain can \sys's programmable memory and scheduling policies provide on oversubscribed single-tenant workloads?
   \item \textbf{RQ2 (Multi-Tenant Management):} Does \sys's cross-layer policy framework improve tail latency, throughput, and resource fairness compared to user-space and global policies in multi-tenant settings?
   \item \textbf{RQ3 (Programmability \& Mechanism Overhead):} Is \sys sufficiently programmable to support diverse policies, and what is the overhead of its core mechanisms and observability capabilities?
 \end{itemize}
 
-\xiangyu{We choose them because ...? Talk about reasons to select these questions.}
+These questions cover single-tenant optimization (RQ1), multi-tenant coordination (RQ2), and system costs (RQ3), reflecting the key claims of \sys.
 
 \subsection{Methodology and Setup}
 
@@ -142,7 +142,8 @@ Critically, for these \emph{memory-bound} workloads, gpreempt-style scheduler ti
 
 \subsubsection{Case Studies}
 
-\xiangyu{Use one sentence to highlight the relationship between 6.3.2 and 6.3.1? Does 6.3.2 include typical examples of 6.3.1?}
+We apply the policy primitives from the microbenchmarks to realistic multi-tenant scenarios.
+
 \paragraph{Two-Tenant: High-Priority LLM Inference + Background Training.}
 We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp} inference service (LC workload) serving 100 ShareGPT prompts at 0.2 RPS, and T2 is a background PyTorch GNN training job (BE workload) with 8M nodes requiring 36GB peak memory (oversubscribed). We compare default UVM (driver FIFO/LRU) against \sys per-tenant memory policies where the LC tenant receives prefetch priority and the BE tenant yields bandwidth during inference.
 
