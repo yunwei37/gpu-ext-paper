@@ -5,8 +5,8 @@
 \paragraph{Principle 1: OS-level, Transparent and Dynamically Programmable Interface.}
 GPU resource management policies should reside at an OS-level interface, rather than within vendor drivers or application-specific runtimes. Policies must be dynamically separable from mechanisms, runtime-updateable without application restarts, and enforceable across unmodified GPU workloads.
 
-\paragraph{Principle 2: Unified host–device policy abstraction.}
-Host and GPU devices should not be managed as separate execution domains. Instead, the system should provide a unified programming abstraction and shared control plane across CPU and GPU, allowing consistent, cross-layer policy decisions (e.g., memory placement, scheduling).
+\paragraph{Principle 2: Cross-layer host–device policy abstraction.}
+Host and GPU devices should not be managed as separate execution domains. Instead, the system should provide a unified programming abstraction and shared control plane across CPU and GPU, allowing consistent policy decisions (e.g., memory placement, scheduling).
 
 \paragraph{Principle 3: SIMT-aware static safety and efficiency.}
 Device-side policies must align with GPU SIMT execution semantics. The system should perform static, load-time verification and optimization, ensuring warp-uniform control flow, bounded resource usage, memory safety, and bounded overhead.
