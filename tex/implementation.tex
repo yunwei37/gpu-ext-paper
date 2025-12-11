@@ -4,7 +4,7 @@
 
 \subsection{Components Overview}
 
-We implemented \sys on Linux 6.15, extending the kernel with a standalone file ($\sim$1 KLOC) that handles hook registration and verifier extensions. Additionally, we integrated instrumentation ($\sim$100 LOC) into NVIDIA's open GPU kernel modules to expose memory management and scheduling decision points (\S\ref{sec:impl-host}). Our userspace loader and JIT infrastructure ($\sim$10 KLOC) builds upon bpftime's framework, while an LLVM-based backend ($\sim$1 KLOC) translates the restricted \sys eBPF instruction subset into GPU device code (PTX).\xiangyu{where should we refer to Sec 5.3?}
+We implemented \sys on Linux 6.15, extending the kernel with a standalone file ($\sim$1 KLOC) that handles hook registration and verifier extensions. Additionally, we integrated lightweight instrumentation ($\sim$100 LOC) into NVIDIA's open GPU kernel modules to expose memory management and scheduling decision points (\S\ref{sec:impl-host}). Our userspace loader and JIT infrastructure ($\sim$10 KLOC) builds upon bpftime's framework, while an LLVM-based backend ($\sim$1 KLOC) translates the restricted \sys eBPF instruction subset into GPU device code (PTX).\xiangyu{where should we refer to Sec 5.3?}
 
 \subsection{Host-side Integration}
 \label{sec:impl-host}
