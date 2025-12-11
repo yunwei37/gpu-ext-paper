@@ -44,7 +44,7 @@ We apply a \sys-based block scheduler driven by the GPU-side interface (Section~
 \paragraph{Expert Offloading (llama.cpp GPT-OSS-120B).}
 We evaluate \sys on GPT-OSS-120B MXFP4 MoE (59~GiB, 116.83B parameters) in llama.cpp on RTX 5090 (32GB). The model requires 1.84$\times$ oversubscription, necessitating CPU-GPU memory tiering. We compare five configurations: framework-managed CPU offloading (\texttt{ncmoe=32/64}), default UVM, UVM with user-space hints (\texttt{cudaMemAdvise}), and \sys with eBPF-based expert prefetching.
 
-\Cref{fig:llama-expert-offload} shows prefill and decode throughput. For decode (memory-bound), \sys achieves \textbf{4.8$\times$ speedup} over framework offloading. The eBPF policy exploits two observations: (1) prefill exhibits clear stride patterns while decode shows temporal locality with less regular but predictable access progression; (2) page-level access frequency is non-uniform within each expert. \sys detects stride patterns from fault address sequences during prefill and prefetches ahead; for decode, it leverages temporal locality by retaining recently-accessed pages. For eviction, \sys uses LFU rather than LRU, preserving frequently-accessed pages while evicting cold pages, even within the same expert. This breaks the assumption in existing MoE frameworks that experts must be migrated as atomic units, enabling finer-grained memory tiering at page granularity. Framework offloading incurs per-token transfer overhead during decoding. For prefill (compute-bound), framework offloading achieves 13\% higher throughput, but decode dominates end-to-end latency, so the 4.8$\times$ decode improvement outweighs the 13\% prefill overhead. Static hints degrade performance, confirming that UVM requires dynamic prefetching.
+\Cref{fig:llama-expert-offload} shows prefill and decode throughput. For decode (memory-bound), \sys achieves \textbf{4.8$\times$ speedup} over framework offloading. The eBPF policy exploits two observations: (1) prefill exhibits clear stride patterns while decode shows temporal locality with less regular but predictable access progression; (2) page-level access frequency is non-uniform within each expert. \sys detects stride patterns from fault address sequences during prefill and prefetches ahead; for decode, it leverages temporal locality by retaining recently-accessed pages. For eviction, \sys uses LFU rather than LRU, preserving frequently-accessed pages while evicting cold pages, even within the same expert. This relaxes the assumption in existing MoE frameworks that experts must be migrated as atomic units, enabling finer-grained memory tiering at page granularity. Framework offloading incurs per-token transfer overhead during decoding. For prefill (compute-bound), framework offloading achieves 13\% higher throughput, but decode dominates end-to-end latency, so the 4.8$\times$ decode improvement outweighs the 13\% prefill overhead. Static hints degrade performance, confirming that UVM requires dynamic prefetching.
 % \xiangyu{Are those hints easy to find in many scenarios? Maybe we should clarify it. Otherwise, it seems that \sys{} uses some tricks to win the competition.}
 
 This policy is expressed as eBPF handlers in the driver plus device-side handlers that mark expert regions as ``will-use soon'' or ``cold'' without modifying the application.
@@ -159,6 +159,13 @@ We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp
 
 Overall, \sys's per-tenant policies provide clear tail-latency and fairness benefits in multi-tenant workloads, achieving improvements for high-priority tenants while also benefiting background jobs through reduced memory thrashing.
 
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{img/results-raw/runtime/microbench_comparison.pdf}
+\caption{Device-side microbenchmark overhead. (a) GPU-side operation overhead comparing eGPU-style naive injection vs \sys's SIMT-aware execution. (b) eGPU CPU map access latency via PCIe, motivating \sys's hierarchical map design.}
+\label{fig:microbench}
+\end{figure*}
+
 \subsection{RQ3: Programmability and Mechanism Overhead}
 
 We evaluate \sys's programmability by examining policy complexity and reuse, and quantify the efficiency of its core mechanisms and observability capabilities.
@@ -197,7 +204,7 @@ We quantify the overhead of the \sys driver runtime independent of policy logic 
 
 \subsubsection{Low-overhead GPU Observability}
 
-We evaluate device-side observability tools built on \sys (\Cref{tab:obs-overhead}) on NVIDIA P40 GPU using llama.cpp prefill (Llama 1B, IO3, sequence-mixed). Tools include \texttt{kernelretsnoop} for per-thread block finish timestamp recording, \texttt{threadhist} for load imbalance detection, and \texttt{launchlate} for kernel launch latency measurement. Overhead is measured as token/s degradation during prefill. These tools show significantly lower overhead than NVBit~\cite{nvbit} (3--14\% vs 85--87\%) due to \sys's warp-level execution model.
+We evaluate device-side observability tools built on \sys (\Cref{tab:obs-overhead}) on NVIDIA P40 GPU using llama.cpp prefill (Llama 1B, IO3, sequence-mixed). Tools include \texttt{kernelretsnoop} for per-thread block finish timestamp recording, \texttt{threadhist} for load imbalance detection, and \texttt{launchlate} for kernel launch latency measurement. Overhead is measured as token/s degradation during prefill. These tools show significantly lower overhead than NVBit~\cite{nvbit} (3--14\% vs 85--87\%). NVBit instruments every SASS instruction on the critical path with per-thread execution semantics, causing divergent control flow and uncoalesced memory accesses that create substantial memory pressure. In contrast, \sys's warp-uniform execution model ensures all threads in a warp execute instrumentation code coherently with coalesced memory operations.
 
 % \texttt{gpu\_sched\_trace}, \texttt{prefetch\_trace}, and \texttt{eviction\_trace} provide host-side observability for scheduling and memory management policies (\Cref{tab:obs-overhead}).
 \begin{table}[t]
@@ -223,10 +230,3 @@ launchlate & 347 & Host+Device & 14\% & 93\% \\
 
 \paragraph{Device-side Runtime Overhead and Optimization.}
 We evaluate device-side \sys mechanisms using a vector-add microbenchmark (32 elements, 10K iterations) from cuda-sample~\cite{cuda-sample} on RTX 5090. \Cref{fig:microbench}(a) compares \sys's SIMT-aware warp-level execution against an eGPU baseline~\cite{egpu} that injects eBPF bytecode without SIMT-specific optimizations. The eGPU-style approach incurs overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead by 60--80\% across operations. \Cref{fig:microbench}(b) shows CPU map access via PCIe is 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU.
-
-\begin{figure*}[!t]
-\centering
-\includegraphics[width=\textwidth]{img/results-raw/runtime/microbench_comparison.pdf}
-\caption{Device-side microbenchmark overhead. (a) GPU-side operation overhead comparing eGPU-style naive injection vs \sys's SIMT-aware execution. (b) eGPU CPU map access latency via PCIe, motivating \sys's hierarchical map design.}
-\label{fig:microbench}
-\end{figure*}
