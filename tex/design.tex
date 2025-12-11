@@ -62,7 +62,7 @@ These program types coexist with existing kernel eBPF program types and have dif
 
 \sys treats memory placement as a programmable cache. It exposes four events (\emph{add}, \emph{access}, \emph{removal}, and \emph{prefetch}) and allows host and device policies to cooperate. \sys regions correspond to GPU hardware-managed units, such as 2MB physical UVM chunks or VA blocks, and finer-grained 4KB pages. This granularity balances policy precision against metadata overhead. Using the regions abstraction, \sys hides vendor-specific and hardware complexities. The host driver exports these events through a \texttt{struct\_ops} table. Handlers encode decisions through an enum field in the context and may reorder but never remove regions in the kernel‑maintained eviction list. The kernel enforces safety and correctness, including fallback FIFO eviction under pressure. Policies maintain their own metadata in maps and express placement and prefetch decisions through these handlers.
 
-Device policies can be triggered at given memory operations and receive a compact warp‑uniform context. Operations like prefetch can be performed on device and then trigger host-side prefetch handlers, enabling the host to combine cross‑kernel information with device‑side predictive logic. The following interface illustrates the host and device memory policy hooks:
+Device policies can be triggered at given memory operations and receive a compact warp‑uniform context. Operations like prefetch can be performed on device and then trigger host-side prefetch handlers, enabling the host to combine driver information with device‑side predictive logic. The following interface illustrates the host and device memory policy hooks:
 
 \begin{minted}[
     highlightlines=false,
@@ -81,7 +81,7 @@ struct gdrv_mem_ops {
   int (*region_access)(gdrv_mem_access_ctx_t *ctx);
   // Region about to leave device-resident working set
   int (*region_remove)(gdrv_mem_remove_ctx_t *ctx);
-  // Safe points (kernel launches, faults) for prefetch
+  // Safe points (e.g. faults) for prefetch
   int (*prefetch)(gdrv_mem_prefetch_ctx_t *ctx);
 };
 
@@ -95,7 +95,7 @@ bool gdrv_mem_list_insert_tail(gdrv_mem_list_t *list,
 struct gdev_mem_ops {
     // Warp observed memory access;
     void (*access)(gdev_mem_access_ctx_t *ctx);
-    // Kernel provides
+    // GPU kernel fence point
     void (*fence)(gdev_mem_fence_ctx_t *ctx);
 };
 
