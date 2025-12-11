@@ -199,8 +199,9 @@ We first quantify the overhead of the \sys driver runtime itself, independent of
 
 \subsubsection{Low-overhead GPU Observability}
 
-We evaluate observability tools built on \sys across diverse workloads. Representative tools include \texttt{kernelretsnoop} for per-thread block finish timestamp recording, \texttt{threadhist} for load imbalance detection, and \texttt{launchlate} for kernel launch latency measurement. Additional tools including \texttt{threadscheduling}, \texttt{gpu\_sched\_trace}, \texttt{prefetch\_trace}, and \texttt{eviction\_trace} provide host-side observability for scheduling and memory management policies (\Cref{tab:obs-overhead}). \yusheng{TODO: Complete table data or remove incomplete rows (TBD entries).} The device-side \sys tools show significantly lower overhead than NVBit~\cite{nvbit}.
+We evaluate device-side observability tools built on \sys (\Cref{tab:obs-overhead}) on NVIDIA P40 GPU using llama.cpp prefill (Llama 1B, IO3, sequence-mixed). Tools include \texttt{kernelretsnoop} for per-thread block finish timestamp recording, \texttt{threadhist} for load imbalance detection, and \texttt{launchlate} for kernel launch latency measurement. Overhead is measured as token/s degradation during prefill. These tools show significantly lower overhead than NVBit~\cite{nvbit} (3--14\% vs 85--87\%) due to \sys's warp-level execution model.
 
+% \texttt{gpu\_sched\_trace}, \texttt{prefetch\_trace}, and \texttt{eviction\_trace} provide host-side observability for scheduling and memory management policies (\Cref{tab:obs-overhead}).
 \begin{table}[t]
 \centering
 \small
@@ -208,17 +209,17 @@ We evaluate observability tools built on \sys across diverse workloads. Represen
 \toprule
 \textbf{Tool} & \textbf{LOC} & \textbf{Domain} & \textbf{\sys} & \textbf{NVBit} \\
 \midrule
-kernelretsnoop & 153 & Device & 8\% & 85\% & \\
-threadhist & TBD & Device & 3\% & 87\% \\
-launchlate & 347 & Host+Device & 14\% & \\
-mem\_trace & 110 & Device & & \\
-threadscheduling & 402 & Device & & \\
-gpu\_sched\_trace & 586 & Host & & \\
-prefetch\_trace & 430 & Host & & \\
-eviction\_trace & 398 & Host & & \\
+kernelretsnoop & 153 & Device & 8\% & 85\% \\
+threadhist & 89 & Device & 3\% & 87\% \\
+launchlate & 347 & Host+Device & 14\% & --- \\
+% mem\_trace & 110 & Device & 5\% & --- \\
+% threadscheduling & 402 & Device & 7\% & --- \\
+% gpu\_sched\_trace & 586 & Host (kprobe) & <1\% & --- \\
+% prefetch\_trace & 430 & Host (kprobe) & <1\% & --- \\
+% eviction\_trace & 398 & Host (kprobe) & <1\% & --- \\
 \bottomrule
 \end{tabularx}
-\caption{\sys-based observability tools. Overhead measurements conducted on NVIDIA P40 GPU.}
+\caption{\sys device-side observability tools and overhead comparison with NVBit.}
 \label{tab:obs-overhead}
 \end{table}
 
