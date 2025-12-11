@@ -54,9 +54,9 @@ We implement \sys{} on Linux by extending the NVIDIA open GPU kernel modules~\ci
 Our contributions can be summarized as follows:
 
 \begin{itemize}[leftmargin=*,itemsep=0pt]
-  \item We design an extensible OS policy interface for GPU for memory, scheduling, and observability.
+  \item We design an extensible OS policy interface for GPU memory, scheduling, and observability.
 
-  \item We implement \sys, an eBPF runtime enabling verified policy execution across host driver and GPU device.
+  \item We implement \sys, a cross-layer eBPF runtime with SIMT-aware verification spanning host driver and GPU device.
 
-  \item We show \sys policies improve performance and reduce tail latency across inference, training, and search workloads.
+  \item We show \sys policies improve throughput and reduce tail latency across inference, training, and search workloads.
 \end{itemize}

@@ -106,23 +106,6 @@ struct gdev_mem_ops {
  int gdev_mem_prefetch(gmem_region_t* r);
 \end{minted}
 
-% map(address)
-
-% // hostside
-% prefetch_callback() {
-% // check logic
-%     prefetch region(device,address)
-% }
-
-% //device side
-% SEC(gdev_entry/xxx)
-% ebpf_gpu(int expert_id) {
-%     gdev_mem_use_hint（address a, b)
-% }
-% // Pin memory on CPU or GPU
-%  int gdev_mem_pin_hint(gmem_region_t* r, int dev_id);
-% int gdev_mem_use_hint(gmem_region_t* r, int dev_id);
-
 \subsubsection{Scheduling Interface}
 \label{sec:design-sched}
 
