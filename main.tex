@@ -10,7 +10,7 @@
 \usepackage{siunitx}
 \usepackage{enumitem}
 \usepackage{listings}
-\usepackage{minted}
+% \usepackage{minted}  % Disabled for arXiv (requires shell-escape)
 \usepackage{tikz}
 \usetikzlibrary{shapes,arrows,positioning,fit}
 \usepackage{subcaption}
@@ -27,20 +27,37 @@
 
 \usepackage{booktabs}
 
-% === minted 设置 ===
-\newlength{\mintednumbersep}
-\AtBeginDocument{%
-  \sbox0{\tiny00}%
-  \setlength\mintednumbersep{\parindent}%
-  \addtolength\mintednumbersep{-\wd0}%
-}
-% Set width of line numbers to align code and line numbers
+% === minted 设置 (disabled for arXiv) ===
+% \newlength{\mintednumbersep}
+% \AtBeginDocument{%
+%   \sbox0{\tiny00}%
+%   \setlength\mintednumbersep{\parindent}%
+%   \addtolength\mintednumbersep{-\wd0}%
+% }
+% \setminted{xleftmargin=\parindent}
+% \setminted{numbersep=\mintednumbersep}
+% \setminted{mathescape}
+% \setminted{linenos}
+% \setminted{fontsize=\small}
 
-\setminted{xleftmargin=\parindent}
-\setminted{numbersep=\mintednumbersep}
-\setminted{mathescape}
-\setminted{linenos}
-\setminted{fontsize=\small}
+% === listings settings (for arXiv compatibility) ===
+\lstset{
+  language=C,
+  basicstyle=\footnotesize\ttfamily,
+  keywordstyle=\bfseries,
+  commentstyle=\itshape,
+  numbers=left,
+  numberstyle=\tiny,
+  numbersep=8pt,
+  xleftmargin=\parindent,
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=2,
+  showstringspaces=false,
+  frame=none,
+  aboveskip=0.5\baselineskip,
+  belowskip=0.5\baselineskip
+}
 
 % === Your commands ===
 \newcommand*\circled[1]{\tikz[baseline=(char.base)]{

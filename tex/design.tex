@@ -64,14 +64,7 @@ These program types coexist with existing kernel eBPF program types and have dif
 
 Device policies can be triggered at given memory operations and receive a compact warp‑uniform context. Operations like prefetch can be performed on device and then trigger host-side prefetch handlers, enabling the host to combine driver information with device‑side predictive logic. The following interface illustrates the host and device memory policy hooks:
 
-\begin{minted}[
-    highlightlines=false,
-    fontsize=\footnotesize,
-    breaklines=true,        % 开启自动换行
-    breaksymbolleft=,       % 【关键】去除换行处的箭头符号
-    breakindent=1em,        % 换行后缩进 1em，视觉上区分
-    baselinestretch=0.9
-]{c}
+\begin{lstlisting}
 // Host-side policy handlers for GPU memory management
 struct gpu_mem_ops {
   // Region created or eligible for device placement
@@ -102,7 +95,7 @@ struct gdev_mem_ops {
 // Device-side helpers
 // Request prefetch, triggers handler in host driver
  int gdev_mem_prefetch(gmem_region_t* r);
-\end{minted}
+\end{lstlisting}
 
 \subsubsection{Scheduling Interface}
 \label{sec:design-sched}
@@ -111,7 +104,7 @@ struct gdev_mem_ops {
 
 Within the GPU, \sys provides a work‑stealing thread‑block scheduler. GPU kernels expose their logical work units; persistent worker blocks select and process units while device‑side eBPF handlers steer scheduling decisions via \texttt{gdev\_block\_ctx}. The verifier ensures that scheduling decisions respect GPU kernel invariants (e.g., selecting only local work units). \sys can inject this scheduler via binary rewriting or allow developers to integrate it.
 
-\begin{minted}[highlightlines=false,fontsize=\footnotesize]{c}
+\begin{lstlisting}
 // Host-side policy handlers for GPU hardware
 // queue scheduling
 struct gpu_sched_ops {
@@ -131,15 +124,15 @@ struct gdev_sched_ops {
   // Worker block starts/exits new work unit
   void (*enter)(gdev_block_ctx_t *ctx);
   void (*exit)(gdev_block_ctx_t *ctx);
-  
+
   // Device function starts/ends
   void (*probe)(gdev_block_ctx_t *ctx);
   void (*retprobe)(gdev_block_ctx_t *ctx);
-  
+
   // Return whether to steal work (TB scheduler)
   bool (*should_try_steal)(gdev_block_ctx_t *ctx);
 };
-\end{minted}
+\end{lstlisting}
 
 \subsection{Runtime Verification and Optimizations}
 \label{sec:verification}
