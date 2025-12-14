@@ -49,7 +49,7 @@ Policy authors use standard eBPF tooling (e.g., \texttt{clang/libbpf}, \texttt{b
 
 \paragraph{Host Driver and Device Runtime.}
 \sys provides a unified runtime across host driver and GPU device contexts, managing verification, compilation, and map placement. It employs a SIMT-aware verifier (\S\ref{sec:verification}) that extends standard eBPF checks to verify warp-uniformity, SIMT control flow, and GPU synchronization constraints. Verified programs are JIT-compiled into native host code or GPU-compatible instructions (e.g., PTX). The runtime manages hierarchical logical eBPF map abstractions whose backing storage is automatically partitioned and replicated across host and device with consistency.
-Policy execution occurs at structured hook points defined in GPU drivers and device. On the host, \sysdriver exposes \texttt{struct\_ops}-style hooks (e.g., region add/eviction, GPU kernel scheduling). Host policies return concise policy decisions enforced via trusted kfuncs. On the GPU device, \sys injects trampolines at hook points and invokes device-side handlers at warp granularity. Device handlers update cross-layer maps with performance signals and make control decisions (e.g., prefetch, block-level scheduling) via trusted helpers that the runtime enforces.
+Policy execution occurs at structured hook points defined in GPU drivers and device. On the host, \sysdriver exposes \texttt{struct\_ops}-style hooks (e.g., region activate/eviction, GPU kernel scheduling). Host policies return concise policy decisions enforced via trusted kfuncs. On the GPU device, \sys injects trampolines at hook points and invokes device-side handlers at warp granularity. Device handlers update cross-layer maps with performance signals and make control decisions (e.g., prefetch, block-level scheduling) via trusted helpers that the runtime enforces.
 
 \subsection{\sys{} Policy Interfaces}
 \label{sec:design-interfaces}
@@ -60,7 +60,7 @@ These program types coexist with existing kernel eBPF program types and have dif
 \subsubsection{Memory Interface}
 \label{sec:design-mem}
 
-\sys treats memory placement as a programmable cache. It exposes four events (\emph{add}, \emph{access}, \emph{removal}, and \emph{prefetch}) and allows host and device policies to cooperate. \sys regions correspond to GPU hardware-managed units, such as 2MB physical UVM chunks or VA blocks, and finer-grained 4KB pages. This granularity balances policy precision against metadata overhead. Using the regions abstraction, \sys hides vendor-specific and hardware complexities. The host driver exports these events through a \texttt{struct\_ops} table. Handlers encode decisions through an enum field in the context and may reorder but never remove regions in the kernel‑maintained eviction list. The kernel enforces safety and correctness, including fallback FIFO eviction under pressure. Policies maintain their own metadata in maps and express placement and prefetch decisions through these handlers.
+\sys treats memory placement as a programmable cache. It exposes four events (\emph{activate}, \emph{access}, \emph{evict\_prepare}, and \emph{prefetch}) and allows host and device policies to cooperate. \sys regions correspond to GPU hardware-managed units, such as 2MB physical UVM chunks or VA blocks, and finer-grained 4KB pages. This granularity balances policy precision against metadata overhead. Using the regions abstraction, \sys hides vendor-specific and hardware complexities. The host driver exports these events through a \texttt{struct\_ops} table. Handlers encode decisions through an enum field in the context and may reorder but never remove regions in the kernel‑maintained eviction list. The kernel enforces safety and correctness, including fallback FIFO eviction under pressure. Policies maintain their own metadata in maps and express placement and prefetch decisions through these handlers.
 
 Device policies can be triggered at given memory operations and receive a compact warp‑uniform context. Operations like prefetch can be performed on device and then trigger host-side prefetch handlers, enabling the host to combine driver information with device‑side predictive logic. The following interface illustrates the host and device memory policy hooks:
 
@@ -73,22 +73,22 @@ Device policies can be triggered at given memory operations and receive a compac
     baselinestretch=0.9
 ]{c}
 // Host-side policy handlers for GPU memory management
-struct gdrv_mem_ops {
+struct gpu_mem_ops {
   // Region created or eligible for device placement
-  int (*region_add)(gdrv_mem_add_ctx_t *ctx);
+  int (*gpu_activate)(gdrv_mem_add_ctx_t *ctx);
   // Memory subsystem observes region use;
   // decide cache hit/eviction policies
-  int (*region_access)(gdrv_mem_access_ctx_t *ctx);
+  int (*gpu_access)(gdrv_mem_access_ctx_t *ctx);
   // Region about to leave device-resident working set
-  int (*region_remove)(gdrv_mem_remove_ctx_t *ctx);
+  int (*gpu_evict_prepare)(gdrv_mem_remove_ctx_t *ctx);
   // Safe points (e.g. faults) for prefetch
-  int (*prefetch)(gdrv_mem_prefetch_ctx_t *ctx);
+  int (*gpu_prefetch)(gdrv_mem_prefetch_ctx_t *ctx);
 };
 
 // Host-side kfuncs: reorder regions in eviction list
-bool gdrv_mem_list_insert_head(gdrv_mem_list_t *list,
+void bpf_gpu_move_head(gdrv_mem_list_t *list,
                                gmem_region_t *r);
-bool gdrv_mem_list_insert_tail(gdrv_mem_list_t *list,
+void bpf_gpu_move_tail(gdrv_mem_list_t *list,
                                gmem_region_t *r);
 
 // Device-side memory handler interface
@@ -114,16 +114,17 @@ Within the GPU, \sys provides a work‑stealing thread‑block scheduler. GPU ke
 \begin{minted}[highlightlines=false,fontsize=\footnotesize]{c}
 // Host-side policy handlers for GPU hardware
 // queue scheduling
-struct gdrv_sched_ops {
+struct gpu_sched_ops {
   // Hardware queue creation; set prio/timeslice,
   // return 0 to accept or <0 to reject/defer
-  int  (*queue_create)(gsched_queue_ctx_t *ctx);
+  int  (*task_init)(gsched_queue_ctx_t *ctx);
   // Hardware queue destruction; cleanup policy
-  void (*queue_destroy)(gsched_queue_ctx_t *ctx);
+  void (*task_destroy)(gsched_queue_ctx_t *ctx);
 };
 
-// Host-side kfunc
-bool gdrv_sched_preempt(gdrv_preempt_ctx_t *ctx);
+// Host-side kfuncs
+void bpf_gpu_set_attr(gsched_queue_ctx_t *ctx, u64 us);
+void bpf_gpu_reject_bind(gsched_queue_ctx_t *ctx);
 
 // Device-side block scheduling handlers
 struct gdev_sched_ops {
