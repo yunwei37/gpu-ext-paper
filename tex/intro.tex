@@ -1,7 +1,7 @@
 \begin{abstract}
-Performance in modern GPU-centric systems increasingly depends on resource management policies, such as memory placement, scheduling, and observability, rather than raw compute alone. Existing approaches force developers into a programmability and low-level control tradeoff: user-space runtimes offer programmability but lack cross-tenant visibility and fine-grained hardware control, 
-while kernel-level approaches provide control but embed policy logic into privileged drivers, complicating maintenance and raising safety risks. 
-We argue that the GPU driver and device layer must serve as an extensible OS policy interface. 
+Performance in modern GPU-centric systems increasingly depends on resource management policies, such as memory placement, scheduling, and observability, rather than raw compute alone, but one-size-fits-all policy performs poorly in many workloads. Existing approaches force developers into a tradeoff: user-space runtimes offer programmability but lack cross-tenant visibility and fine-grained hardware control,
+while OS kernel modification bring complexity and safety risks. To address this, 
+we argue that the GPU driver and device layer must serve as an extensible OS policy interface. 
 Recently emerging eBPF offers a possibility, but naively transplanting host-side eBPF is insufficient: it cannot observe critical device-side events, and directly injecting policy code into GPU kernels affects safety and efficiency.
 
 We present \sys, an eBPF-based policy runtime that treats the GPU driver and device as a programmable OS subsystem. \sys extends GPU drivers to expose safe hooks and introduces a device-side eBPF runtime that executes verified policy logic within GPU kernels, enabling coherent, application-transparent policies. Evaluation on realistic workloads, including inference, training, and vector search, shows that \sys improves throughput by up to $4.8\times$ and reduces tail latency by up to $2\times$ with low overhead, without modifying applications or restarting drivers.
