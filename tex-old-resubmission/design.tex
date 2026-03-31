@@ -13,21 +13,21 @@ Device-side policies must align with GPU SIMT execution semantics. The system sh
 
 \section{\sys Design}
 
-% \subsection{Challenges}
-% \label{sec:challenges}
-%
-% We elaborate on the three challenges introduced in \S1. Each arises from the GPU being a discrete device and shapes a specific aspect of the \sys{} design.
-%
-% \subsubsection{C1: Timescale}
-% Cross-device operations such as page migration and GPU context preemption take milliseconds of DMA across PCIe, far exceeding the microsecond budget of a synchronous BPF callback. In sched\_ext, the effect of a scheduling decision (context switch) completes before the callback returns. On GPU, the effect (data migration) outlives the callback by three orders of magnitude. Policies must therefore initiate transitions asynchronously and act proactively from application-level triggers (e.g., before a kernel launch), not only reactively at the fault that reveals the need. This requires async execution paths (sleepable kfuncs, BPF work queues) and proactive attachment points (uprobes on CUDA APIs) that do not exist in current CPU extensibility frameworks.
-%
-% \subsubsection{C2: Information}
-% The GPU is a distinct processor with its own ISA and execution model. Host-side BPF cannot observe device-internal state: per-warp access patterns, SM utilization, computation phases, and thread-block scheduling are architecturally opaque from the host. CPU-side eBPF assumes single-threaded scalar execution, whereas GPU kernels execute in warps of 32 threads that must follow warp-uniform control paths. Running scalar eBPF logic per GPU thread introduces warp divergence, serialization overhead, and deadlock risks. Extending verified BPF execution to the GPU therefore requires a SIMT-aware verifier that enforces warp-uniformity constraints, bounded resource usage, and safe control flow (\S\ref{sec:verification}).
-%
-% \subsubsection{C3: Coupling}
-% On CPU, scheduling and memory management are largely independent subsystems with separate extensibility interfaces (sched\_ext for scheduling, cache\_ext for page caching). On GPU, memory placement and compute scheduling compete for the same constrained device resources, making them interdependent. Decisions about which data resides in device memory directly determine which workloads can execute efficiently. A page fault is simultaneously a memory event (data not resident) and a scheduling event (context stalls). Policies must therefore see both memory and scheduling state in a single execution context, and shared policy state must be accessible from both host and device despite operating at different timescales and memory hierarchies.
+\subsection{Challenges}
+\label{sec:challenges}
 
-Two properties of GPU hardware shape how \sys{} differs from CPU extensibility frameworks: the cross-device gap (transitions take milliseconds and span coupled memory-scheduling domains) forces decoupling triggers from effects, and architectural opacity (distinct ISA, opaque device state) requires device-side verified execution.
+
+We elaborate on the three challenges introduced in \S1.
+
+\subsubsection{C1: Lack of a Safe and Expressive OS-Level GPU Policy Interface}
+GPU resource management needs to run at the driver layer to be effective, but GPU drivers were not designed to expose a programmable interface. Exposing low-level mechanisms (page tables, command buffers, interrupt handlers) to eBPF would give policies expressiveness but compromise driver stability and tenant isolation. Conversely, constraining programmability to high-level abstractions ensures safety but limits the expressiveness needed for complex memory placement and scheduling decisions. Thus, the challenge lies in carving out a narrow, stable, and verifiable GPU policy interface: expressive enough to implement policies, yet constrained enough to prevent buggy policies from corrupting device state or crashing the kernel.
+
+\subsubsection{C2: Mismatch Between CPU Extension Semantics and the GPU SIMT Execution Model}
+Applying existing CPU-oriented eBPF mechanisms to GPU device is challenging due to semantic mismatches with the GPU SIMT execution model. CPU-side eBPF assumes single-threaded execution, whereas GPU kernels execute in warps of 32 threads that must follow warp-uniform control paths. Running scalar eBPF logic per thread introduces warp divergence, serialization overhead, and deadlock risks from thousands of concurrent memory operations unchecked by the CPU-side verifier. Furthermore, GPUs lack isolation and recovery points, meaning an unbounded loop or invalid access in policy logic can halt the entire device. This semantic mismatch makes reuse of CPU-oriented eBPF inefficient and unsafe.
+
+\subsubsection{C3: Absence of Efficient Mechanisms for Host–Device Shared State}
+GPU policies require coordinated host–device resource management, which today lacks efficient and consistent abstractions for shared policy state. GPU-accessible host memory exhibits orders-of-magnitude higher latency than GPU global memory, while GPU memory is capacity-limited and optimized for throughput. Meanwhile, CPU and GPU components operate asynchronously at different timescales, causing policy decisions to rely on stale or inconsistent state unless synchronized.
+
 
 \subsection{High-Level Architecture}
 \label{sec:arch}
@@ -54,42 +54,85 @@ Policy execution occurs at structured hook points defined in GPU drivers and dev
 \subsection{\sys{} Policy Interfaces}
 \label{sec:design-interfaces}
 
-\sys{} models GPU resource management as programmable lifecycles. Memory chunks transition between activated, accessed, and evicted; compute contexts transition between created, scheduled, and preempted. BPF programs, triggered by events across the GPU management stack, direct these transitions via effects (kfunc calls). Unlike sched\_ext, where each callback makes one synchronous decision at one transition point, \sys{} programs can direct multiple transitions asynchronously from any trigger, decoupling triggers from their effects across the device boundary.
+\sys introduces three eBPF program types: two in the driver‑level ( \texttt{BPF\_PROG\_TYPE\_GPU\_MEM} for memory‑placement policy and \texttt{BPF\_PROG\_TYPE\_GPU\_SCHED} for scheduling decisions), and one in the device‑level ( \texttt{BPF\_PROG\_TYPE\_GPU\_DEV} for GPU kernel instrumentation).
+These program types coexist with existing kernel eBPF program types and have different SIMT‑specific verification rules.
 
-\sys{} introduces three eBPF program types: \texttt{BPF\_PROG\_TYPE\_GPU\_MEM} for memory placement, \texttt{BPF\_PROG\_TYPE\_GPU\_SCHED} for scheduling, and \texttt{BPF\_PROG\_TYPE\_GPU\_DEV} for device-side execution.
+\subsubsection{Memory Interface}
+\label{sec:design-mem}
 
-\input{tex/fig_exec_model}
+\sys treats memory placement as a programmable cache. It exposes four events (\emph{activate}, \emph{access}, \emph{evict\_prepare}, and \emph{prefetch}) and allows host and device policies to cooperate. \sys regions correspond to GPU hardware-managed units, such as 2MB physical UVM chunks or VA blocks, and finer-grained 4KB pages. This granularity balances policy precision against metadata overhead. Using the regions abstraction, \sys hides vendor-specific and hardware complexities. The host driver exports these events through a \texttt{struct\_ops} table. Handlers encode decisions through an enum field in the context and may reorder but never remove regions in the kernel‑maintained eviction list. The kernel enforces safety and correctness, including fallback FIFO eviction under pressure. Policies maintain their own metadata in maps and express placement and prefetch decisions through these handlers.
 
-We illustrate the model with the memory lifecycle interface. \sys treats memory placement as a programmable cache, exposing four lifecycle events (\emph{activate}, \emph{access}, \emph{evict\_prepare}, and \emph{prefetch}). \sys regions correspond to GPU hardware-managed units, such as 2MB physical UVM chunks or VA blocks. BPF programs attached at these events direct transitions via kfuncs that reorder the kernel-maintained eviction list. The kernel enforces safety, including fallback FIFO eviction under pressure. Policies maintain their own metadata in BPF maps and may initiate asynchronous effects (e.g., cross-block prefetch via \texttt{bpf\_wq}) that complete after the hook returns.
+Device policies can be triggered at given memory operations and receive a compact warp‑uniform context. Operations like prefetch can be performed on device and then trigger host-side prefetch handlers, enabling the host to combine driver information with device‑side predictive logic. The following interface illustrates the host and device memory policy hooks:
 
 \begin{lstlisting}
-// BPF program at evict_prepare: direct eviction
-// ordering via kfunc effects
-SEC("gpu_mem/evict_prepare")
-int evict_policy(gdrv_mem_remove_ctx_t *ctx) {
-  gmem_region_t *r = ctx->region;
-  u64 access_time = bpf_gpu_get_access_time(r);
-  // Effect: direct this chunk to evict last (LRU)
-  bpf_gpu_move_tail(&ctx->evict_list, r);
-  // Effect: async prefetch of next chunk
-  bpf_gpu_prefetch_async(r->va + CHUNK_SIZE,
-                         CHUNK_SIZE);
-  return 0;
-}
+// Host-side policy handlers for GPU memory management
+struct gpu_mem_ops {
+  // Region created or eligible for device placement
+  int (*gpu_activate)(gdrv_mem_add_ctx_t *ctx);
+  // Memory subsystem observes region use;
+  // decide cache hit/eviction policies
+  int (*gpu_access)(gdrv_mem_access_ctx_t *ctx);
+  // Region about to leave device-resident working set
+  int (*gpu_evict_prepare)(gdrv_mem_remove_ctx_t *ctx);
+  // Safe points (e.g. faults) for prefetch
+  int (*gpu_prefetch)(gdrv_mem_prefetch_ctx_t *ctx);
+};
 
-// Available lifecycle events:
-//   gpu_mem/activate    - chunk becomes resident
-//   gpu_mem/access      - chunk accessed
-//   gpu_mem/evict_prepare - chunk about to be evicted
-//   gpu_mem/prefetch    - prefetch opportunity
-//
-// Available kfuncs (effects):
-//   bpf_gpu_move_head/tail - reorder eviction list
-//   bpf_gpu_prefetch_async - async cross-device DMA
-//   bpf_gpu_get_access_time - query lifecycle state
+// Host-side kfuncs: reorder regions in eviction list
+void bpf_gpu_move_head(gdrv_mem_list_t *list,
+                               gmem_region_t *r);
+void bpf_gpu_move_tail(gdrv_mem_list_t *list,
+                               gmem_region_t *r);
+
+// Device-side memory handler interface
+struct gdev_mem_ops {
+    // Warp observed memory access;
+    void (*access)(gdev_mem_access_ctx_t *ctx);
+    // GPU kernel fence point
+    void (*fence)(gdev_mem_fence_ctx_t *ctx);
+};
+
+// Device-side helpers
+// Request prefetch, triggers handler in host driver
+ int gdev_mem_prefetch(gmem_region_t* r);
 \end{lstlisting}
 
-\sys{} exposes similar lifecycle interfaces for GPU scheduling (queue admission, priority, preemption) and device-side execution (memory observation, thread-block work-stealing). On the host, scheduling hooks direct compute context transitions via kfuncs such as \texttt{bpf\_gpu\_set\_attr} and \texttt{gdrv\_sched\_preempt}. On the device, BPF handlers observe warp-level memory access patterns and steer thread-block scheduling decisions. Uprobes on unmodified CUDA APIs (e.g., \texttt{cudaLaunchKernel}) provide proactive triggers that direct lifecycle transitions before faults occur.
+\subsubsection{Scheduling Interface}
+\label{sec:design-sched}
+
+\sys exposes scheduling policy control at two levels: hardware‑queue lifecycle (host‑side) and thread‑block scheduling (device‑side). The host participates in GPU queue admission and priority control through policies. Policies set queue priority, timeslice, and may reject or defer queue creation. Properties are written directly into firmware‑visible structures, ensuring enforcement beyond user‑space hints. Policies may also invoke the \texttt{gdrv\_sched\_preempt} kfunc to trigger cooperative preemption through the driver's native context‑switch mechanism.
+
+Within the GPU, \sys provides a work‑stealing thread‑block scheduler. GPU kernels expose their logical work units; persistent worker blocks select and process units while device‑side eBPF handlers steer scheduling decisions via \texttt{gdev\_block\_ctx}. The verifier ensures that scheduling decisions respect GPU kernel invariants (e.g., selecting only local work units). \sys can inject this scheduler via binary rewriting or allow developers to integrate it.
+
+\begin{lstlisting}
+// Host-side policy handlers for GPU hardware
+// queue scheduling
+struct gpu_sched_ops {
+  // Hardware queue creation; set prio/timeslice,
+  // return 0 to accept or <0 to reject/defer
+  int  (*task_init)(gsched_queue_ctx_t *ctx);
+  // Hardware queue destruction; cleanup policy
+  void (*task_destroy)(gsched_queue_ctx_t *ctx);
+};
+
+// Host-side kfuncs
+void bpf_gpu_set_attr(gsched_queue_ctx_t *ctx, u64 us);
+void bpf_gpu_reject_bind(gsched_queue_ctx_t *ctx);
+
+// Device-side block scheduling handlers
+struct gdev_sched_ops {
+  // Worker block starts/exits new work unit
+  void (*enter)(gdev_block_ctx_t *ctx);
+  void (*exit)(gdev_block_ctx_t *ctx);
+
+  // Device function starts/ends
+  void (*probe)(gdev_block_ctx_t *ctx);
+  void (*retprobe)(gdev_block_ctx_t *ctx);
+
+  // Return whether to steal work (TB scheduler)
+  bool (*should_try_steal)(gdev_block_ctx_t *ctx);
+};
+\end{lstlisting}
 
 \subsection{Runtime Verification and Optimizations}
 \label{sec:verification}

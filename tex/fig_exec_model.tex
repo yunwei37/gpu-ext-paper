@@ -1,0 +1,74 @@
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  node distance=0.4cm and 0.6cm,
+  box/.style={draw, rounded corners, minimum height=0.6cm, minimum width=1.2cm, font=\small},
+  trigger/.style={box, fill=blue!10},
+  bpf/.style={box, fill=green!10},
+  effect/.style={box, fill=orange!10},
+  label/.style={font=\small\itshape, text=gray},
+  arrow/.style={->, >=stealth, thick},
+  dasharrow/.style={->, >=stealth, thick, dashed},
+  every node/.style={font=\small},
+]
+
+% === sched_ext (top half) ===
+\node[font=\small\bfseries] (sched_title) at (0, 0) {sched\_ext (coupled, 1:1, sync):};
+
+\node[trigger] (s_trans) at (-2.5, -0.8) {transition};
+\node[bpf]     (s_bpf)   at (0, -0.8)    {BPF};
+\node[effect]  (s_eff)   at (2.8, -0.8)   {immediate effect};
+
+\draw[arrow] (s_trans) -- (s_bpf);
+\draw[arrow] (s_bpf)   -- (s_eff);
+
+\node[label, below=0.05cm of s_trans] {point};
+\node[label, below=0.05cm of s_eff] {same processor, same moment};
+
+% === gpu_ext (bottom half) ===
+\node[font=\small\bfseries] (gpu_title) at (0, -2.2) {\sys{} (decoupled, many:many, sync+async):};
+
+% Triggers
+\node[trigger] (t_a) at (-3.2, -3.2) {trigger A};
+\node[trigger] (t_b) at (-3.2, -4.0) {trigger B};
+\node[trigger] (t_c) at (-3.2, -4.8) {trigger C};
+\node[trigger, fill=purple!10] (t_d) at (-3.2, -5.9) {trigger D};
+\node[label, below=-0.05cm of t_d] {(device)};
+
+% BPF + maps
+\node[bpf, minimum height=1.8cm, minimum width=1.4cm] (g_bpf) at (-0.5, -4.0) {BPF\\+ maps};
+
+% Effects (lifecycle transitions)
+\node[effect] (e_x) at (2.8, -3.2) {transition X};
+\node[label, right=0.05cm of e_x] {\scriptsize async, 6.6ms};
+\node[effect] (e_y) at (2.8, -4.0) {transition Y};
+\node[label, right=0.05cm of e_y] {\scriptsize ordering};
+\node[effect] (e_z) at (2.8, -4.8) {transition Z};
+\node[label, right=0.05cm of e_z] {\scriptsize from state};
+
+% Arrows from triggers to BPF
+\draw[arrow] (t_a) -- (g_bpf);
+\draw[arrow] (t_b) -- (g_bpf);
+\draw[arrow] (t_c) -- (g_bpf);
+\draw[dasharrow] (t_d) -- (g_bpf);
+
+% Arrows from BPF to effects
+\draw[arrow] (g_bpf) -- (e_x);
+\draw[arrow] (g_bpf) -- (e_y);
+\draw[arrow] (g_bpf) -- (e_z);
+
+% PCIe boundary
+\draw[thick, dashed, gray] (-4.0, -5.4) -- (4.5, -5.4) node[right, font=\scriptsize\itshape, text=gray] {PCIe};
+
+% Labels
+\node[label] at (-3.2, -2.7) {triggers (open)};
+\node[label] at (2.8, -2.7) {effects (lifecycle-bounded)};
+
+% Lifecycle boundary box
+\draw[thick, dotted, orange!60] (1.8, -2.9) rectangle (4.4, -5.1);
+\node[font=\scriptsize, orange!80!black, rotate=90] at (4.6, -4.0) {lifecycle};
+
+\end{tikzpicture}
+\caption{Execution model contrast. In sched\_ext, each BPF callback makes one synchronous decision at one transition point (coupled, 1:1). In \sys{}, BPF programs triggered from any point in the GPU management stack can direct multiple lifecycle transitions asynchronously via kfunc effects (decoupled, many:many). Triggers are open; effects are lifecycle-bounded. The dashed line marks the host-device boundary.}
+\label{fig:exec-model}
+\end{figure}

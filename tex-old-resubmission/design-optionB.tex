@@ -1,0 +1,124 @@
+% Option B: Organize by host/device (match contributions)
+% Only the Policy Interfaces + Verification sections are restructured.
+% Design Principles, Challenges, and High-Level Architecture are unchanged.
+% All code examples and technical content preserved from original.
+
+% ============================================================
+% REPLACES: §§ Policy Interfaces + §§ Runtime Verification
+% ============================================================
+
+\subsection{Host-Side Policy Interfaces}
+\label{sec:design-interfaces}
+
+GPU resources follow driver-defined lifecycles: memory chunks transition between activated, accessed, and evicted; compute contexts transition between created, scheduled, and preempted. \sys exposes these lifecycle transitions as programmable hooks in a unified \texttt{struct\_ops} interface, where a single BPF program can direct transitions in both memory and scheduling domains simultaneously. This reflects the coupling between these domains on GPU: a page fault is both a memory event (data not resident) and a scheduling event (context stalls).
+
+\subsubsection{Memory Lifecycle Hooks}
+\label{sec:design-mem}
+
+\sys treats memory placement as a programmable cache. It exposes four events (\emph{activate}, \emph{access}, \emph{evict\_prepare}, and \emph{prefetch}) and allows host and device policies to cooperate. \sys regions correspond to GPU hardware-managed units, such as 2MB physical UVM chunks or VA blocks, and finer-grained 4KB pages. This granularity balances policy precision against metadata overhead. Using the regions abstraction, \sys hides vendor-specific and hardware complexities. The host driver exports these events through a \texttt{struct\_ops} table. Handlers encode decisions through an enum field in the context and may reorder but never remove regions in the kernel-maintained eviction list. The kernel enforces safety and correctness, including fallback FIFO eviction under pressure. Policies maintain their own metadata in maps and express placement and prefetch decisions through these handlers.
+
+\begin{lstlisting}
+// Host-side policy handlers for GPU memory management
+struct gpu_mem_ops {
+  // Region created or eligible for device placement
+  int (*gpu_activate)(gdrv_mem_add_ctx_t *ctx);
+  // Memory subsystem observes region use;
+  // decide cache hit/eviction policies
+  int (*gpu_access)(gdrv_mem_access_ctx_t *ctx);
+  // Region about to leave device-resident working set
+  int (*gpu_evict_prepare)(gdrv_mem_remove_ctx_t *ctx);
+  // Safe points (e.g. faults) for prefetch
+  int (*gpu_prefetch)(gdrv_mem_prefetch_ctx_t *ctx);
+};
+
+// Host-side kfuncs: reorder regions in eviction list
+void bpf_gpu_move_head(gdrv_mem_list_t *list,
+                               gmem_region_t *r);
+void bpf_gpu_move_tail(gdrv_mem_list_t *list,
+                               gmem_region_t *r);
+\end{lstlisting}
+
+\subsubsection{Scheduling Lifecycle Hooks}
+\label{sec:design-sched}
+
+\sys exposes scheduling policy control at the hardware-queue lifecycle level. The host participates in GPU queue admission and priority control through policies. Policies set queue priority, timeslice, and may reject or defer queue creation. Properties are written directly into firmware-visible structures, ensuring enforcement beyond user-space hints. Policies may also invoke the \texttt{gdrv\_sched\_preempt} kfunc to trigger cooperative preemption through the driver's native context-switch mechanism.
+
+\begin{lstlisting}
+// Host-side policy handlers for GPU hardware
+// queue scheduling
+struct gpu_sched_ops {
+  // Hardware queue creation; set prio/timeslice,
+  // return 0 to accept or <0 to reject/defer
+  int  (*task_init)(gsched_queue_ctx_t *ctx);
+  // Hardware queue destruction; cleanup policy
+  void (*task_destroy)(gsched_queue_ctx_t *ctx);
+};
+
+// Host-side kfuncs
+void bpf_gpu_set_attr(gsched_queue_ctx_t *ctx, u64 us);
+void bpf_gpu_reject_bind(gsched_queue_ctx_t *ctx);
+\end{lstlisting}
+
+\subsubsection{Asynchronous Effects and Proactive Triggers}
+
+Because cross-device transitions take milliseconds, \sys provides asynchronous kfuncs that initiate effects after the synchronous hook returns. BPF programs schedule deferred work via \texttt{bpf\_wq}, enabling cross-block prefetch, proactive migration, and other effects that outlive the callback. Additionally, \sys attaches uprobes to unmodified CUDA API calls (e.g., \texttt{cudaLaunchKernel}, \texttt{cudaStreamSynchronize}), enabling proactive policy decisions from application-level events that are invisible to the driver.
+
+% ============================================================
+
+\subsection{Device-Side BPF Execution}
+\label{sec:verification}
+
+\sys extends verified BPF execution to the GPU itself, enabling both device-local observation and policy execution. This addresses the information challenge: GPU-internal execution state is architecturally opaque to the host.
+
+\subsubsection{Device-Side Policy Interfaces}
+
+Device policies are triggered at memory operations and thread-block scheduling events, receiving a compact warp-uniform context. Operations like prefetch can be performed on device and then trigger host-side prefetch handlers, enabling the host to combine driver information with device-side predictive logic.
+
+Within the GPU, \sys provides a work-stealing thread-block scheduler. GPU kernels expose their logical work units; persistent worker blocks select and process units while device-side eBPF handlers steer scheduling decisions via \texttt{gdev\_block\_ctx}. The verifier ensures that scheduling decisions respect GPU kernel invariants (e.g., selecting only local work units). \sys can inject this scheduler via binary rewriting or allow developers to integrate it.
+
+\begin{lstlisting}
+// Device-side memory handler interface
+struct gdev_mem_ops {
+    // Warp observed memory access;
+    void (*access)(gdev_mem_access_ctx_t *ctx);
+    // GPU kernel fence point
+    void (*fence)(gdev_mem_fence_ctx_t *ctx);
+};
+
+// Device-side helpers
+// Request prefetch, triggers handler in host driver
+ int gdev_mem_prefetch(gmem_region_t* r);
+
+// Device-side block scheduling handlers
+struct gdev_sched_ops {
+  // Worker block starts/exits new work unit
+  void (*enter)(gdev_block_ctx_t *ctx);
+  void (*exit)(gdev_block_ctx_t *ctx);
+
+  // Device function starts/ends
+  void (*probe)(gdev_block_ctx_t *ctx);
+  void (*retprobe)(gdev_block_ctx_t *ctx);
+
+  // Return whether to steal work (TB scheduler)
+  bool (*should_try_steal)(gdev_block_ctx_t *ctx);
+};
+\end{lstlisting}
+
+\subsubsection{SIMT-aware Verification}
+
+\sys policies execute directly within privileged GPU driver and kernel contexts, making safety guarantees critical. We adopt a standard eBPF threat model: we trust system administrators loading policies, but consider policy code potentially buggy or misconfigured. The trusted computing base (TCB) includes the kernel and \sys kernel module, GPU compiler backend, and GPU driver/firmware. Policy authors only interact with eBPF and do not write native device code. For host-side verification, we reuse the existing Linux kernel eBPF verifier unchanged, relying on standard type-checking, bounded-loop, and memory-safety constraints. \sys-specific kfuncs and hooks are declared via BPF Type Format (BTF) metadata.
+
+\sys introduces a SIMT-aware static verification model enforcing warp-level uniformity constraints to ensure efficient and safe GPU-side policy execution.
+The key insight is that we distinguish \emph{warp-uniform} values (identical across warp threads, e.g., region identifiers) from \emph{lane-varying} values (thread-local GPU state). Policies may compute freely using lane-varying values, but these must not influence control-flow decisions or directly produce side effects visible outside a warp. To guarantee warp-level coherence, \sys mandates that branch conditions, loop bounds, and map-update keys be warp-uniform or derived via warp-level aggregation. Additionally, \sys prohibits GPU-wide barriers, global synchronization primitives, and non-uniform atomic operations, and imposes resource budgets per policy hook to bound memory and thread resource usage. These constraints ensure safe policy integration that respects GPU hardware execution semantics.
+
+\subsubsection{Warp-level Execution Optimizations}
+
+Direct scalar execution of eBPF after SIMT verification on GPU threads still causes resource overhead (e.g. duplicate memory update to maps) due to the SIMT. To resolve this, \sys introduces a warp-level aggregated execution model, executing policy logic once per warp using a designated "warp leader" (typically lane 0). Each hook invocation conceptually follows a two-phase approach: each lane independently computes lane-local contributions (e.g., effective addresses, counters) without influencing control flow or directly updating shared state. These contributions are then aggregated at warp granularity. Subsequently, the warp leader executes the policy handler once using aggregated inputs and warp-uniform context. The resulting decision is broadcast back to all lanes. This design minimizes GPU overhead while preserving eBPF's scalar semantics. To further reduce runtime overhead, \sys employs compiler-level optimizations (specialization and inlining) tailored for warp-level execution.
+
+% ============================================================
+
+\subsection{Cross-Device State Coordination}
+
+\subsubsection{Hierarchical Cross-layer Maps}
+
+GPU policy decisions require coherent sharing of policy state across asynchronous CPU and GPU contexts. To transparently bridge CPU-GPU memory hierarchies, \sys introduces cross-layer maps. Logically, each map is a single unified key-value store accessible from host-side driver hooks, GPU-side device policies, and user-space control planes, and verifiable through eBPF's existing model. Physically, maps are realized as hierarchical shards across host DRAM, GPU global memory, and GPU-local storage (e.g., shared memory, SM-local). The runtime dynamically determines shard placement based on access frequency, latency, and capacity constraints. Following eBPF's soft-state philosophy, \sys maps provide relaxed, eventual consistency. Instead of strong global ordering, our runtime periodically merges GPU-local map shards into canonical snapshots at synchronization points, such as GPU kernel completion boundaries. This snapshot-based model is sufficient for policy decisions relying on approximate statistics. Occasional staleness affects decision optimality but cannot violate correctness invariants such as memory integrity, which remain enforced by the GPU driver and hardware MMU.
