@@ -1,9 +1,13 @@
 \section{Background and Motivation}
 
+\arq{Think about the key things that you want to articulate in this section, because I don't think that they're coming through.  My list includes: 1. A brief overview of what GPU resource management looks like. 2. some experimentation that shows that we need workload-specific policies, 3. A summary of the gaps in existing approaches. 4. A summary of how eBPF works today that points to why a straightforward adoption of existing tooling would not work for our purposes.}
+
+\arq{If we go forward with the idea of agent-based optimization, then I think this section should be more focused on what agent-based optimization would look like in this space. What it needs, what it lacks, etc.  It would be nice if we could do some agent-based optimization and show some kernel crashes (as an example) when given current extensibility mechanisms.}
+
 \subsection{The Diversity of GPU-Centric Workloads}
 % \xiangyu{Workloads in CPU clusters}
 
-Modern GPU systems run diverse workloads with conflicting resource demands. Generative AI inference exhibits compute-intensive prefill, bandwidth-bound decoding~\cite{zhong2024distserve,patel2024splitwise}, irregular KV-cache offloading~\cite{sheng2023flexgen,kwon2023efficient}, and sparse expert activations~\cite{gale2023megablocks,he2021fastmoe}. Dense neural network training demands predictable synchronization, while GNN and embedding workloads exhibit irregular, pointer-chasing accesses resistant to prefetching. Vector search adds variability with random-access query and sequential indexing. These distinct memory behaviors (\Cref{fig:access_patterns}) and imbalanced thread scheduling across SMs (\Cref{fig:thread_scheduling}) are poorly served by static policies. In multi-tenant environments, latency-critical inference conflicts with throughput-maximizing training, creating contention that fixed partitioning cannot resolve.
+Modern GPU systems run diverse workloads with conflicting resource demands. Generative AI inference exhibits compute-intensive prefill, bandwidth-bound decoding~\cite{zhong2024distserve,patel2024splitwise}, irregular KV-cache offloading~\cite{sheng2023flexgen,kwon2023efficient}, and sparse expert activations~\cite{gale2023megablocks,he2021fastmoe}. Dense neural network training demands predictable synchronization, while GNN and embedding workloads exhibit irregular, pointer-chasing accesses resistant to prefetching. Vector search adds variability with random-access query and sequential indexing. These distinct memory behaviors (\Cref{fig:access_patterns}) and imbalanced thread scheduling across SMs (\Cref{fig:thread_scheduling}) are poorly served by static policies. In multi-tenant environments, latency-critical inference conflicts with throughput-maximizing training, creating contention that fixed partitioning cannot resolve. \arq{Its awkward that we deal with diversity before explaining GPU system architecture.  Its also the case that this does not really motivate what we want it to motivate.  We want to show that we need/want deployment-specific policies *because* of these differences.  All we've really done here is list a bunch of different GPU workloads and said a few words about them.}
 
 \begin{figure*}[t]
     \centering
@@ -48,7 +52,7 @@ High-level frameworks (e.g., PyTorch) and runtimes (e.g., CUDA libraries) operat
 The GPU driver acts as the OS component for GPU systems, managing privileged low-level hardware mechanisms including the Memory Management Unit (MMU), hardware interrupts, and kernel scheduling. Typical drivers are monolithic, implementing application-agnostic resource-management algorithms such as Least Recently Used (LRU)-based page eviction, round-robin scheduling for context switching, and tree-based prefetching in Unified Virtual Memory scenarios~\cite{gu2020uvmbench,amd-oversubscription}. However, these application-agnostic policies provide no mechanism to adapt eviction, prefetching, or scheduling decisions based on workload characteristics or runtime conditions~\cite{gu2020uvmbench,ravi2021pilot}. They also lack multi-tenant coordination primitives—such as priority-based resource allocation or performance isolation between co-located workloads—that modern datacenter deployments require~\cite{wang2024gcaps,fan2025gpreempt}.
 % \weichen{Complementing GPreempt, GCAPS~\cite{wang2024gcaps} demonstrates recent driver-level refactoring by implementing priority-based preemption for real-time guarantees. However, similar to prior approaches, GCAPS embeds a fixed scheduling policy within the driver, lacking a programmable interface for defining arbitrary resource management policies at runtime.}
 % Updating drivers from scratch is extremely cumbersome, involving massive code updates, and could potentially introduce new bugs. Furthermore, much of the performance of driver software is application-scenario dependent, making it impossible to rewrite a driver for every new application scenario. 
-
+\arq{There's a lot of editorializing in here, even though we probably really just want to focus on what the Kernel driver *is* rather than what it does wrong (at least, at this point in the paper).}
 
 \paragraph{Device-Side Execution}
 
@@ -60,6 +64,8 @@ In summary, modern GPU software stacks include statically-defined policy logic e
 
 % \xiangyu{I think we can simplify the description of various related works by only referencing them but not mentioning their details.
 % Probably, it is better to highlight limitations.}
+
+\arq{We haven't established the goals of what we might want from a system, so words like safe and dynamic don't really make sense here. Its not clear that safe and dynamic are things that we want/need.  It isn't clear *why* we want or need them.}
 
 Existing approaches face limitations:
 
