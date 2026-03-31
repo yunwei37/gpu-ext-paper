@@ -43,8 +43,8 @@ cross-device operations like migrating data or dispatching commands take millise
 % \arq{There are some good ideas in this paragraph, although it is pretty complicated to disentangle. I think that we need to rework the paragraph keeping in mind that the audience does not know what eBPF is, what advisory hooks are, what proactive preemption is, etc.}
 
 % P4b: Mechanism mapping
-\sys{} addresses each mismatch with composable mechanisms: synchronous advisory hooks in the fault handler, asynchronous sleepable kfuncs and BPF work queues, proactive uprobes on unmodified CUDA APIs, and device-side BPF instrumentation with a SIMT-aware verifier that prevents GPU specific issues (\S\ref{sec:design-interfaces}, \S\ref{sec:verification}). Throughout, we balance expressiveness against stability with a narrow policy interface.
-\arq{The content is generally strong, but I think this needs to be "punchier". In part, this will happen when we work out the previous paragraph more because the two are in conversation with eacy other.}
+% \arq{The content is generally strong, but I think this needs to be "punchier". In part, this will happen when we work out the previous paragraph more because the two are in conversation with eacy other.}
+\sys{} models GPU resource management as programmable lifecycles, where verified BPF programs direct transitions such as memory eviction, prefetch, and compute preemption via kfuncs (\S\ref{sec:design-interfaces}). The device boundary forces these decisions to be decoupled from the transitions they direct: unlike sched\_ext, where each callback makes one synchronous decision at one transition point, \sys{} programs can direct multiple transitions asynchronously from any trigger in the management stack. Policies can influence which transitions occur and when, but cannot create invalid transitions or violate resource invariants. \sys{} extends this model to the GPU itself, where a SIMT-aware verifier enables verified BPF to run on GPU hardware for observation and policy execution (\S\ref{sec:verification}).
 
 % P5: System summary (merged into P4b above)
 
