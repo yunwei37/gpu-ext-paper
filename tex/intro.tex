@@ -39,7 +39,7 @@ We create a programmable OS interface for GPU resource management that breaks th
 
 % P4a: Co-location insight + two mismatches
 However, the GPU is a discrete processor with its own execution model and resources, and policy decisions in the host driver must take effect on a separate device, making direct application of the CPU model insufficient: 
-cross-device operations like migrating data or dispatching commands take milliseconds, too slow for synchronous callbacks and too costly for purely reactive decisions. Limited device memory and bandwidth further couple memory and scheduling, as decisions about data  placement directly affect which workloads can execute. Finally, the GPU's distinct architecture also makes its internal execution state opaque to the host without device-side instrumentation.
+cross-device operations like migrating data or dispatching commands take milliseconds, too slow for synchronous callbacks and too costly for purely reactive decisions. Limited device memory and bandwidth further couple memory and scheduling, as decisions about data  placement directly affect which workloads can execute. Finally, the GPU's distinct architecture also makes its internal execution state opaque to the host without device-side instrumentation. %, while existing frameworks~\cite{cupti,villa2019nvbit,neutrino}..
 % \arq{There are some good ideas in this paragraph, although it is pretty complicated to disentangle. I think that we need to rework the paragraph keeping in mind that the audience does not know what eBPF is, what advisory hooks are, what proactive preemption is, etc.}
 
 % P4b: Mechanism mapping

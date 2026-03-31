@@ -1,4 +1,4 @@
-\section{Background and Motivation}
+\section{Background}
 
 \arq{Think about the key things that you want to articulate in this section, because I don't think that they're coming through.  My list includes: 1. A brief overview of what GPU resource management looks like. 2. some experimentation that shows that we need workload-specific policies, 3. A summary of the gaps in existing approaches. 4. A summary of how eBPF works today that points to why a straightforward adoption of existing tooling would not work for our purposes.}
 
@@ -36,6 +36,14 @@ The GPU device executes computations via user-defined device kernels and proprie
 
 In summary, modern GPU software stacks include statically-defined policy logic embedded within monolithic kernel drivers, closed-source firmware, and opaque device kernels. This architectural coupling limits runtime policy flexibility, programmability, and adaptability in GPU-centric systems.
 
+\subsection{eBPF and Kernel Extensibility}
+\label{sec:background}
+
+% Moved from "Limitations" — CPU eBPF paragraph, reframed as background on eBPF
+CPU-side eBPF has been used to customize OS scheduling and resource management (e.g., \texttt{sched\_ext}, \texttt{cache\_ext}). However, extending this model to GPUs faces two barriers. First, host-based eBPF treats the GPU as a black box: it can trace driver commands but cannot observe internal execution state (e.g., warp divergence), preventing reaction to on-chip bottlenecks. Second, unlike the Linux CPU scheduler refactored to support \texttt{sched\_ext}, monolithic GPU drivers expose no safe programmable extension points. Their resource management mechanisms are tightly coupled to low-level hardware interactions (e.g., MMU invalidation), and naïvely exposing such controls risks resource leaks, hardware hangs, or kernel panics.
+
+\section{Motivation}
+
 \subsection{The Diversity of GPU-Centric Workloads}
 % \xiangyu{Workloads in CPU clusters}
 % \arq{Its awkward that we deal with diversity before explaining GPU system architecture.  Its also the case that this does not really motivate what we want it to motivate.  We want to show that we need/want deployment-specific policies *because* of these differences.  All we've really done here is list a bunch of different GPU workloads and said a few words about them.}
@@ -61,7 +69,14 @@ Modern GPU systems run diverse workloads with conflicting resource demands. Gene
 % \yusheng{I think we can remove them.}
 % \xiangyu{It is OK to roughly mention these scenarios (because people might have already known). However, instead of purely saying what they are doing, we should give one central sentence: they all generate heterogeneous workload.}
 
+\subsection{Agent-Based Policy Exploration}
+
+AI agents are increasingly capable of generating system policy code, not merely tuning configurations. Recent work demonstrates agents generating compiler heuristics~\cite{alphaevolve2025}, datacenter scheduling and LLM serving code~\cite{hamadanian2025glia,cheng2025barbarians}, and eBPF policies for congestion control and CPU scheduling~\cite{dwivedula2025policysmith,zheng2025schedcp}. GPU resource management, with its large policy space and workload-dependent optima, is a natural target for such exploration.
+
+To be effective in this domain, agents require an interface that is both programmable and safe. Programmable, because agents generate policy \emph{code} (e.g., eviction ordering functions, prefetch strategies), not parameter vectors; fixed configuration knobs cannot express what agents produce. Safe, because agents explore iteratively, generating tens to hundreds of candidate policies, some of which may be incorrect; the interface must contain errors without crashing the kernel or corrupting device state. Fast iteration is equally important: loading a new policy should take milliseconds, not require rebuilding or reloading kernel modules. No existing GPU policy interface provides all three properties (\S\ref{sec:motivation-limitations}).
+
 \subsection{Limitations of Existing Extensibility Mechanisms}
+\label{sec:motivation-limitations}
 
 % \xiangyu{I think we can simplify the description of various related works by only referencing them but not mentioning their details.
 % Probably, it is better to highlight limitations.}
@@ -77,14 +92,10 @@ Recent research has introduced driver-level resource control by moving policy de
 \paragraph{Host User-Space Runtimes and Libraries}
 Recent frameworks such as Paella~\cite{ng2023paella}, Pie~\cite{gim2025pie}, XSched~\cite{shen2025xsched}, and KTransformers~\cite{chen2025ktransformers} expose programmability at the user-space layer. Paella provides software-defined GPU scheduling for model serving; Pie enables developers to customize inference loops and KV-cache management via ``inferlets''; XSched supports flexible, user-defined scheduling through its XQueue abstraction; and KTransformers exposes programmable hybrid CPU–GPU scheduling and expert-placement strategies. LithOS~\cite{coppock2025lithos} also re-implements runtime stacks with OS-like abstractions in user-space.
 
-Despite this programmability, user-space systems share three limitations. 
+Despite this programmability, user-space systems share three limitations.
 First, programmability remains application-bound: developers must write policies for a specific framework or runtime, often requiring code changes or porting applications onto specialized stacks, preventing reuse across ecosystems.
 Second, user-space runtimes lack global visibility and coordination across multi-tenant, multi-framework environments. Confined to isolated process silos, they cannot safely share memory or bandwidth, nor mitigate interference from co-located tenants. As a result, applications conservatively pre-allocate resources (e.g., GPU memory) at startup to avoid contention~\cite{xiao2018gandiva,yu2020fine}. Likewise, hardware partitioning such as NVIDIA's Multi-Instance GPU (MIG) imposes fixed resource boundaries that user-space runtimes cannot dynamically rebalance.
 Third, user-space frameworks lack privileged access to low-level driver mechanisms, leaving policies constrained to coarse-grained GPU kernel launch boundaries. This precludes precise preemption for latency-sensitive tasks and prevents fine-grained compute–transfer overlap. Moreover, they cannot execute policy logic on latency-critical paths (e.g., page-fault handlers), nor exploit GPU-side warp-level or barrier-level access patterns.
 
 \paragraph{Binary Instrumentation and Profiling Tools on Device}
-\label{sec:background}
 Tools such as NVBit~\cite{villa2019nvbit} and Neutrino~\cite{neutrino} inject logic directly into GPU binaries. NVBit supports dynamic SASS-level instrumentation, while Neutrino provides instruction-level profiling via programmable assembly-layer probes with an eBPF-like interface. Despite high kernel visibility, these tools face three limitations. First, they lack safety guarantees, as injected logic can cause crashes or deadlocks. Second, they target offline profiling rather than online policy enforcement, operating in read-only modes that cannot control memory placement or thread scheduling. Third, lacking host-side integration, they cannot coordinate policies across processes. Additionally, assembly-level instrumentation restricts expressiveness and portability~\cite{neutrino}. A prior workshop paper eGPU~\cite{egpu} extends eBPF to GPU instrumentation but remains limited to observability with prohibitive overhead (see \S\ref{sec:eval}).
-
-\paragraph{Host-Based Kernel Programmability (CPU eBPF)}
-CPU-side eBPF has been used to customize OS scheduling and resource management (e.g., \texttt{sched\_ext}, \texttt{cache\_ext}). However, extending this model to GPUs faces two barriers. First, host-based eBPF treats the GPU as a black box: it can trace driver commands but cannot observe internal execution state (e.g., warp divergence), preventing reaction to on-chip bottlenecks. Second, unlike the Linux CPU scheduler refactored to support \texttt{sched\_ext}, monolithic GPU drivers expose no safe programmable extension points. Their resource management mechanisms are tightly coupled to low-level hardware interactions (e.g., MMU invalidation), and naïvely exposing such controls risks resource leaks, hardware hangs, or kernel panics.
