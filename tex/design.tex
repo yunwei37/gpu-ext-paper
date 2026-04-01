@@ -1,12 +1,4 @@
 % Design Principles commented out — too generic, covered by intro and motivation
-% \section{Design Principles}
-% \sys follows three design principles:
-% \paragraph{Principle 1: OS-level, Transparent and Dynamically Programmable Interface.}
-% GPU resource management policies should reside at an OS-level interface, rather than within vendor drivers or application-specific runtimes. Policies must be dynamically separable from mechanisms, runtime-updateable without application restarts, and enforceable across unmodified GPU workloads.
-% \paragraph{Principle 2: Cross-layer host–device policy abstraction.}
-% Host and GPU devices should not be managed as separate execution domains. Instead, the system should provide a unified programming abstraction and shared control plane across CPU and GPU, allowing consistent policy decisions (e.g., memory placement, scheduling).
-% \paragraph{Principle 3: SIMT-aware static safety and efficiency.}
-% Device-side policies must align with GPU SIMT execution semantics. The system should perform static, load-time verification and optimization, ensuring warp-uniform control flow, bounded resource usage, memory safety, and bounded overhead.
 
 \section{\sys Design}
 
@@ -25,7 +17,54 @@
 % On CPU, scheduling and memory management are largely independent subsystems with separate extensibility interfaces (sched\_ext for scheduling, cache\_ext for page caching). On GPU, memory placement and compute scheduling compete for the same constrained device resources, making them interdependent. Decisions about which data resides in device memory directly determine which workloads can execute efficiently. A page fault is simultaneously a memory event (data not resident) and a scheduling event (context stalls). Policies must therefore see both memory and scheduling state in a single execution context, and shared policy state must be accessible from both host and device despite operating at different timescales and memory hierarchies.
 % Challenges C1/C2/C3 moved to §3 Motivation (sec:motivation-limitations)
 
-Two properties of GPU hardware shape how \sys{} differs from CPU extensibility frameworks: the cross-device gap (transitions take milliseconds and span coupled memory-scheduling domains) forces decoupling triggers from effects, and architectural opacity (distinct ISA, opaque device state) requires device-side verified execution.
+\sys{} addresses the three mismatches between the CPU eBPF model and GPU architecture identified in \S\ref{sec:motivation-limitations}: cross-device latency forces asynchronous execution, memory-scheduling coupling requires unified hooks spanning both domains, and device opacity motivates a device-side verified BPF runtime.
+
+\subsection{\sys{} Policy Execution Model}
+\label{sec:design-interfaces}
+
+\sys{} models GPU resource management as programmable lifecycles. GPU resources follow driver-defined lifecycles: memory chunks transition between activated, accessed, and evicted; compute contexts transition between created, scheduled, and preempted. To write a policy, a developer writes BPF programs that attach to events in the lifecycle and direct transitions via kfunc calls. From any trigger point, whether a driver fault event, an application API call (uprobe), a device execution event, or deferred async work (bpf\_wq), a program can direct multiple transitions asynchronously, decoupling triggers from their effects across the device boundary.
+
+\sys{} introduces three eBPF program types: \texttt{BPF\_PROG\_TYPE\_GPU\_MEM} for memory placement, \texttt{BPF\_PROG\_TYPE\_GPU\_SCHED} for scheduling, and \texttt{BPF\_PROG\_TYPE\_GPU\_DEV} for device-side execution. \sys treats memory placement as a programmable cache, exposing four lifecycle events (\emph{activate}, \emph{access}, \emph{evict\_prepare}, and \emph{prefetch}). \sys regions correspond to GPU hardware-managed units, such as 2MB physical UVM chunks or VA blocks. BPF programs attached at these events direct transitions via kfuncs that reorder the kernel-maintained eviction list. The kernel enforces safety, including fallback FIFO eviction under pressure. Policies maintain their own metadata in BPF maps and may initiate asynchronous effects (e.g., cross-block prefetch via \texttt{bpf\_wq}) that complete after the hook returns. \sys also exposes lifecycle interfaces for GPU scheduling (queue admission, priority, preemption via kfuncs such as \texttt{bpf\_gpu\_set\_attr} and \texttt{gdrv\_sched\_preempt}) and device-side block scheduling (work-stealing via \texttt{should\_try\_steal}).
+
+\input{tex/fig_exec_model}
+
+We illustrate the model with MoE expert offloading, a scenario that naturally requires all three layers. Consider a 120B Mixture-of-Experts model (59\,GiB) on a 32\,GB GPU: not all expert weights fit in device memory, so the driver must continuously evict and migrate pages. Each token activates only a subset of experts, but the default driver uses LRU eviction and tree-based prefetching, which are unaware of expert activation patterns. The result: every token triggers page faults on cold expert pages, each incurring milliseconds of PCIe DMA stall.
+
+A \sys policy addresses this with three cooperating BPF programs across three layers, connected by a shared map. First, during inference, a device-side BPF handler monitors which expert pages each warp actually accesses, writing per-expert access counts to a cross-layer map; this information is invisible to the host, as only device-side BPF can observe warp-level access patterns within GPU kernel execution. Second, a BPF program attached to \texttt{cudaLaunchKernel} fires before each layer executes; it reads the device-side access map to predict which experts the next layer will activate, then calls \texttt{bpf\_gpu\_prefetch\_async} to migrate their pages before compute begins, avoiding the 6.6\,ms fault-driven DMA stall by overlapping migration with computation. Third, when memory pressure requires eviction, the driver invokes a BPF handler at the \emph{evict\_prepare} lifecycle event; the handler reads the same access-frequency map and applies LFU ordering, protecting frequently-activated expert pages and evicting cold ones first. The kernel enforces safety, including fallback FIFO eviction under pressure.
+
+\begin{lstlisting}
+// Device-side: observe expert access patterns
+SEC("gpu_dev/mem_access")
+int moe_observe(gdev_mem_access_ctx_t *ctx) {
+  u64 va = ctx->va & EXPERT_MASK;
+  u64 *freq = bpf_map_lookup_elem(&expert_freq, &va);
+  if (freq) __sync_fetch_and_add(freq, 1);
+  return 0;
+}
+
+// Uprobe: proactive prefetch before next layer
+SEC("uprobe/cudaLaunchKernel")
+int moe_prefetch(struct pt_regs *ctx) {
+  u64 next_va = predict_next_expert(ctx);
+  bpf_gpu_prefetch_async(next_va, EXPERT_SIZE);
+  return 0;
+}
+
+// Driver hook: evict cold experts, protect hot ones
+SEC("gpu_mem/evict_prepare")
+int moe_evict(gdrv_mem_remove_ctx_t *ctx) {
+  gmem_region_t *r = ctx->region;
+  u64 *freq = bpf_map_lookup_elem(&expert_freq,
+                                   &r->va);
+  if (freq && *freq > HOT_THRESHOLD)
+    bpf_gpu_move_tail(&ctx->evict_list, r); // keep
+  else
+    bpf_gpu_move_head(&ctx->evict_list, r); // evict
+  return 0;
+}
+\end{lstlisting}
+
+Each layer exists because information resides in a different place: expert activation patterns are visible only on the device, application-layer intent is visible only at API calls, and eviction decisions are made inside the driver. The three BPF programs coordinate through cross-layer maps, directing memory lifecycle transitions from triggers that span the entire stack.
 
 \subsection{High-Level Architecture}
 \label{sec:arch}
@@ -38,9 +77,7 @@ Two properties of GPU hardware shape how \sys{} differs from CPU extensibility f
 \label{fig:system-design}
 \end{figure}
 
-Figure~\ref{fig:system-design} shows the architecture of \sys.
-
-% \sys exposes \emph{hierarchical cross-layer maps}: logical eBPF map abstractions whose backing storage is automatically partitioned and replicated across host DRAM, GPU global memory, and optionally per-SM scratch space, with consistency and placement managed transparently by the runtime. Policy developers access maps via standard eBPF helpers regardless of execution context, without manual DMA transfers, memory placement, or address translation.
+Figure~\ref{fig:system-design} shows how \sys realizes this execution model.
 
 \paragraph{User-space Control Plane.}
 Policy authors use standard eBPF tooling (e.g., \texttt{clang/libbpf}, \texttt{bpftool}) to build policy bytecode. The control-plane links against a loader library that installs policies and configures eBPF maps. It enables runtime policy redeployment and reconfiguration (e.g., eviction thresholds, sampling rates, priorities) without application or kernel restarts, and exports runtime metrics (e.g., region hotness, tenant latencies).
@@ -48,46 +85,6 @@ Policy authors use standard eBPF tooling (e.g., \texttt{clang/libbpf}, \texttt{b
 \paragraph{Host Driver and Device Runtime.}
 \sys provides a unified runtime across host driver and GPU device contexts, managing verification, compilation, and map placement. It employs a SIMT-aware verifier (\S\ref{sec:verification}) that extends standard eBPF checks to verify warp-uniformity, SIMT control flow, and GPU synchronization constraints. Verified programs are JIT-compiled into native host code or GPU-compatible instructions (e.g., PTX). The runtime manages hierarchical logical eBPF map abstractions whose backing storage is automatically partitioned and replicated across host and device with consistency.
 Policy execution occurs at structured hook points defined in GPU drivers and device. On the host, \sysdriver exposes \texttt{struct\_ops}-style hooks (e.g., region activate/eviction, GPU kernel scheduling). Host policies return concise policy decisions enforced via trusted kfuncs. On the GPU device, \sys injects trampolines at hook points and invokes device-side handlers at warp granularity. Device handlers update cross-layer maps with performance signals and make control decisions (e.g., prefetch, block-level scheduling) via trusted helpers that the runtime enforces.
-
-\subsection{\sys{} Policy Interfaces}
-\label{sec:design-interfaces}
-
-\sys{} models GPU resource management as programmable lifecycles. Memory chunks transition between activated, accessed, and evicted; compute contexts transition between created, scheduled, and preempted. BPF programs, triggered by events across the GPU management stack, direct these transitions via effects (kfunc calls). Unlike sched\_ext, where each callback makes one synchronous decision at one transition point, \sys{} programs can direct multiple transitions asynchronously from any trigger, decoupling triggers from their effects across the device boundary.
-
-\sys{} introduces three eBPF program types: \texttt{BPF\_PROG\_TYPE\_GPU\_MEM} for memory placement, \texttt{BPF\_PROG\_TYPE\_GPU\_SCHED} for scheduling, and \texttt{BPF\_PROG\_TYPE\_GPU\_DEV} for device-side execution.
-
-\input{tex/fig_exec_model}
-
-We illustrate the model with the memory lifecycle interface. \sys treats memory placement as a programmable cache, exposing four lifecycle events (\emph{activate}, \emph{access}, \emph{evict\_prepare}, and \emph{prefetch}). \sys regions correspond to GPU hardware-managed units, such as 2MB physical UVM chunks or VA blocks. BPF programs attached at these events direct transitions via kfuncs that reorder the kernel-maintained eviction list. The kernel enforces safety, including fallback FIFO eviction under pressure. Policies maintain their own metadata in BPF maps and may initiate asynchronous effects (e.g., cross-block prefetch via \texttt{bpf\_wq}) that complete after the hook returns.
-
-\begin{lstlisting}
-// BPF program at evict_prepare: direct eviction
-// ordering via kfunc effects
-SEC("gpu_mem/evict_prepare")
-int evict_policy(gdrv_mem_remove_ctx_t *ctx) {
-  gmem_region_t *r = ctx->region;
-  u64 access_time = bpf_gpu_get_access_time(r);
-  // Effect: direct this chunk to evict last (LRU)
-  bpf_gpu_move_tail(&ctx->evict_list, r);
-  // Effect: async prefetch of next chunk
-  bpf_gpu_prefetch_async(r->va + CHUNK_SIZE,
-                         CHUNK_SIZE);
-  return 0;
-}
-
-// Available lifecycle events:
-//   gpu_mem/activate    - chunk becomes resident
-//   gpu_mem/access      - chunk accessed
-//   gpu_mem/evict_prepare - chunk about to be evicted
-//   gpu_mem/prefetch    - prefetch opportunity
-//
-// Available kfuncs (effects):
-//   bpf_gpu_move_head/tail - reorder eviction list
-//   bpf_gpu_prefetch_async - async cross-device DMA
-//   bpf_gpu_get_access_time - query lifecycle state
-\end{lstlisting}
-
-\sys{} exposes similar lifecycle interfaces for GPU scheduling (queue admission, priority, preemption) and device-side execution (memory observation, thread-block work-stealing). On the host, scheduling hooks direct compute context transitions via kfuncs such as \texttt{bpf\_gpu\_set\_attr} and \texttt{gdrv\_sched\_preempt}. On the device, BPF handlers observe warp-level memory access patterns and steer thread-block scheduling decisions. Uprobes on unmodified CUDA APIs (e.g., \texttt{cudaLaunchKernel}) provide proactive triggers that direct lifecycle transitions before faults occur.
 
 \subsection{Runtime Verification and Optimizations}
 \label{sec:verification}
