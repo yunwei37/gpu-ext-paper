@@ -14,7 +14,7 @@
 
 \sys models GPU resource management as programmable lifecycles. GPU resources transition through defined lifecycles: memory chunks between activated, accessed, and evicted; compute contexts between created, scheduled, preempted and finished. 
 
-To write a policy in \sys{}, developers implement eBPF programs attached to lifecycle events, directing GPU resource state transitions asynchronously using kernel functions (\emph{kfuncs}). Unlike prior BPF extensibility systems (e.g., sched_ext, cache_ext, XDP), which rely on synchronous callbacks returning immediate decisions, \sys{} must decouple policy triggers (GPU faults, application API calls via uprobes, device-side execution events, or async tasks via bpf_wq) from their cross-device effects. This decoupling is forced by three GPU-specific constraints: effects must be asynchronous, a single hook may trigger multiple concurrent effects, and hooks span fundamentally different execution environments where no unified synchronous return value suffices. For example, a uprobe-triggered prefetch at \texttt{cudaLaunchKernel} initiates a 6.6,ms async DMA transfer informed by device-side observations and concurrently preempts another tenant's context to free GPU memory, coordination impossible with existing synchronous, tightly-coupled CPU-side eBPF models.
+To write a policy in \sys{}, developers implement eBPF programs attached to lifecycle events, directing GPU resource state transitions asynchronously using kernel functions (\emph{kfuncs}). Unlike prior BPF extensibility systems (e.g., sched\_ext, cache\_ext, XDP), which rely on synchronous callbacks returning immediate decisions, \sys{} must decouple policy triggers (GPU faults, application API calls via uprobes, device-side execution events, or async tasks via bpf_wq) from their cross-device effects. This decoupling is forced by three GPU-specific constraints: effects must be asynchronous, a single hook may trigger multiple concurrent effects, and hooks span fundamentally different execution environments where no unified synchronous return value suffices. For example, a uprobe-triggered prefetch at \texttt{cudaLaunchKernel} initiates a 6.6,ms async DMA transfer informed by device-side observations and concurrently preempts another tenant's context to free GPU memory, coordination impossible with existing synchronous, tightly-coupled CPU-side eBPF models.
 
 \sys defines three eBPF program types to control distinct resource domains: \texttt{GPU_MEM} for memory placement, \texttt{GPU_SCHED} for scheduling decisions, and \texttt{GPU_DEV} for device-side execution. Memory placement is modeled as a programmable cache, exposing lifecycle events (\emph{activate}, \emph{access}, \emph{evict_prepare}, \emph{prefetch}) on GPU-managed units (e.g., 2MB UVM chunks). Similarly, compute scheduling policies manage priority adjustments, and preemption. Device-side eBPF cooperate with these host-side policies by capturing fine-grained runtime state like access pattern or thread scheduling events, coordinating across domains via cross-layer maps, and enabling on-device execution decisions like fine-grained block scheduling (e.g., warp-level work-stealing decisions) or prefetch(e.g., device L2 prefetch triggers host callback for extended prefetch). Together, these three program types enable host-device collaboration under strict safety guarantees enforced by the kernel eBPF verifier and a SIMT-aware device verifier.
 
@@ -25,17 +25,19 @@ To ensure kernel safety boundaries, in \sys{}, verified kfuncs structure lifecyc
 
 \subsubsection{Example: MoE Expert Offloading}
 
-We illustrate the model with MoE expert offloading, a scenario that naturally requires all three layers. Consider a 120B Mixture-of-Experts model (59\,GiB) on a 32\,GB GPU: not all expert weights fit in device memory, so the driver must continuously evict and migrate pages. Each token activates only a subset of experts, but the default driver uses LRU eviction and tree-based prefetching, which are unaware of expert activation patterns. The result: every token triggers page faults on cold expert pages, each incurring milliseconds of PCIe DMA stall.
+We illustrate the programmable lifecycle model with Mixture-of-Experts (MoE) offloading where model size is larger than GPU memory. As not all expert parameters fit in device memory, the GPU driver continuously evicts and migrates expert pages. Each inference token activates only a subset of experts, but the default driver using LRU eviction and tree-based prefetching lacks visibility into expert activation patterns. Consequently, every token experiences costly PCIe DMA stalls on cold expert page faults.
 
-A \sys policy addresses this with three cooperating BPF programs across three layers, connected by a shared map. First, during inference, a device-side BPF handler monitors which expert pages each warp actually accesses, writing per-expert access counts to a cross-layer map; this information is invisible to the host, as only device-side BPF can observe warp-level access patterns within GPU kernel execution. Second, a BPF program attached to \texttt{cudaLaunchKernel} fires before each layer executes; it reads the device-side access map to predict which experts the next layer will activate, then calls \texttt{bpf\_gpu\_prefetch\_async} to migrate their pages before compute begins, avoiding the 6.6\,ms fault-driven DMA stall by overlapping migration with computation. In multi-tenant settings, the same program can simultaneously preempt a low-priority tenant's GPU context via \texttt{gdrv\_sched\_preempt} to free device memory for the prefetch, illustrating how memory and scheduling are coupled: prefetch requires free memory, which requires a scheduling decision. Third, when memory pressure requires eviction, the driver invokes a BPF handler at the \emph{evict\_prepare} lifecycle event; the handler reads the same access-frequency map and applies LFU ordering, protecting frequently-activated expert pages and evicting cold ones first. The kernel enforces safety, including fallback FIFO eviction under pressure.
+A \sys{} policy uses three cooperating BPF programs at different layers, coordinating via a shared cross-layer map. First, during GPU kernel execution, a device-side BPF handler insert at warp entry tracks warp-level accesses to expert pages, recording per page access counts for each warp in a hierarchical cross-layer map: information only visible on-device. Second, a uprobe BPF program attached to \texttt{cudaLaunchKernel} proactively reads these counts to predict upcoming expert activations. It asynchronously initiates prefetches (\texttt{bpf_gpu_prefetch_async}) to overlap memory migration with computation, avoiding expensive stalls. If memory pressure arises, this program can simultaneously preempt lower-priority GPU tasks via \texttt{gdrv_sched_preempt}. Finally, upon memory eviction (\emph{evict_prepare}), a kernel-side BPF handler leverages the same expert access counts to evict cold pages first (LFU ordering), protecting hot experts. Unlike framework-level offloading that often migrates experts as atomic units, \sys operates at page granularity, enabling finer-grained compute-transfer overlap.
+Each eBPF exists because information resides separately in different layers, cross-layer maps coordinate them and enabling policies orchestrate resource transitions across GPU and host boundaries.
+
 
 \begin{lstlisting}
 // Device-side: observe expert access patterns
-SEC("gpu_dev/mem_access")
-int moe_observe(gdev_mem_access_ctx_t *ctx) {
+SEC("gpu_dev/warp_entry")
+int moe_observe(gdev_page_access_ctx_t *ctx) {
   u64 va = ctx->va & EXPERT_MASK;
   u64 *freq = bpf_map_lookup_elem(&expert_freq, &va);
-  if (freq) __sync_fetch_and_add(freq, 1);
+  if (freq) fetch_and_add(freq, 1);
   return 0;
 }
 
@@ -64,8 +66,6 @@ int moe_evict(gdrv_mem_remove_ctx_t *ctx) {
   return 0;
 }
 \end{lstlisting}
-
-Each layer exists because information resides in a different place: expert activation patterns are visible only on the device, application-layer intent is visible only at API calls, and eviction and scheduling decisions are made inside the driver. The three BPF programs coordinate through cross-layer maps, directing lifecycle transitions across both memory and scheduling domains from triggers that span the entire stack.
 
 \subsection{High-Level Architecture}
 \label{sec:arch}
