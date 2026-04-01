@@ -17,9 +17,8 @@ eBPF (extended Berkeley Packet Filter) allows user-supplied programs to run safe
 \section{Motivation}
 
 \subsection{The Diversity of GPU-Centric Workloads}
-% \xiangyu{Workloads in CPU clusters}
-% \arq{Its awkward that we deal with diversity before explaining GPU system architecture.  Its also the case that this does not really motivate what we want it to motivate.  We want to show that we need/want deployment-specific policies *because* of these differences.  All we've really done here is list a bunch of different GPU workloads and said a few words about them.}
 
+% \arq{We want to show that we need/want deployment-specific policies *because* of these differences.  All we've really done here is list a bunch of different GPU workloads and said a few words about them.}
 Modern GPU systems run diverse workloads whose conflicting resource demands require different management policies. Under memory oversubscription, the choice of eviction and prefetch policy alone can control up to 73\% of execution time~\cite{ganguly2019interplay}, with similar magnitudes reported across GPU memory management workloads~\cite{park2025helm,kehne2019etc}.
 LLM inference alternates between compute-intensive prefill and bandwidth-bound decoding~\cite{zhong2024distserve,patel2024splitwise}, with irregular KV-cache offloading~\cite{sheng2023flexgen,kwon2023efficient} and sparse MoE expert activations~\cite{gale2023megablocks,he2021fastmoe} that benefit from expert-aware eviction and stride-based prefetching; the default LRU eviction and tree-based prefetching in the driver perform poorly.
 GNN training exhibits irregular, pointer-chasing accesses~\cite{lin2024towards,wang2016gunrock} where aggressive sequential prefetching helps, yet the same strategy harms random-access workloads.
