@@ -66,6 +66,10 @@ int moe_evict(gdrv_mem_remove_ctx_t *ctx) {
 
 Each layer exists because information resides in a different place: expert activation patterns are visible only on the device, application-layer intent is visible only at API calls, and eviction decisions are made inside the driver. The three BPF programs coordinate through cross-layer maps, directing memory lifecycle transitions from triggers that span the entire stack.
 
+This decoupling is not a design choice but a necessity: sched\_ext does not need to decouple because CPU transitions are local and immediate; \sys{} must decouple because GPU transitions cross the device boundary, take milliseconds, and depend on information from multiple execution contexts.
+
+To ensure safety: Triggers are open, but operations are lifecycle-bounded. Regardless of where a BPF program is triggered, it can only direct valid lifecycle transitions through kfuncs. Kfuncs are the sole interface between policy programs and the GPU driver; each validates its parameters and enforces lifecycle invariants before executing. The BPF verifier guarantees that programs terminate and stay within memory bounds. Together, these ensure that agent-generated or human-written policies can explore arbitrarily within the lifecycle surface but cannot escape it. If a policy errs or is unloaded, the driver reverts to default behavior.  A prefetch decision based on stale access counts may prefetch the wrong data (wasteful), but cannot corrupt page tables or crash the system (unsafe), because the driver validates every kfunc invocation regardless of input data.
+
 \subsection{High-Level Architecture}
 \label{sec:arch}
 
