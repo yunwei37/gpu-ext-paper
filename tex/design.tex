@@ -98,7 +98,7 @@ int evict_policy(gdrv_mem_remove_ctx_t *ctx) {
 
 \subsubsection{SIMT-aware Verification}
 
-To solve the SIMT mismatch described in C2, \sys introduces a SIMT-aware static verification model enforcing warp-level uniformity constraints to ensure efficient and safe GPU-side policy execution.
+Because the GPU executes in SIMT (Single Instruction, Multiple Threads) mode, device-side BPF programs must respect warp-level execution semantics. \sys introduces a SIMT-aware static verification model enforcing warp-level uniformity constraints to ensure efficient and safe GPU-side policy execution.
 The key insight is that we distinguish \emph{warp-uniform} values (identical across warp threads, e.g., region identifiers) from \emph{lane-varying} values (thread-local GPU state). Policies may compute freely using lane-varying values, but these must not influence control-flow decisions or directly produce side effects visible outside a warp. To guarantee warp-level coherence, \sys mandates that branch conditions, loop bounds, and map-update keys be warp-uniform or derived via warp-level aggregation. Additionally, \sys prohibits GPU-wide barriers, global synchronization primitives, and non-uniform atomic operations, and imposes resource budgets per policy hook to bound memory and thread resource usage. These constraints ensure safe policy integration that respects GPU hardware execution semantics.
 
 \subsubsection{Warp-level Execution Optimizations}
