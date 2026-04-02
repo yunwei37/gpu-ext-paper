@@ -193,8 +193,11 @@ LatencyBudget (CLC) & Scheduling Block & Device & 19 \\
 
 We quantify the overhead of the \sys driver runtime independent of policy logic using GEMM from PolyBench~\cite{grauer2012auto} and HotSpot~\cite{che2009rodinia} (1.1$\times$ oversubscription, 35~GB working set) on RTX 5090. With hooks enabled but no policy attached, the overhead is less than 0.2\%. 
 
-\paragraph{Dynamic Attach and Verification Cost.}
-We also measure the one-time deployment cost of device-side policies on unmodified running applications. After our optimized CUDA attach pipeline, dynamically attaching to an already-running \texttt{vec\_add} process takes 273\,ms from \texttt{bpftime trace} startup to detection of the first kernel entry, without requiring \texttt{LD\_PRELOAD} or application restart. The GPU SIMT-aware verifier adds only \mbox{$\sim$3\,ms} per device-side policy load, which is less than 1\% of total attach cost on this workload; the SIMT-specific analysis itself takes 18--1284\,$\mu$s for 16--2048 instruction programs. Across 18 GPU example programs in our current suite, the verifier accepts 13 and correctly rejects 5 unsafe cases, catching hazards such as lane-varying branches, non-uniform atomics, and varying map-update keys that are outside standard eBPF verification.
+\paragraph{Dynamic Attach Cost.}
+We measure the one-time deployment cost of device-side policies on unmodified running applications. After our optimized CUDA attach pipeline, dynamically attaching to an already-running \texttt{vec\_add} process takes 273\,ms from \texttt{bpftime trace} startup to detection of the first kernel entry, without requiring \texttt{LD\_PRELOAD} or application restart.
+
+\paragraph{SIMT-Aware Verification.}
+Across 18 GPU example programs in our current suite, the SIMT-aware verifier accepts 13 and correctly rejects 5 unsafe cases, catching hazards such as lane-varying branches, non-uniform atomics, and varying map-update keys that are outside standard eBPF verification.
 
 \subsubsection{Low-overhead GPU Observability}
 
