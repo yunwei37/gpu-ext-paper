@@ -20,7 +20,7 @@ To write a policy in \sys{}, developers implement eBPF programs that direct reso
 
 \input{tex/fig_exec_model}
 
-To ensure kernel safety boundaries, in \sys{}, verified kfuncs structure lifecycle transitions explicitly only along three dimensions: \emph{ordering} (evict chunk A before B), \emph{timing} (prefetch now rather than waiting), and \emph{selection} (preempt tenant X for Y), and the lifecycle is always managed by the kernel mechanism. For example, policies only implement transitions to reorder kernel-maintained eviction lists, does not allow allocating memory and will fall back to default FIFO behavior under pressure or misconfiguration.
+To ensure kernel safety boundaries, in \sys{}, verified kfuncs structure lifecycle transitions explicitly only along three dimensions: \emph{ordering} (evict chunk A before B), \emph{timing} (prefetch now rather than waiting), and \emph{selection} (preempt tenant X for Y), and the lifecycle is always managed by the kernel mechanism. For example, policies only implement transitions to reorder kernel-maintained eviction lists, does not allow allocating memory and will fall back to default FIFO behavior under pressure or misconfiguration. In multi-tenant settings, a single administrator-defined policy governs all tenants, as with sched\_ext; per-tenant policy isolation is future work.
 
 \subsubsection{Example: MoE Expert Offloading}
 
