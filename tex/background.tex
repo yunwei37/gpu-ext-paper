@@ -64,6 +64,7 @@ Third, user-space frameworks lack privileged access to low-level driver mechanis
 
 \subsection{GPU-Specific Challenges for eBPF Extensibility}
 \label{sec:motivation-challenges}
+% In CPU extensibility, a policy's natural trigger point is also its optimal decision point: when a packet arrives, the right time to filter it is now; when a process becomes runnable, the right time to schedule it is now. GPU breaks this: when a page fault arrives, the optimal action—prefetch—should have begun milliseconds earlier, at an event visible only in user-space (kernel launch). The decision point and the trigger point are separated not just across layers, but across time.
 
 eBPF has enabled safe runtime extensibility for CPU scheduling~\cite{schedext-docs} and page caching~\cite{zussman2025cache_ext}, making it a natural starting point for in-driver GPU extensibility. However, CPU-side eBPF extensibility (\S\ref{sec:background}) does not directly transfer to GPUs. Beyond the lack of safe programmable extension points in GPU drivers, three mismatches between the CPU eBPF model and GPU architecture create challenges without direct counterparts in CPU extensibility.
 First, \emph{cross-device latency}: CPU eBPF callbacks execute synchronously, but GPU operations such as page migration cross the PCIe boundary and take milliseconds (\S\ref{sec:arch-gpu}). Policies must initiate transitions asynchronously and act proactively, not only reactively at the fault.
