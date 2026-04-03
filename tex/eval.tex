@@ -108,7 +108,7 @@ We evaluate \sys on multi-tenant GPU workloads, comparing per-tenant policies ag
 \subsubsection{Microbenchmarks}
 
 \paragraph{Compute-bound Timeslice Scheduler (LC + BE).}
-We evaluate \sys's BPF struct\_ops scheduling policies on \emph{compute-bound} multi-tenant workloads where the bottleneck is GPU SM time rather than memory bandwidth. 2 latency-critical (LC) processes and 4 best-effort (BE) processes run concurrently, each with 4 CUDA streams submitting 50 compute kernels. We compare the native scheduler against \sys with differentiated timeslices (LC: 1s, BE: 200$\mu$s) using a gpreempt-style preemption policy. \Cref{fig:scheduler-latency} shows that \sys reduces LC P99 launch latency by 95\%, demonstrating scheduling stability. BE throughput remains unchanged, confirming that \sys reduces LC tail latency without sacrificing BE throughput.
+We evaluate \sys's BPF struct\_ops scheduling policies on \emph{compute-bound} multi-tenant workloads where the bottleneck is GPU SM time rather than memory bandwidth. 2 latency-critical (LC) processes and 4 best-effort (BE) processes run concurrently, each with 4 CUDA streams submitting 50 compute kernels. We compare the native scheduler against \sys with differentiated timeslices (LC: 1s, BE: 200$\mu$s) using a gpreempt-style preemption policy. \Cref{fig:scheduler-latency} shows that \sys reduces LC P99 launch latency by 95\%, demonstrating scheduling stability. BE throughput remains unchanged.
 
 \begin{figure}
 \centering
@@ -148,8 +148,6 @@ We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp
 \label{fig:two-tenant}
 \vspace{-2ex}
 \end{figure}
-
-\sys's per-tenant policies improve both tail latency and fairness, benefiting high-priority tenants while reducing memory thrashing for background jobs.
 
 \begin{figure*}[!t]
 \centering
