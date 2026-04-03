@@ -1,3 +1,4 @@
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -89,9 +90,10 @@ cbar = plt.colorbar(im, ax=ax2, shrink=0.8)
 cbar.set_label('Thread Count', fontsize=14)
 
 plt.tight_layout()
-plt.savefig('/home/yunwei37/workspace/gpu/co-processor-demo/gbpf-paper/img/thread_scheduling_motivation.pdf',
+output_dir = os.path.dirname(os.path.abspath(__file__))
+plt.savefig(os.path.join(output_dir, 'thread_scheduling_motivation.pdf'),
             bbox_inches='tight', dpi=300)
-plt.savefig('/home/yunwei37/workspace/gpu/co-processor-demo/gbpf-paper/img/thread_scheduling_motivation.png',
+plt.savefig(os.path.join(output_dir, 'thread_scheduling_motivation.png'),
             bbox_inches='tight', dpi=300)
 print("Saved to thread_scheduling_motivation.pdf and .png")
 plt.show()
