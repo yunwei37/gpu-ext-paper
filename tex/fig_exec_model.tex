@@ -13,7 +13,7 @@
 ]
 
 % === sched_ext (top) ===
-\node[font=\small\bfseries] (sched_title) at (0, 0) {sched\_ext (1:1, sync, same processor):};
+\node[font=\small\bfseries] (sched_title) at (0, 0) {sched\_ext / cache\_ext / XDP (1:1, sync, same processor):};
 
 \node[trigger] (s_trans) at (-2.3, -0.7) {transition};
 \node[bpf]     (s_bpf)   at (0, -0.7)    {BPF};
@@ -69,6 +69,6 @@
 \node[font=\small, orange!80!black, rotate=90] at (4.5, -2.95) {lifecycle};
 
 \end{tikzpicture}
-\caption{Execution model contrast. sched\_ext: one synchronous callback per transition. \sys{}: user-defined triggers direct multiple asynchronous lifecycle transitions via kfunc effects. Dashed line: host-device boundary.}
+\caption{Policy execution model: sched\_ext / cache\_ext / XDP vs \sys{}.}
 \label{fig:exec-model}
 \end{figure}

@@ -40,7 +40,7 @@ We evaluate \sys on GPT-OSS-120B MXFP4 MoE (59~GiB, 116.83B parameters) in llama
 \begin{figure}
 \centering
 \includegraphics[width=0.9\columnwidth]{img/results-raw/clc_policies_comparison.pdf}
-\caption{\sys block-scheduling policies across workload regimes: (a) moderate imbalance, (b) heavy-tail imbalance. No single policy dominates.}
+\caption{\sys block-scheduling policies: (a) moderate imbalance, (b) heavy-tail imbalance.}
 \label{fig:clc-policies}
 \vspace{-2ex}
 \end{figure}
@@ -77,14 +77,14 @@ We evaluate \sys on PyTorch-based GCN training with random graphs of varying siz
 
 With UVM enabled via a custom allocator, each epoch allocates memory on CPU and migrates to GPU on demand, incurring overhead. \sys uses sequential prefetch with a uprobe to trace PyTorch memory allocations, using device-traced history patterns to determine prefetch range.
 Originally application developers can also pre-migrate pages via \texttt{cudaMemPrefetchAsync}, achieving 5.5$\times$ speedup at moderate oversubscription, but this requires application modification. Without user-expressed prefetching, eBPF optimizes page fault handling by aggressive prefetching, achieving 2.65$\times$ speedup without modifying applications. Even with user-expressed prefetching, runtime page faults and eviction occur under memory pressure, and \sys's combined approach achieves 1.44$\times$ additional speedup by prefetching larger regions and reducing blocking faults.
-Native GPU allocation (no UVM) achieves the highest performance when data fits in memory (1.89~s at 5M nodes) but fails with OOM beyond $\sim$8M nodes. UVM with \sys prefetching enables training at 15M nodes (2.17$\times$ oversubscription) with acceptable overhead.
+Native GPU allocation (no UVM) achieves the highest performance when data fits in memory (1.89~s at 5M nodes) but fails with OOM beyond $\sim$8M nodes. UVM with \sys prefetching enables training at 15M nodes (2.17$\times$ oversubscription) with near-native performance and no application modification.
 The agent further explored deeper cross-block lookahead: after verifying that single-block-ahead prefetch (K=1) improved epoch time by 21\%, it tested K=2 and K=3 (both degraded by 16\% due to PCIe overload) and adaptive K up to 6 (degraded by 46\%). The agent first suspected lock contention, then measured PCIe utilization to identify bandwidth saturation as the true bottleneck, establishing that one block ahead is the useful prediction boundary for this workload.
 
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/pytorch/uvm_benchmark_comparison.pdf}
 \vspace{-1ex}
-\caption{GCN training epoch time vs graph size. Native allocation OOMs beyond GPU capacity; \sys eBPF prefetching achieves near-native performance transparently without application modification.}
+\caption{GCN training epoch time vs graph size.}
 \label{fig:gnn-epoch}
 \end{figure}
 
@@ -114,7 +114,7 @@ We evaluate \sys's BPF struct\_ops scheduling policies on \emph{compute-bound} (
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/scheduler_latency_throughput.pdf}
 \vspace{-1ex}
-\caption{Multi-tenant GPU scheduling with \sys BPF struct\_ops on compute-bound workloads (LC: latency-critical, BE: best-effort).}
+\caption{Multi-tenant GPU scheduling with \sys BPF struct\_ops (LC: latency-critical, BE: best-effort).}
 \label{fig:scheduler-latency}
 \end{figure}
 
@@ -144,7 +144,7 @@ We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/fig_colocated_results.pdf}
 \vspace{-1ex}
-\caption{Two-tenant co-location: \texttt{llama.cpp} inference (LC) + GNN training (BE). \sys achieves mutual improvement: LC latency better than single-tenant performance while BE training improves by 28\%.}
+\caption{Two-tenant co-location: \texttt{llama.cpp} inference (LC) + GNN training (BE).}
 \label{fig:two-tenant}
 \vspace{-2ex}
 \end{figure}
