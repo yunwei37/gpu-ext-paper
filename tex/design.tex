@@ -25,47 +25,44 @@ To ensure OS kernel safety boundaries, in \sys{}, verified kfuncs structure life
 
 We illustrate the programmable effects model with Mixture-of-Experts (MoE) offloading where model size is larger than GPU memory. As not all expert parameters fit in device memory, the GPU driver continuously evicts and migrates expert pages. Each inference token activates only a subset of experts, but the default driver using LRU eviction and tree-based prefetching lacks visibility into expert activation patterns. Consequently, every token experiences costly PCIe DMA stalls on cold expert page faults.
 
-A \sys{} policy uses three cooperating BPF programs at different layers, coordinating via a shared cross-layer map. First, during GPU kernel execution, a device-side BPF handler inserted at warp entry tracks warp-level accesses to expert pages, recording per page access counts for each warp in a hierarchical cross-layer map: information only visible on-device. Second, a uprobe BPF program attached to \texttt{cudaLaunchKernel} proactively reads these counts to predict upcoming expert activations. It asynchronously initiates prefetches (\texttt{bpf\_gpu\_prefetch\_async}) to overlap memory migration with computation, avoiding expensive stalls. If memory pressure arises, this program can simultaneously preempt lower-priority GPU tasks via \texttt{gdrv\_sched\_preempt}. Finally, upon memory eviction (\emph{evict\_prepare}), a kernel-side BPF handler leverages the same expert access counts to evict cold pages first (LFU ordering), protecting hot experts. Unlike framework-level offloading that often migrates experts as atomic units, \sys operates at page granularity, enabling finer-grained compute-transfer overlap.
+A \sys{} policy uses three cooperating BPF programs at different layers (\Cref{fig:moe-listing}), coordinating via a shared cross-layer map. First, during GPU kernel execution, a device-side BPF handler inserted at warp entry tracks warp-level accesses to expert pages, recording per page access counts for each warp in a hierarchical cross-layer map: information only visible on-device. Second, a uprobe BPF program attached to \texttt{cudaLaunchKernel} proactively reads these counts to predict upcoming expert activations. It asynchronously initiates prefetches (\texttt{bpf\_gpu\_prefetch\_async}) to overlap memory migration with computation, avoiding expensive stalls. If memory pressure arises, this program can simultaneously preempt lower-priority GPU tasks via \texttt{gdrv\_sched\_preempt}. Finally, upon memory eviction (\emph{evict\_prepare}), a kernel-side BPF handler leverages the same expert access counts to evict cold pages first (LFU ordering), protecting hot experts. Unlike framework-level offloading that often migrates experts as atomic units, \sys operates at page granularity, enabling finer-grained compute-transfer overlap.
 Each eBPF program exists because information resides in different layers; cross-layer maps coordinate them to orchestrate resource transitions across GPU and host boundaries.
 
 
+\begin{figure}[t]
 \begin{lstlisting}
-// Device-side: observe expert access patterns
 SEC("gpu_dev/warp_entry")
-int moe_observe(gdev_page_access_ctx_t *ctx) {
+int moe_observe(gdev_page_access_ctx_t *ctx){
   u64 va = ctx->va & EXPERT_MASK;
-  u64 *freq = bpf_map_lookup_elem(&expert_freq, &va);
+  u64 *freq = bpf_map_lookup_elem(
+                  &expert_freq, &va);
   if (freq) fetch_and_add(freq, 1);
   return 0;
 }
-
-// Uprobe: prefetch + preempt at GPU kernel launch
 SEC("uprobe/cudaLaunchKernel")
 int moe_prefetch(struct pt_regs *ctx) {
-  u64 next_va = predict_next_expert(ctx);
-  // Memory: prefetch predicted hot experts
-  bpf_gpu_prefetch_async(next_va, EXPERT_SIZE);
-  // Scheduling: preempt BE tenant to free memory
+  u64 next = predict_next_expert(ctx);
+  bpf_gpu_prefetch_async(
+                  next, EXPERT_SIZE);
   if (bpf_gpu_mem_pressure() > THRESHOLD)
     gdrv_sched_preempt(BE_CONTEXT);
   return 0;
 }
-
-// Driver hook: evict cold experts, protect hot ones
 SEC("gpu_mem/evict_prepare")
-int moe_evict(gdrv_mem_remove_ctx_t *ctx) {
+int moe_evict(gdrv_mem_remove_ctx_t *ctx){
   gmem_region_t *r = ctx->region;
-  u64 *freq = bpf_map_lookup_elem(&expert_freq,
-                                   &r->va);
+  u64 *freq = bpf_map_lookup_elem(
+                  &expert_freq, &r->va);
   if (freq && *freq > HOT_THRESHOLD)
-    bpf_gpu_move_tail(&ctx->evict_list, r); // keep
+    bpf_gpu_move_tail(&ctx->evict_list, r);
   else
-    bpf_gpu_move_head(&ctx->evict_list, r); // evict
+    bpf_gpu_move_head(&ctx->evict_list, r);
   return 0;
 }
 \end{lstlisting}
-
-\noindent In the listing above, \texttt{predict\_next\_expert} is a BPF helper that reads the cross-layer expert frequency map to identify the next likely expert, and \texttt{bpf\_gpu\_mem\_pressure} queries the driver's current memory utilization.
+\caption{MoE expert offloading policy}
+\label{fig:moe-listing}
+\end{figure}
 
 \subsection{High-Level Architecture}
 \label{sec:arch}

@@ -32,8 +32,10 @@
 \lstset{
   language=C,
   basicstyle=\footnotesize\ttfamily,
-  keywordstyle=\bfseries,
-  commentstyle=\itshape,
+  keywordstyle=\bfseries\color{blue!70!black},
+  commentstyle=\itshape\color{green!50!black},
+  stringstyle=\color{red!70!black},
+  morekeywords={SEC,u64,gmem_region_t,gdev_page_access_ctx_t,gdrv_mem_remove_ctx_t,bpf_map_lookup_elem,bpf_gpu_prefetch_async,bpf_gpu_mem_pressure,bpf_gpu_move_tail,bpf_gpu_move_head,gdrv_sched_preempt,fetch_and_add,predict_next_expert},
   numbers=left,
   numberstyle=\tiny,
   numbersep=8pt,
@@ -114,7 +116,8 @@
 \begin{document}
 
 % \title{\sys: An eBPF Extensible OS Policy Interface for GPU Systems}
-\title{\sys: eBPF Extensions for GPU Resource Management}
+% \title{\sys: eBPF Extensions for GPU Resource Management}
+\title{Safe and Programmable GPU Resource Management with eBPF}
 
 \iffalse % real authors (hidden by anonymous option, kept for camera-ready)
 \author{Yusheng Zheng}
