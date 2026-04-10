@@ -69,6 +69,6 @@
 \node[font=\scriptsize, orange!80!black, rotate=90] at (4.6, -4.0) {lifecycle};
 
 \end{tikzpicture}
-\caption{Execution model contrast. In sched\_ext, each BPF callback makes one synchronous decision at one transition point (coupled, 1:1). In \sys{}, BPF programs triggered from any point in the GPU management stack can direct multiple lifecycle transitions asynchronously via kfunc effects (decoupled, many:many). Triggers are open; effects are lifecycle-bounded. The dashed line marks the host-device boundary.}
+\caption{Execution model contrast. sched\_ext: one synchronous callback per transition (1:1). \sys{}: triggers from any stack layer direct multiple asynchronous lifecycle transitions via kfunc effects (many:many). The dashed line marks the host-device boundary.}
 \label{fig:exec-model}
 \end{figure}

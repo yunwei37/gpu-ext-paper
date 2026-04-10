@@ -40,7 +40,7 @@ We evaluate \sys on GPT-OSS-120B MXFP4 MoE (59~GiB, 116.83B parameters) in llama
 \begin{figure}
 \centering
 \includegraphics[width=0.9\columnwidth]{img/results-raw/clc_policies_comparison.pdf}
-\caption{\sys block-scheduling policies across workload regimes. No single policy dominates: always-steal works well under moderate imbalance (a) but becomes pathological under clustered heavy tails (b), where LatencyBudget matches baseline performance.}
+\caption{\sys block-scheduling policies across workload regimes: (a) moderate imbalance, (b) heavy-tail imbalance. No single policy dominates.}
 \label{fig:clc-policies}
 \vspace{-2ex}
 \end{figure}
@@ -51,7 +51,7 @@ We evaluate \sys on GPT-OSS-120B MXFP4 MoE (59~GiB, 116.83B parameters) in llama
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/llama.cpp/llama_uvm_combined_color.pdf}
 \vspace{-1ex}
-\caption{Prefill (pp512) and decode (tg128) throughput for GPT-OSS-120B MoE (59~GiB) on RTX 5090 (32GB). \sys eBPF prefetching achieves 4.8$\times$ speedup on decode (memory-bound) over framework offloading while maintaining competitive prefill performance.}
+\caption{Prefill (pp512) and decode (tg128) throughput for GPT-OSS-120B MoE (59~GiB) on RTX 5090 (32GB).}
 \label{fig:llama-expert-offload}
 \vspace{-2ex}
 \end{figure}
@@ -67,7 +67,7 @@ We compare vLLM's CPU-offload mode (\texttt{--cpu-offload-gb 8}) against \sys wi
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/vllm/ttft_tpot_combined.pdf}
 \vspace{-1ex}
-\caption{Time-to-first-token and decoding throughput on Qwen-30B FP8 MoE with 100 concurrent requests ($\approx$60K tokens KV-cache). \sys KV-aware sequential prefetch improves mean and p99 TTFT by 1.7--2$\times$ and decoding throughput by 1.3$\times$ over vLLM CPU-offload.}
+\caption{Time-to-first-token and decoding throughput on Qwen-30B FP8 MoE (100 concurrent requests, $\approx$60K tokens KV-cache).}
 \label{fig:vllm-kv-offload}
 \vspace{-2ex}
 \end{figure}
@@ -84,7 +84,7 @@ The agent further explored deeper cross-block lookahead: after verifying that si
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/pytorch/uvm_benchmark_comparison.pdf}
 \vspace{-1ex}
-\caption{GCN training epoch time vs graph size. Native GPU allocation (green) OOMs beyond memory capacity. User-space prefetching (blue) eliminates page faults but requires application modification; \sys eBPF prefetching (red) achieves similar benefits transparently. Combined approaches (dashed blue) provide additional benefits under severe oversubscription.}
+\caption{GCN training epoch time vs graph size. Native allocation OOMs beyond GPU capacity; \sys eBPF prefetching achieves near-native performance transparently without application modification.}
 \label{fig:gnn-epoch}
 \end{figure}
 
@@ -95,7 +95,7 @@ We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/faiss/faiss_benchmark_results.pdf}
 \vspace{-1ex}
-\caption{Faiss index build time and query throughput under oversubscription. \sys adaptive prefetch reduces build time by 21--29\% and query latency by 10--16\% compared to default UVM.}
+\caption{Faiss index build time and query throughput under oversubscription.}
 \label{fig:faiss-perf}
 \end{figure}
 
@@ -114,7 +114,7 @@ We evaluate \sys's BPF struct\_ops scheduling policies on \emph{compute-bound} m
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/scheduler_latency_throughput.pdf}
 \vspace{-1ex}
-\caption{Multi-tenant GPU scheduling with \sys BPF struct\_ops policies on compute-bound workloads. \sys reduces latency-critical (LC) P99 launch latency by 95\% while maintaining best-effort (BE) throughput.}
+\caption{Multi-tenant GPU scheduling with \sys BPF struct\_ops on compute-bound workloads (LC: latency-critical, BE: best-effort).}
 \label{fig:scheduler-latency}
 \end{figure}
 
@@ -127,7 +127,7 @@ We evaluate \sys's memory policies for priority differentiation on \emph{memory-
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/all_kernels_stacked.pdf}
 \vspace{-1ex}
-\caption{Multi-tenant memory priority differentiation on oversubscribed UVM workloads. \sys memory policies improve total completion time by 55--92\% and enforce priority differentiation; scheduler policies are ineffective on these memory-bound workloads. Single 1$\times$: ideal single-process time; 2$\times$Single 1$\times$: theoretical lower bound.}
+\caption{Multi-tenant memory priority differentiation under UVM oversubscription. Single 1$\times$: ideal single-process time; 2$\times$Single 1$\times$: theoretical lower bound.}
 \label{fig:all-kernels-priority}
 \end{figure}
 
@@ -144,7 +144,7 @@ We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/fig_colocated_results.pdf}
 \vspace{-1ex}
-\caption{Two-tenant co-location: \texttt{llama.cpp} inference (LC) + GNN training (BE). \sys achieves mutual improvement: LC latency better than single-tenant performance while BE training improves by 28\%. Tenant-aware policies reduce contention rather than prioritizing one workload at the expense of another.}
+\caption{Two-tenant co-location: \texttt{llama.cpp} inference (LC) + GNN training (BE). \sys achieves mutual improvement: LC latency better than single-tenant performance while BE training improves by 28\%.}
 \label{fig:two-tenant}
 \vspace{-2ex}
 \end{figure}
@@ -152,7 +152,7 @@ We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp
 \begin{figure*}[!t]
 \centering
 \includegraphics[width=\textwidth]{img/results-raw/runtime/microbench_comparison.pdf}
-\caption{Device-side microbenchmark overhead. (a) GPU-side operation overhead comparing eGPU-style naive injection vs \sys's SIMT-aware execution. (b) eGPU CPU map access latency via PCIe, motivating \sys's hierarchical map design.}
+\caption{Device-side microbenchmark overhead. (a) eGPU-style naive injection vs \sys's SIMT-aware execution. (b) CPU map access latency via PCIe vs GPU-side operations.}
 \label{fig:microbench}
 \end{figure*}
 

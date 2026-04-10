@@ -22,7 +22,7 @@ Modern GPU workloads differ in resource demands based on deployment contexts, ma
 \begin{figure*}[t]
     \centering
     \includegraphics[width=\textwidth]{img/pattern/combined_patterns_1x5.pdf}
-    \caption{Memory access (page fault) patterns under UVM oversubscription vary across GPU workloads: faiss Build exhibits sequential scans; faiss Query random accesses; llama.cpp MoE Prefill shows periodic sequential patterns while Decode exhibits sparse random accesses; PyTorch DNN shows periodic block accesses.}
+    \caption{Memory access (page fault) patterns under UVM oversubscription across five GPU workloads, ranging from sequential scans to sparse random accesses.}
     \label{fig:access_patterns}
 \end{figure*}
 
@@ -30,7 +30,7 @@ Modern GPU workloads differ in resource demands based on deployment contexts, ma
 \begin{figure}[t]
     \centering
     \includegraphics[width=\columnwidth]{img/pattern/vector_add/thread_scheduling_motivation.pdf}
-    \caption{GPU thread scheduling imbalance observed via eBPF tracing. (a) SM load distribution shows 127$\times$ imbalance (SM~15: 382 threads vs SM~6: 3 threads). (b) Warp activity heatmap reveals SM~0 concentrates work in high-numbered warps while other SMs underutilize warp slots.}
+    \caption{GPU thread scheduling imbalance observed via eBPF tracing. (a) SM load distribution: 127$\times$ imbalance. (b) Warp activity heatmap across SMs.}
     \label{fig:thread_scheduling}
 \end{figure}
 
