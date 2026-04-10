@@ -152,7 +152,7 @@ We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp
 \begin{figure*}[!t]
 \centering
 \includegraphics[width=\textwidth]{img/results-raw/runtime/microbench_comparison.pdf}
-\caption{Device-side microbenchmark overhead. (a) eGPU-style naive injection vs \sys's SIMT-aware execution. (b) CPU map access latency via PCIe vs GPU-side operations.}
+\caption{Device-side microbenchmark overhead. (a) Naive per-thread injection vs \sys's SIMT-aware execution. (b) CPU map access latency via PCIe vs GPU-side operations.}
 \label{fig:microbench}
 \end{figure*}
 
@@ -218,4 +218,4 @@ launchlate & 347 & Host+Device & 14\% & 93\% \\
 \end{table}
 
 \paragraph{Device-side Runtime Optimization.}
-We evaluate device-side \sys mechanisms using a vector-add cuda kernel (32 elements, 10K iterations) from cuda-sample~\cite{nvidia_cuda_samples} on RTX 5090. \Cref{fig:microbench}(a) compares \sys's SIMT-aware warp-level execution against the prior eGPU baseline~\cite{egpu} that injects eBPF bytecode without SIMT-specific verification and optimizations. The eGPU-style approach incurs overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead by 60--80\% across operations. \Cref{fig:microbench}(b) shows CPU map access via PCIe is 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU. We do not compare policy-level performance against eGPU or Neutrino because they are limited to read-only observability (\S\ref{sec:background}).
+We evaluate device-side \sys mechanisms using a vector-add cuda kernel (32 elements, 10K iterations) from cuda-sample~\cite{nvidia_cuda_samples} on RTX 5090. \Cref{fig:microbench}(a) compares \sys's SIMT-aware warp-level execution against the prior workshop version baseline~\cite{egpu} that injects eBPF bytecode without SIMT-specific verification and optimizations. The baseline incurs overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead by 60--80\% across operations. \Cref{fig:microbench}(b) shows CPU map access via PCIe is 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU. We do not compare policy-level performance against the prior workshop version or Neutrino because they are limited to read-only observability (\S\ref{sec:background}).
