@@ -13,7 +13,7 @@
 ]
 
 % === sched_ext (top) ===
-\node[font=\scriptsize\bfseries] (sched_title) at (0, 0) {sched\_ext (1:1, sync):};
+\node[font=\scriptsize\bfseries] (sched_title) at (0, 0) {sched\_ext (1:1, sync, same processor):};
 
 \node[trigger] (s_trans) at (-2.2, -0.6) {transition};
 \node[bpf]     (s_bpf)   at (0, -0.6)    {BPF};
@@ -22,27 +22,32 @@
 \draw[arrow] (s_trans) -- (s_bpf);
 \draw[arrow] (s_bpf)   -- (s_eff);
 
-\node[label, below=0.01cm of s_eff] {same processor, same moment};
-
 % === gpu_ext (bottom) ===
-\node[font=\scriptsize\bfseries] (gpu_title) at (0, -1.5) {\sys{} (many:many, async):};
+\node[font=\scriptsize\bfseries] (gpu_title) at (0, -1.2) {\sys{} (many:many, async, cross-device):};
 
-% Triggers
-\node[trigger] (t_a) at (-2.8, -2.2) {driver hook};
-\node[trigger] (t_b) at (-2.8, -2.75) {uprobe};
-\node[trigger] (t_c) at (-2.8, -3.3) {bpf\_wq};
-\node[trigger, fill=purple!10] (t_d) at (-2.8, -3.85) {device event};
+% Host triggers
+\node[trigger] (t_a) at (-2.8, -1.9) {driver hook};
+\node[trigger] (t_b) at (-2.8, -2.45) {uprobe};
+\node[trigger] (t_c) at (-2.8, -3.0) {bpf\_wq};
 
 % BPF + maps
-\node[bpf, minimum height=1.4cm, minimum width=1.2cm, text width=1.0cm, align=center] (g_bpf) at (-0.3, -3.0) {BPF\\+ maps};
+\node[bpf, minimum height=1.2cm, minimum width=1.2cm, text width=1.0cm, align=center] (g_bpf) at (-0.3, -2.45) {BPF\\+ maps};
 
 % Effects (lifecycle transitions)
-\node[effect] (e_x) at (2.4, -2.2) {prefetch};
+\node[effect] (e_x) at (2.4, -1.9) {prefetch};
 \node[label, right=0.02cm of e_x] {\tiny async};
-\node[effect] (e_y) at (2.4, -3.0) {evict};
+\node[effect] (e_y) at (2.4, -2.45) {evict};
 \node[label, right=0.02cm of e_y] {\tiny reorder};
-\node[effect] (e_z) at (2.4, -3.8) {preempt};
+\node[effect] (e_z) at (2.4, -3.0) {preempt};
 \node[label, right=0.02cm of e_z] {\tiny select};
+
+% Device boundary (polyline: L-shape under triggers, up between BPF and effects)
+\draw[thick, dashed, gray]
+  (-3.6, -3.4) -- (0.8, -3.4) -- (0.8, -1.55);
+\node[font=\tiny\itshape, text=gray, align=center] at (0.8, -3.7) {device boundary};
+
+% Device trigger (below boundary, left)
+\node[trigger, fill=purple!10] (t_d) at (-2.8, -3.8) {device event};
 
 % Arrows from triggers to BPF
 \draw[arrow] (t_a) -- (g_bpf);
@@ -50,21 +55,18 @@
 \draw[arrow] (t_c) -- (g_bpf);
 \draw[dasharrow] (t_d) -- (g_bpf);
 
-% Arrows from BPF to effects
-\draw[arrow] (g_bpf) -- (e_x);
-\draw[arrow] (g_bpf) -- (e_y);
-\draw[arrow] (g_bpf) -- (e_z);
-
-% PCIe boundary
-\draw[thick, dashed, gray] (-3.6, -3.55) -- (3.8, -3.55) node[right, font=\tiny\itshape, text=gray] {PCIe};
+% Arrows from BPF to effects (cross boundary)
+\draw[dasharrow] (g_bpf) -- (e_x);
+\draw[dasharrow] (g_bpf) -- (e_y);
+\draw[dasharrow] (g_bpf) -- (e_z);
 
 % Labels
-\node[label] at (-2.8, -1.85) {triggers (open)};
-\node[label] at (2.4, -1.85) {effects (bounded)};
+\node[label] at (-2.8, -1.55) {triggers (open)};
+\node[label] at (2.4, -1.55) {effects (bounded)};
 
 % Lifecycle boundary box
-\draw[thick, dotted, orange!60] (1.5, -2.0) rectangle (3.7, -4.1);
-\node[font=\tiny, orange!80!black, rotate=90] at (3.85, -3.05) {lifecycle};
+\draw[thick, dotted, orange!60] (1.5, -1.7) rectangle (3.7, -3.3);
+\node[font=\tiny, orange!80!black, rotate=90] at (3.85, -2.5) {lifecycle};
 
 \end{tikzpicture}
 \caption{Execution model contrast. sched\_ext: one synchronous callback per transition. \sys{}: user-defined triggers direct multiple asynchronous lifecycle transitions via kfunc effects. Dashed line: host-device boundary.}
