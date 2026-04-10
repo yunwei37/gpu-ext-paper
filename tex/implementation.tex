@@ -5,6 +5,7 @@
 \subsection{Components Overview}
 
 We implemented \sys on Linux 6.15, extending the OS kernel with a standalone file ($\sim$1 KLOC) that handles hook registration and verifier extensions. We integrated lightweight instrumentation ($\sim$100 LOC) into NVIDIA's open GPU kernel modules to expose memory and scheduling lifecycle events as GPU-specific kfuncs (\S\ref{sec:impl-host}). Policies can be triggered from driver hooks for page faults, uprobes on application functions, kprobe and tracepoints for syscalls, device-side events, and asynchronous tasks. Our user-space loader and JIT infrastructure ($\sim$10 KLOC) builds upon bpftime's framework~\cite{bpftime} for device-side code generation, while an LLVM-based backend ($\sim$1 KLOC) translates the restricted \sys eBPF instruction subset into GPU device code (PTX) (\S\ref{sec:impl-gpu}).
+Although our implementation targets NVIDIA GPUs, the host-side design aligns with generic Linux abstractions (HMM/\texttt{migrate\_vma}~\cite{rocm-gpu-memory,linux-gpusvm-doc}, DRM scheduler~\cite{drm-gpu-sched,amdgpu-userq-doc}), and the device-side can be extended to generate vendor-neutral IR~\cite{spirv-ir-rfc} for future portability.
 
 \subsection{Host-side Integration}
 \label{sec:impl-host}
