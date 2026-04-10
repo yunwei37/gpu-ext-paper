@@ -188,19 +188,12 @@ LatencyBudget (CLC) & Scheduling Block & Device & 19 \\
 \label{tab:support-matrix}
 \end{table}
 
-\subsubsection{Host Runtime Overhead}
+\paragraph{Host Runtime Overhead} We quantify the overhead of the \sys driver runtime independent of policy logic using GEMM from PolyBench~\cite{grauer2012auto} and HotSpot~\cite{che2009rodinia} (1.1$\times$ oversubscription, 35~GB working set) on RTX 5090. With hooks enabled but no policy attached, the overhead is less than 0.2\%.
 
-We quantify the overhead of the \sys driver runtime independent of policy logic using GEMM from PolyBench~\cite{grauer2012auto} and HotSpot~\cite{che2009rodinia} (1.1$\times$ oversubscription, 35~GB working set) on RTX 5090. With hooks enabled but no policy attached, the overhead is less than 0.2\%. 
+\paragraph{Device Verification} Across 18 GPU programs, the SIMT-aware verifier accepts 13 and correctly rejects 5 unsafe cases (lane-varying branches, non-uniform atomics, varying map-update keys).
 
-\paragraph{Dynamic Attach Cost.}
-We measure device-side one-time deployment cost on unmodified running applications. Attaching to a running \texttt{vec\_add} process takes 273\,ms from \texttt{bpftime trace} startup to detection of the first GPU kernel entry, without requiring \texttt{LD\_PRELOAD} or application restart.
-
-\paragraph{SIMT-Aware Verification.}
-Across 18 GPU example programs in our current suite, the SIMT-aware verifier accepts 13 and correctly rejects 5 unsafe cases, catching hazards such as lane-varying branches, non-uniform atomics, and varying map-update keys that are outside standard eBPF verification.
-
-\subsubsection{Low-overhead GPU Observability}
-
-We evaluate device-side observability tools built on \sys (\Cref{tab:obs-overhead}) on NVIDIA P40 GPU using llama.cpp prefill (Llama 1B, IO3, sequence-mixed). Tools include \texttt{kernelretsnoop} (per-thread block finish timestamps), \texttt{threadhist} (load imbalance detection), and \texttt{launchlate} (kernel launch latency). Overhead is measured as token/s degradation during prefill. These tools show significantly lower overhead than NVBit~\cite{villa2019nvbit} (3--14\% vs 85--87\%) due to \sys's warp-uniform execution avoiding divergent control flow and unnecessary memory accesses.
+\paragraph{Device-side Observability Overhead.}
+We evaluate device-side observability tools built on \sys (\Cref{tab:obs-overhead}) on NVIDIA P40 GPU using llama.cpp prefill (Llama 1B, IO3, sequence-mixed). Tools include \texttt{kernelretsnoop} (per-block finish timestamps), \texttt{threadhist} (load imbalance detection), and \texttt{launchlate} (kernel launch latency). Overhead is measured as token/s degradation during prefill. These tools show significantly lower overhead than NVBit~\cite{villa2019nvbit} (3--14\% vs 85--87\%) due to \sys's warp-uniform execution avoiding divergent control flow and unnecessary memory accesses. Attaching to a running process takes an average 273\,ms from \texttt{bpftime trace} startup to detection of the first GPU kernel entry, without application restart.
 
 % \texttt{gpu\_sched\_trace}, \texttt{prefetch\_trace}, and \texttt{eviction\_trace} provide host-side observability for scheduling and memory management policies (\Cref{tab:obs-overhead}).
 \begin{table}[t]
@@ -224,5 +217,5 @@ launchlate & 347 & Host+Device & 14\% & 93\% \\
 \label{tab:obs-overhead}
 \end{table}
 
-\paragraph{Device-side Runtime Overhead and Optimization.}
-We evaluate device-side \sys mechanisms using a vector-add microbenchmark (32 elements, 10K iterations) from cuda-sample~\cite{nvidia_cuda_samples} on RTX 5090. \Cref{fig:microbench}(a) compares \sys's SIMT-aware warp-level execution against the prior eGPU baseline~\cite{egpu} that injects eBPF bytecode without SIMT-specific optimizations. The eGPU-style approach incurs overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead by 60--80\% across operations. \Cref{fig:microbench}(b) shows CPU map access via PCIe is 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU. We do not compare policy-level performance against eGPU or Neutrino because they are limited to read-only observability (\S\ref{sec:background}).
+\paragraph{Device-side Runtime Optimization.}
+We evaluate device-side \sys mechanisms using a vector-add cuda kernel (32 elements, 10K iterations) from cuda-sample~\cite{nvidia_cuda_samples} on RTX 5090. \Cref{fig:microbench}(a) compares \sys's SIMT-aware warp-level execution against the prior eGPU baseline~\cite{egpu} that injects eBPF bytecode without SIMT-specific verification and optimizations. The eGPU-style approach incurs overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead by 60--80\% across operations. \Cref{fig:microbench}(b) shows CPU map access via PCIe is 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU. We do not compare policy-level performance against eGPU or Neutrino because they are limited to read-only observability (\S\ref{sec:background}).
