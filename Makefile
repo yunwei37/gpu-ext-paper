@@ -3,6 +3,8 @@
 
 TEX=main.tex
 PDF=main.pdf
+RESUB_TEX=resubmission-changes.tex
+RESUB_PDF=resubmission-changes.pdf
 TEX_SRCS=$(wildcard tex/*.tex) $(TEX)
 IMG_SRCS=$(wildcard img/*)
 BIB=cite.bib
@@ -17,11 +19,14 @@ BIBTEX=bibtex
 
 .PHONY: all clean distclean
 
-all: $(PDF)
+all: $(PDF) $(RESUB_PDF)
 
 # Rule to convert SVG to PDF
 img/%.pdf: img/%.svg
 	convert $< $@
+
+$(RESUB_PDF): $(RESUB_TEX)
+	$(LATEX) $(LATEXFLAGS) $(RESUB_TEX)
 
 $(PDF): $(TEX_SRCS) $(IMG_SRCS) $(BIB) $(SVG_PDFS)
 	$(LATEX) $(LATEXFLAGS) $(TEX)
@@ -35,4 +40,4 @@ clean:
 	@rm -f $(SVG_PDFS)
 
 distclean: clean
-	@rm -f $(PDF)
+	@rm -f $(PDF) $(RESUB_PDF)
