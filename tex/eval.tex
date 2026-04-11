@@ -42,7 +42,7 @@ We evaluate \sys on GPT-OSS-120B MXFP4 MoE (59~GiB, 116.83B parameters) in llama
 \includegraphics[width=0.9\columnwidth]{img/results-raw/clc_policies_comparison.pdf}
 \caption{\sys block-scheduling policies: (a) moderate imbalance, (b) heavy-tail imbalance.}
 \label{fig:clc-policies}
-\vspace{-2ex}
+
 \end{figure}
 
 % \xiangyu{Are those hints easy to find in many scenarios? Maybe we should clarify it. Otherwise, it seems that \sys{} uses some tricks to win the competition.}
@@ -50,10 +50,10 @@ We evaluate \sys on GPT-OSS-120B MXFP4 MoE (59~GiB, 116.83B parameters) in llama
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/llama.cpp/llama_uvm_combined_color.pdf}
-\vspace{-1ex}
+
 \caption{Prefill (pp512) and decode (tg128) throughput for GPT-OSS-120B MoE (59~GiB) on RTX 5090 (32GB).}
 \label{fig:llama-expert-offload}
-\vspace{-2ex}
+
 \end{figure}
 
 \paragraph{KV-cache Offloading (vLLM Qwen-30B MoE).}
@@ -66,10 +66,10 @@ We compare vLLM's CPU-offload mode (\texttt{--cpu-offload-gb 8}) against \sys wi
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/vllm/ttft_tpot_combined.pdf}
-\vspace{-1ex}
+
 \caption{Time-to-first-token and decoding throughput on Qwen-30B FP8 MoE (100 concurrent requests, $\approx$60K tokens KV-cache).}
 \label{fig:vllm-kv-offload}
-\vspace{-2ex}
+
 \end{figure}
 
 \paragraph{Graph Neural Networks (GNN Training).}
@@ -82,7 +82,7 @@ Native GPU allocation (no UVM) achieves the highest performance when data fits i
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/pytorch/uvm_benchmark_comparison.pdf}
-\vspace{-1ex}
+
 \caption{GCN training epoch time vs graph size.}
 \label{fig:gnn-epoch}
 \end{figure}
@@ -93,7 +93,7 @@ We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/faiss/faiss_benchmark_results.pdf}
-\vspace{-1ex}
+
 \caption{Faiss index build time and query throughput under oversubscription.}
 \label{fig:faiss-perf}
 \end{figure}
@@ -112,7 +112,7 @@ We evaluate \sys's BPF struct\_ops scheduling policies on \emph{compute-bound} (
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/scheduler_latency_throughput.pdf}
-\vspace{-1ex}
+
 \caption{Multi-tenant GPU scheduling with \sys BPF struct\_ops (LC: latency-critical, BE: best-effort).}
 \label{fig:scheduler-latency}
 \end{figure}
@@ -125,7 +125,7 @@ We evaluate \sys's memory policies for priority differentiation on \emph{memory-
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/all_kernels_stacked.pdf}
-\vspace{-1ex}
+
 \caption{Multi-tenant memory priority differentiation under UVM oversubscription. Single 1$\times$: ideal single-process time; 2$\times$Single 1$\times$: theoretical lower bound.}
 \label{fig:all-kernels-priority}
 \end{figure}
@@ -142,10 +142,10 @@ We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/fig_colocated_results.pdf}
-\vspace{-1ex}
+
 \caption{Two-tenant co-location: \texttt{llama.cpp} inference (LC) + GNN training (BE).}
 \label{fig:two-tenant}
-\vspace{-2ex}
+
 \end{figure}
 
 \begin{figure*}[!t]
