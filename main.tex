@@ -144,38 +144,38 @@
 \affiliation{\institution{UC Santa Cruz}}
 \fi % end real authors
 
-%% CCS concepts (mandatory for ACM papers > 2 pages)
-\begin{CCSXML}
-<ccs2012>
-   <concept>
-       <concept_id>10011007.10011006.10011008.10011009.10011015</concept_id>
-       <concept_desc>Software and its engineering~Virtual memory</concept_desc>
-       <concept_significance>500</concept_significance>
-       </concept>
-   <concept>
-       <concept_id>10011007.10011006.10011008.10011024.10011028</concept_id>
-       <concept_desc>Software and its engineering~Scheduling</concept_desc>
-       <concept_significance>500</concept_significance>
-       </concept>
-   <concept>
-       <concept_id>10011007.10011006.10011039</concept_id>
-       <concept_desc>Software and its engineering~Formal software verification</concept_desc>
-       <concept_significance>300</concept_significance>
-       </concept>
-   <concept>
-       <concept_id>10010520.10010521.10010537.10010540</concept_id>
-       <concept_desc>Computer systems organization~Graphics processors</concept_desc>
-       <concept_significance>500</concept_significance>
-       </concept>
- </ccs2012>
-\end{CCSXML}
+% %% CCS concepts (mandatory for ACM papers > 2 pages)
+% \begin{CCSXML}
+% <ccs2012>
+%    <concept>
+%        <concept_id>10011007.10011006.10011008.10011009.10011015</concept_id>
+%        <concept_desc>Software and its engineering~Virtual memory</concept_desc>
+%        <concept_significance>500</concept_significance>
+%        </concept>
+%    <concept>
+%        <concept_id>10011007.10011006.10011008.10011024.10011028</concept_id>
+%        <concept_desc>Software and its engineering~Scheduling</concept_desc>
+%        <concept_significance>500</concept_significance>
+%        </concept>
+%    <concept>
+%        <concept_id>10011007.10011006.10011039</concept_id>
+%        <concept_desc>Software and its engineering~Formal software verification</concept_desc>
+%        <concept_significance>300</concept_significance>
+%        </concept>
+%    <concept>
+%        <concept_id>10010520.10010521.10010537.10010540</concept_id>
+%        <concept_desc>Computer systems organization~Graphics processors</concept_desc>
+%        <concept_significance>500</concept_significance>
+%        </concept>
+%  </ccs2012>
+% \end{CCSXML}
 
-\ccsdesc[500]{Software and its engineering~Virtual memory}
-\ccsdesc[500]{Software and its engineering~Scheduling}
-\ccsdesc[300]{Software and its engineering~Formal software verification}
-\ccsdesc[500]{Computer systems organization~Graphics processors}
+% \ccsdesc[500]{Software and its engineering~Virtual memory}
+% \ccsdesc[500]{Software and its engineering~Scheduling}
+% \ccsdesc[300]{Software and its engineering~Formal software verification}
+% \ccsdesc[500]{Computer systems organization~Graphics processors}
 
-\keywords{GPU resource management, eBPF, OS kernel extensibility, memory management, scheduling, unified virtual memory}
+% \keywords{GPU resource management, eBPF, OS kernel extensibility, memory management, scheduling, unified virtual memory}
 
 \begin{abstract}
 GPU resource management policies significantly influence application performance, yet optimal policies vary widely across workloads and deployment scenarios. Existing user-space solutions offer programmability and flexibility but lack cross-tenant visibility and hardware-level control, while OS kernel-driver modifications introduce complexity and safety risks, limiting deployment and AI agent policy exploration.
@@ -195,6 +195,10 @@ We introduce \sys, an OS interface for GPU resource management that resolves thi
 \input{tex/discussion}
 
 \input{tex/conclusion}
+
+\begin{acks}
+This work used Claude as a generative AI tool. During paper preparation, generative AI assisted with code editing, typographic corrections, and language improvements. All research ideas, system design, experimental methodology, and analysis were conceived and directed by the human authors.
+\end{acks}
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{cite}
