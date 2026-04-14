@@ -22,7 +22,7 @@ This paper was previously submitted to OSDI'26 (Spring cycle) and rejected. Belo
 
 \section{Reframed Core Design Contribution}
 
-The OSDI submission organized the design around three design principles and three corresponding challenges (C1--C3). The revised paper replaces this with a unified execution model, \emph{programmable effects on resource lifecycles}, with an explicit comparison against existing BPF extensibility systems (sched\_ext, cache\_ext, XDP). The key distinction: GPU policies require many-to-many, asynchronous, cross-device trigger-effect mappings rather than synchronous 1:1 callbacks. This is supported by a new execution model figure (\S4.1) and a concrete MoE expert offloading example showing three cooperating BPF programs across host and device (\S4.1.2).
+The OSDI submission organized the design around three design principles and three corresponding challenges (C1--C3). The revised paper replaces this with a unified execution model based on \emph{asynchronous resource state machines with BPF-directed lifecycle transitions}, with an explicit comparison against existing BPF extensibility systems (sched\_ext, cache\_ext, XDP). The key distinction: GPU policies require many-to-many, asynchronous, cross-device trigger-effect mappings rather than synchronous 1:1 callbacks. This is supported by a new execution model figure (\S4.1) and a concrete MoE expert offloading example showing three cooperating BPF programs across host and device (\S4.1.2).
 
 \section{Added Agent-Driven Evaluation (New RQ2)}
 

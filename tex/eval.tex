@@ -10,7 +10,7 @@ We evaluate \sys using four research questions:
   \item \textbf{RQ4 (Programmability \& Mechanism Overhead):} Is \sys sufficiently programmable to support diverse policies, and what is the overhead of its core mechanisms and observability capabilities?
 \end{itemize}
 
-\ys{Figture needs improvements}
+\yusheng{Figture needs improvements}
 
 \subsection{Methodology and Setup}
 
@@ -25,7 +25,7 @@ We evaluate \sys's memory policy interface on oversubscribed single-tenant setup
 
 \paragraph{Memory Policy Microbenchmarks.}
 We evaluate host-device prefetch coordination using a modified vector-add GPU kernel~\cite{nvidia_cuda_samples} with stride access pattern and 40GB working set (1.25$\times$ oversubscription). Device-side L2 prefetch instructions (\texttt{prefetch.global.L2}) trigger non-blocking page faults, while host-side callbacks extend prefetching to additional pages. With device-only prefetch and default host prefetch at thread entry, we achieve 1.34$\times$ speedup; combined host-device stride-based eBPF prefetch achieves 1.77$\times$. However, sequential prefetch degrades performance by 8\% due to pattern mismatch, demonstrating that \sys's cross-layer design enables workload-aware prefetching.
-\ys{Add figture for it}
+\yusheng{Add figture for it}
 
 \paragraph{Single-Tenant Block Scheduler.}
 We apply a \sys-based block scheduler driven by the GPU-side interface (Section~\ref{sec:design-interfaces}) to workloads with load imbalance. Using cluster-style launch where persistent worker blocks pull work units via \texttt{should\_\allowbreak{}try\_steal}, we evaluate three policies: FixedWork (static block assignment, no scheduler), Greedy (always-steal), and LatencyBudget (workload-aware with per-block time limits).
