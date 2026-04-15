@@ -116,6 +116,7 @@ We evaluate \sys's BPF struct\_ops scheduling policies on \emph{compute-bound} (
 
 \caption{Multi-tenant GPU scheduling with \sys{} (LC: latency-critical, BE: best-effort).}
 \label{fig:scheduler-latency}
+% \vspace{-1.5em}
 \end{figure}
 
 \paragraph{Memory-bound Memory Priority Differentiation.}
@@ -186,6 +187,7 @@ LatencyBudget (CLC) & Scheduling Block & Device & 19 \\
 \end{tabularx}
 \caption{Policy support matrix. Domain indicates where the policy executes: Host (driver eBPF), Device (GPU eBPF), or both.}
 \label{tab:support-matrix}
+\vspace{-2em}
 \end{table}
 
 \paragraph{Host Runtime Overhead.} We quantify the overhead of the \sys driver runtime independent of policy logic using GEMM from PolyBench~\cite{grauer2012auto} and HotSpot~\cite{che2009rodinia} (1.1$\times$ oversubscription, 35~GB working set) on RTX 5090. With hooks enabled but no policy attached, the overhead is less than 0.2\%.
@@ -215,6 +217,7 @@ launchlate & 347 & Host+Device & 14\% & 93\% \\
 \end{tabularx}
 \caption{\sys device-side observability tools and overhead comparison with NVBit.}
 \label{tab:obs-overhead}
+\vspace{-3em}
 \end{table}
 
 \paragraph{Device-side Runtime Optimization.}
