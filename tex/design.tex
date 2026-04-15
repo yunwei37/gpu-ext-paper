@@ -2,10 +2,33 @@
 
 \section{\sys Design}
 
-% Challenges C1/C2/C3 moved to §3 Motivation (sec:motivation-limitations)
-
 \arq{This needs to be higher level: it should reference the specific required principles (safe, full-stack, and dynamic) that we articulate in the Motivation.  It should explain how it achieves each of those properties.  I also think that we should refer to \sys{} as an "OS subsystem" rather than repeatedly calling it (or focusing on its) interface.  This seems critical to me because the safe and dynamic properties do not seem like properties of just the interface but also of the desgin/implementation of the subsystem itself.}
 \sys{} provides a safe, programmable OS interface for GPU resource management, supporting dynamic AI-generated policies transparently. As identified in \S\ref{sec:motivation-challenges}, achieving these goals requires addressing three GPU-specific challenges: (1) cross-device latency that necessitates asynchronous policy execution, (2) memory-scheduling coupling that demands unified lifecycle management across both domains, and (3) fragmented visibility across the stack that requires both device-side verified BPF execution and user-defined triggers to bridge the application-driver-device gap.
+
+\begin{figure}
+\centering
+    \includegraphics[width=\columnwidth]{img/gpu-ebpf-arch.png}
+\caption{\sys architecture. (a) bpf syscall deploys policies to verifier and driver hooks; (b) GPU JIT after verification; (c) DBI injects trampolines into GPU kernels.}
+\label{fig:system-design}
+\end{figure}
+
+\label{sec:arch}
+\arq{What is the purpose of this subsection?  What are you trying to convey?  If you want the reader to understand about the high level architecture of the system, I actually would include this information in the intro of the section (i.e., before any subsections).  I would also *drastically* simplify the figure to just show \sys{}'s high level components, rather than depicting things like "verifier" and "JIT" which are unlikely to be referenced again.}
+As shown in Figure~\ref{fig:system-design}, policy authors use standard eBPF tooling (e.g., \texttt{clang/libbpf}, \texttt{bpftool}) to build a single policy object containing both host and device parts, and deploy it via a loader library that installs policies, configures maps, and supports runtime redeployment without  application or driver restarts. The runtime spans host driver and GPU device, managing verification (\S\ref{sec:verification}), JIT compilation to native host CPU code or GPU-compatible instructions (e.g., PTX), and hierarchical map placement across host and device.
+
+\subsection{GPU-Specific Challenges for eBPF Extensibility}
+\label{sec:motivation-challenges}
+
+eBPF (extended Berkeley Packet Filter) allows user-supplied programs to run safely inside the OS kernel. Programs are statically verified at load time for termination, memory safety, and type correctness, then JIT-compiled to native code. The verifier guarantees that programs call only approved helpers and kfuncs (OS kernel functions). eBPF programs are callbacks attached to hook points such as \texttt{struct\_ops}, \texttt{kprobe}, and \texttt{uprobe}. This enables runtime-programmable OS extensions, including \texttt{sched\_ext}~\cite{schedext-docs} for CPU scheduling, \texttt{cache\_ext}~\cite{zussman2025cache_ext} for page cache eviction, and XDP for network packet processing. In these systems, each BPF callback makes a single synchronous decision at a fixed transition point, with effects immediately taking place on local CPU resources, and each subsystem is extended independently.
+
+However, the CPU eBPF model does not directly transfer to GPUs. Three mismatches between the CPU model and GPU architecture create challenges beyond the lack of safe programmable extension in GPU drivers.
+
+First, cross-device latency: CPU eBPF callbacks execute synchronously, but GPU operations such as page migration cross the PCIe boundary and take milliseconds (\S\ref{sec:arch-gpu}). Policies must initiate transitions asynchronously and act proactively, not only reactively at the fault.
+
+Second, memory-scheduling coupling: CPU extensibility treats scheduling and memory as independent subsystems (\texttt{sched\_ext} and \texttt{cache\_ext}), but on GPU, limited device memory tightly couples these domains, as a page fault is simultaneously a memory event and a scheduling stall. GPU policies must coordinate across both.
+
+Third, fragmented visibility: CPU eBPF runs on the same processor it manages, but in GPU stacks, policy-relevant state is split across layers. Downward, GPU-internal execution state such as per-warp access patterns and SM utilization remains opaque to the host (\S\ref{sec:arch-gpu}). Upward, GPU runtimes bypass the OS kernel for work submission (e.g., user-space command buffers and doorbells), so the driver sees only coarse lifecycle events, not individual GPU kernel launches or application phase transitions (e.g., LLM prefill-to-decode, FAISS build-to-search).
+Naively exposing low-level GPU driver controls without addressing these mismatches risks resource leaks, hardware hangs, or OS kernel panics.
 
 \subsection{\sys{} Policy Execution Model}
 \label{sec:design-interfaces}
@@ -73,19 +96,6 @@ int moe_evict(gdrv_mem_remove_ctx_t *ctx){
 \caption{MoE expert offloading policy}
 \label{fig:moe-listing}
 \end{figure}
-
-\subsection{High-Level Architecture}
-\label{sec:arch}
-
-\begin{figure}
-\centering
-    \includegraphics[width=\columnwidth]{img/gpu-ebpf-arch.png}
-\caption{\sys architecture. (a) bpf syscall deploys policies to verifier and driver hooks; (b) GPU JIT after verification; (c) DBI injects trampolines into GPU kernels.}
-\label{fig:system-design}
-\end{figure}
-
-\arq{What is the purpose of this subsection?  What are you trying to convey?  If you want the reader to understand about the high level architecture of the system, I actually would include this information in the intro of the section (i.e., before any subsections).  I would also *drastically* simplify the figure to just show \sys{}'s high level components, rather than depicting things like "verifier" and "JIT" which are unlikely to be referenced again.}
-As shown in Figure~\ref{fig:system-design}, policy authors use standard eBPF tooling (e.g., \texttt{clang/libbpf}, \texttt{bpftool}) to build a single policy object containing both host and device parts, and deploy it via a loader library that installs policies, configures maps, and supports runtime redeployment without  application or driver restarts. The runtime spans host driver and GPU device, managing verification (\S\ref{sec:verification}), JIT compilation to native host CPU code or GPU-compatible instructions (e.g., PTX), and hierarchical map placement across host and device.
 
 \subsection{Runtime Verification and Optimizations}
 \label{sec:verification}
