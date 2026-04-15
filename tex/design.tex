@@ -68,7 +68,7 @@ Each eBPF program exists because policy-relevant state is split across layers; c
 
 
 \begin{figure}[t]
-\begin{lstlisting}
+\begin{lstlisting}[xleftmargin=0pt,numbers=none]
 SEC("gpu_dev/warp_entry")
 int moe_observe(gdev_page_access_ctx_t *ctx){
   u64 va = ctx->va & EXPERT_MASK;

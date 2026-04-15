@@ -1,6 +1,6 @@
 \begin{figure}[t]
 \centering
-\begin{tikzpicture}[
+\begin{tikzpicture}[scale=0.97, every node/.append style={scale=0.97},
   node distance=0.35cm and 0.6cm,
   box/.style={draw, rounded corners, minimum height=0.6cm, minimum width=1.3cm, font=\small},
   trigger/.style={box, fill=blue!10},
@@ -65,8 +65,8 @@
 \node[label] at (2.5, -1.9) {transitions (bounded)};
 
 % State-transition boundary box
-\draw[thick, dotted, orange!60] (1.4, -2.0) rectangle (4.3, -3.95);
-\node[font=\small, orange!80!black, rotate=90] at (4.5, -2.95) {state transitions};
+\draw[thick, dotted, orange!60] (1.4, -2.0) rectangle (3.8, -3.95);
+\node[font=\small, orange!80!black, rotate=90] at (4.0, -2.95) {state machines};
 
 \end{tikzpicture}
 \caption{Policy execution model: sched\_ext / cache\_ext / XDP vs \sys{}.}

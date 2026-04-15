@@ -38,8 +38,8 @@
   morekeywords={SEC,u64,gmem_region_t,gdev_page_access_ctx_t,gdrv_mem_remove_ctx_t,bpf_map_lookup_elem,bpf_gpu_prefetch_async,bpf_gpu_mem_pressure,bpf_gpu_move_tail,bpf_gpu_move_head,gdrv_sched_preempt,fetch_and_add,predict_next_expert},
   numbers=left,
   numberstyle=\tiny,
-  numbersep=8pt,
-  xleftmargin=0pt,
+  numbersep=5pt,
+  xleftmargin=12pt,
   breaklines=true,
   breakatwhitespace=true,
   tabsize=2,
@@ -103,6 +103,9 @@
 \newcommand{\xiangyu}[1]{\grumbler{orange}{XG}{#1}}
 \newcommand{\JC}[1]{\grumbler{orange}{JC}{#1}}
 \newcommand{\todo}[1]{\grumbler{olive}{todo}{#1}}
+
+% Allow extra stretch to prevent overfull hboxes from inline \texttt{} code
+\emergencystretch=2em
 
 % === ACM conference metadata ===
 \setcopyright{none}
