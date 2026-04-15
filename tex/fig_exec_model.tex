@@ -35,11 +35,11 @@
 
 % Effects (state transitions)
 \node[transition] (e_x) at (2.5, -2.3) {prefetch};
-\node[label, right=0.05cm of e_x] {\small async};
+\node[label, right=0.05cm of e_x] {\small timing};
 \node[transition] (e_y) at (2.5, -2.95) {evict};
-\node[label, right=0.05cm of e_y] {\small reorder};
+\node[label, right=0.05cm of e_y] {\small selection};
 \node[transition] (e_z) at (2.5, -3.6) {preempt};
-\node[label, right=0.05cm of e_z] {\small select};
+\node[label, right=0.05cm of e_z] {\small selection};
 
 % Device boundary (polyline: L-shape under triggers, up between BPF and effects)
 \draw[thick, dashed, gray]
@@ -69,6 +69,8 @@
 \node[font=\small, orange!80!black, rotate=90] at (4.5, -2.95) {state transitions};
 
 \end{tikzpicture}
-\caption{Policy execution model: sched\_ext / cache\_ext / XDP vs \sys{}.\arq{This figure does not make a lot of sense to me, and I don't think that it is adequently explained.  It also uses different words than the rest of the paper, which makes it very confusing.}}
+\caption{Policy execution model: sched\_ext / cache\_ext / XDP vs \sys{}.}
+% \arq{This figure does not make a lot of sense to me, and I don't think that it is adequently explained.  It also uses different words than the rest of the paper, which makes it very confusing.}
+% \yusheng{Resolved: unified terminology---effect→transition, lifecycle→state transitions, labels now match prose dimensions (selection, timing).}
 \label{fig:exec-model}
 \end{figure}
