@@ -16,7 +16,7 @@ The GPU device executes kernels in the SIMT (Single Instruction, Multiple Thread
 \begin{figure}[t]
     \centering
     \includegraphics[width=\columnwidth]{img/gpu_stack_figure.pdf}
-    \caption{In modern GPU stacks, user-space applications have distinct requirements, but the OS driver is \emph{unprogrammable} and performs one-size-fits-all management. GPU device state remains \emph{invisible} to the host, preventing workload-aware policies.}
+    \caption{GPU system stack. User-space frameworks hold workload semantics; the kernel driver manages memory (UVM) and compute scheduling; GPU-internal state (HBM, SMs) remains opaque to host software.}
     \label{fig:motivation_silos}
 \end{figure}
 
