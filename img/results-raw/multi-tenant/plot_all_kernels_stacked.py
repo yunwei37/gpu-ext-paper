@@ -154,12 +154,14 @@ def plot_kernel_subplot(ax, df, kernel_name, sched_df=None):
 
 def main():
     base_dir = Path(__file__).parent
+    # Data lives in the eval directory, not in the paper repo
+    data_dir = base_dir.parents[3] / 'eval' / 'multi-tenant-memory'
 
     # Define kernel data paths
     kernels = [
-        ('Hotspot', base_dir / 'results_hotspot'),
-        ('GEMM', base_dir / 'results_gemm'),
-        ('K-Means', base_dir / 'results_kmeans'),
+        ('Hotspot', data_dir / 'results_hotspot'),
+        ('GEMM', data_dir / 'results_gemm'),
+        ('K-Means', data_dir / 'results_kmeans'),
     ]
 
     # Load all data
@@ -190,19 +192,20 @@ def main():
     print_improvements(data, sched_data)
 
     # Create figure with 3 subplots
-    fig, axes = plt.subplots(1, 3, figsize=(20, 8))
+    fig, axes = plt.subplots(1, 3, figsize=(16, 6))
 
     # Plot each kernel
     for idx, (kernel_name, df) in enumerate(data.items()):
         sched_df = sched_data.get(kernel_name)
         plot_kernel_subplot(axes[idx], df, kernel_name, sched_df)
 
-    # Add shared legend
+    # Add shared legend at bottom
     handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.02))
+    fig.legend(handles, labels, loc='lower center', ncol=4, bbox_to_anchor=(0.5, -0.02),
+               columnspacing=1.0)
 
     plt.tight_layout()
-    plt.subplots_adjust(top=0.85)
+    plt.subplots_adjust(bottom=0.35)
 
     # Save
     output_path = base_dir / 'all_kernels_stacked'

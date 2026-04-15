@@ -24,7 +24,7 @@ plt.rcParams.update({
     'lines.linewidth': 2,
 })
 
-DATA_DIR = Path(__file__).parent / "simple_test_results"
+DATA_DIR = Path(__file__).parents[4] / 'eval' / 'multi-tenant-scheduler' / 'simple_test_results'
 OUTPUT_DIR = Path(__file__).parent
 NUM_RUNS = 10
 

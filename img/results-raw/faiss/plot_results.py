@@ -10,11 +10,12 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from pathlib import Path
 
-# 结果目录
+# 结果目录 (JSON data in workloads, output PDFs here)
+data_dir = Path(__file__).parents[5] / 'workloads' / 'faiss' / 'results'
 results_dir = Path(__file__).parent
 
 # 读取所有结果文件
-result_files = list(results_dir.glob("*.json"))
+result_files = list(data_dir.glob("*.json"))
 
 def parse_filename(filename):
     name = filename.stem

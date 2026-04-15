@@ -23,9 +23,28 @@ LATEX=pdflatex
 LATEXFLAGS=-shell-escape -interaction=nonstopmode -halt-on-error
 BIBTEX=bibtex
 
-.PHONY: all clean distclean
+# Python figure scripts
+PLOT_SCRIPTS = \
+	img/results-raw/clc/plot_microbench_combined.py \
+	img/results-raw/llama.cpp/visbasic.py \
+	img/results-raw/vllm/generate_figures.py \
+	img/results-raw/faiss/plot_results.py \
+	img/results-raw/multi-tenant/plot_figures.py \
+	img/results-raw/multi-tenant/plot_all_kernels_stacked.py \
+	img/results-raw/multi-tenant/plot_colocated_results.py \
+	img/pattern/vector_add/plot_thread_scheduling.py
+
+.PHONY: all clean distclean figures
 
 all: $(PDF) $(RESUB_PDF)
+
+figures:
+	@echo "Regenerating all figures..."
+	@for script in $(PLOT_SCRIPTS); do \
+		echo "  Running $$script"; \
+		python $$script || echo "  FAILED: $$script"; \
+	done
+	@echo "Done."
 
 # Rule to convert SVG to PDF
 img/%.pdf: img/%.svg
