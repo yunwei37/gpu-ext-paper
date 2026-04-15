@@ -9,16 +9,16 @@ import numpy as np
 
 plt.style.use('seaborn-v0_8-whitegrid')
 plt.rcParams.update({
-    'font.size': 26,
-    'axes.labelsize': 30,
-    'axes.titlesize': 30,
-    'xtick.labelsize': 22,
-    'ytick.labelsize': 22,
-    'legend.fontsize': 22,
+    'font.size': 30,
+    'axes.labelsize': 34,
+    'axes.titlesize': 34,
+    'xtick.labelsize': 26,
+    'ytick.labelsize': 26,
+    'legend.fontsize': 26,
     'figure.dpi': 150,
 })
 
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6))
 
 # ============================================================
 # (a) Memory Prefetch Microbenchmark
