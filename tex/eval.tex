@@ -50,7 +50,7 @@ The agent arrived at the final policy through iterative exploration: sequential 
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/llama.cpp/llama_uvm_combined_color.pdf}
 
-\caption{Prefill (pp512) and decode (tg128) throughput for GPT-OSS-120B MoE (59~GiB) on RTX 5090 (32GB).}
+\caption{Prefill and decode throughput for GPT-OSS-120B MoE on llama.cpp.}
 \label{fig:llama-expert-offload}
 
 \end{figure}
@@ -65,7 +65,7 @@ Under memory pressure, the key challenge is managing two competing data types: K
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/vllm/ttft_tpot_combined.pdf}
 
-\caption{Time-to-first-token and decoding throughput on Qwen-30B FP8 MoE (100 concurrent requests, $\approx$60K tokens KV-cache). Configurations: CPU Offload (8GB), UVM Baseline, UVM eBPF, and LMCache~\cite{lmcache}.}
+\caption{Time-to-first-token and decoding throughput on Qwen-30B MoE inference with vLLM.}
 \label{fig:vllm-kv-offload}
 
 \end{figure}
@@ -81,7 +81,7 @@ Native GPU allocation (no UVM) achieves the highest performance when data fits i
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/pytorch/uvm_benchmark_comparison.pdf}
 
-\caption{GCN training epoch time vs graph size.}
+\caption{GCN training epoch time vs graph size on PyTorch.}
 \label{fig:gnn-epoch}
 \end{figure}
 
