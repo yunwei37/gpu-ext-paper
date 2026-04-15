@@ -5,7 +5,7 @@
   box/.style={draw, rounded corners, minimum height=0.6cm, minimum width=1.3cm, font=\small},
   trigger/.style={box, fill=blue!10},
   bpf/.style={box, fill=green!10},
-  effect/.style={box, fill=orange!10},
+  transition/.style={box, fill=orange!10},
   label/.style={font=\small\itshape, text=gray},
   arrow/.style={->, >=stealth, semithick},
   dasharrow/.style={->, >=stealth, semithick, dashed},
@@ -17,7 +17,7 @@
 
 \node[trigger] (s_trans) at (-2.3, -0.7) {transition};
 \node[bpf]     (s_bpf)   at (0, -0.7)    {BPF};
-\node[effect]  (s_eff)   at (2.5, -0.7)   {immediate effect};
+\node[transition]  (s_eff)   at (2.5, -0.7)   {immediate transition};
 
 \draw[arrow] (s_trans) -- (s_bpf);
 \draw[arrow] (s_bpf)   -- (s_eff);
@@ -34,11 +34,11 @@
 \node[bpf, minimum height=1.4cm, minimum width=1.3cm, text width=1.1cm, align=center] (g_bpf) at (-0.3, -2.95) {BPF\\+ maps};
 
 % Effects (state transitions)
-\node[effect] (e_x) at (2.5, -2.3) {prefetch};
+\node[transition] (e_x) at (2.5, -2.3) {prefetch};
 \node[label, right=0.05cm of e_x] {\small async};
-\node[effect] (e_y) at (2.5, -2.95) {evict};
+\node[transition] (e_y) at (2.5, -2.95) {evict};
 \node[label, right=0.05cm of e_y] {\small reorder};
-\node[effect] (e_z) at (2.5, -3.6) {preempt};
+\node[transition] (e_z) at (2.5, -3.6) {preempt};
 \node[label, right=0.05cm of e_z] {\small select};
 
 % Device boundary (polyline: L-shape under triggers, up between BPF and effects)
@@ -55,14 +55,14 @@
 \draw[arrow] (t_c) -- (g_bpf);
 \draw[dasharrow] (t_d) -- (g_bpf);
 
-% Arrows from BPF to effects (cross boundary)
+% Arrows from BPF to transitions (cross boundary)
 \draw[dasharrow] (g_bpf) -- (e_x);
 \draw[dasharrow] (g_bpf) -- (e_y);
 \draw[dasharrow] (g_bpf) -- (e_z);
 
 % Labels
 \node[label] at (-2.9, -1.9) {triggers (open)};
-\node[label] at (2.5, -1.9) {effects (bounded)};
+\node[label] at (2.5, -1.9) {transitions (bounded)};
 
 % State-transition boundary box
 \draw[thick, dotted, orange!60] (1.4, -2.0) rectangle (4.3, -3.95);
