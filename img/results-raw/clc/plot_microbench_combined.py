@@ -24,7 +24,7 @@ fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
 # (a) Memory Prefetch Microbenchmark
 # Normalized speedup (higher = better), baseline = 1.0
 # ============================================================
-mem_policies = ['Default\nUVM', 'Device\nPrefetch', 'Host+Device\nStride eBPF', 'Sequential\nPrefetch']
+mem_policies = ['Default\nUVM', 'Device\nPrefetch', 'Host+Dev.\nStride\neBPF', 'Host Seq.\neBPF']
 mem_speedups = [1.0, 1.34, 1.77, 0.92]
 mem_colors = ['#7f7f7f', '#2ca02c', '#1f77b4', '#d62728']
 
@@ -44,7 +44,7 @@ for i, (bar, val) in enumerate(zip(bars_m, mem_speedups)):
                     xy=(bar.get_x() + bar.get_width()/2, val),
                     xytext=(0, 5),
                     textcoords='offset points',
-                    ha='center', va='bottom', fontsize=22, color=color, fontweight='bold')
+                    ha='center', va='bottom', fontsize=26, color=color, fontweight='bold')
 
 ax1.set_ylabel('Normalized Speedup')
 ax1.set_title('(a) Memory Prefetch')
@@ -63,41 +63,42 @@ policies = ['FixedWork', 'Greedy', 'LatencyBudget']
 runtimes_a = [0.1019, 0.0910, 0.0909]  # Imbalanced GEMM
 runtimes_b = [14.8, 17.8, 14.7]        # ClusteredHeavy
 
-# Normalize to FixedWork baseline
-norm_a = [r / runtimes_a[0] for r in runtimes_a]
-norm_b = [r / runtimes_b[0] for r in runtimes_b]
+# Normalize to speedup (baseline / actual), higher = better
+speedup_a = [runtimes_a[0] / r for r in runtimes_a]
+speedup_b = [runtimes_b[0] / r for r in runtimes_b]
 
 x_s = np.arange(len(policies))
 width = 0.3
 
-bars_imb = ax2.bar(x_s - width/2, norm_a, width,
+bars_imb = ax2.bar(x_s - width/2, speedup_a, width,
                    label='Imbalanced GEMM', color='#2ca02c', edgecolor='black', linewidth=0.5)
-bars_clh = ax2.bar(x_s + width/2, norm_b, width,
+bars_clh = ax2.bar(x_s + width/2, speedup_b, width,
                    label='Clustered Heavy', color='#1f77b4', edgecolor='black', linewidth=0.5)
 
 # Baseline reference line
 ax2.axhline(y=1.0, color='gray', linestyle='--', linewidth=2, alpha=0.7)
 
 # Annotations for non-baseline policies
-for bars, norms in [(bars_imb, norm_a), (bars_clh, norm_b)]:
-    for i, (bar, val) in enumerate(zip(bars, norms)):
+for bars, speedups in [(bars_imb, speedup_a), (bars_clh, speedup_b)]:
+    for i, (bar, val) in enumerate(zip(bars, speedups)):
         if i == 0:  # skip FixedWork baseline
             continue
         change = (val - 1.0) * 100
         sign = '+' if change >= 0 else ''
-        color = '#d62728' if change > 0 else '#2ca02c'
+        color = '#2ca02c' if change > 0 else '#d62728'
         ax2.annotate(f'{sign}{change:.0f}%',
                     xy=(bar.get_x() + bar.get_width()/2, val),
                     xytext=(0, 5),
                     textcoords='offset points',
-                    ha='center', va='bottom', fontsize=18, color=color, fontweight='bold')
+                    ha='center', va='bottom',
+                    fontsize=24, color=color, fontweight='bold')
 
-ax2.set_ylabel('Normalized Latency')
+ax2.set_ylabel('')
 ax2.set_title('(b) Block Scheduling')
 ax2.set_xticks(x_s)
 ax2.set_xticklabels(policies)
-ax2.set_ylim(0, max(norm_b) * 1.2)
-ax2.legend(loc='upper left')
+ax2.set_ylim(0, max(max(speedup_a), max(speedup_b)) * 1.2)
+ax2.legend(loc='upper center', bbox_to_anchor=(0.5, -0.10), ncol=2, columnspacing=0.8)
 ax2.set_axisbelow(True)
 
 plt.tight_layout()
