@@ -4,12 +4,12 @@ import numpy as np
 
 # Set larger font sizes globally
 plt.rcParams.update({
-    'font.size': 14,
-    'axes.labelsize': 16,
-    'axes.titlesize': 18,
-    'xtick.labelsize': 13,
-    'ytick.labelsize': 13,
-    'legend.fontsize': 12,
+    'font.size': 18,
+    'axes.labelsize': 20,
+    'axes.titlesize': 22,
+    'xtick.labelsize': 16,
+    'ytick.labelsize': 16,
+    'legend.fontsize': 16,
 })
 
 # Updated data from the trace example
@@ -54,7 +54,7 @@ ax1.set_xlabel('SM ID')
 ax1.set_ylabel('Thread Count')
 ax1.set_title('(a) SM Load Distribution')
 ax1.set_xticks(sm_ids)
-ax1.legend(loc='upper right', fontsize=14)
+ax1.legend(loc='upper right', fontsize=16)
 ax1.set_ylim(0, 420)
 
 # Highlight max and min
@@ -65,7 +65,7 @@ bars[min_sm].set_color('lightcoral')
 
 # Add load balance score annotation
 ax1.text(0.02, 0.95, 'Load Balance: 48.6%', transform=ax1.transAxes,
-         fontsize=14, verticalalignment='top',
+         fontsize=16, verticalalignment='top',
          bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 
 # (b) Warp Distribution Heatmap
@@ -87,7 +87,7 @@ ax2.set_yticks(range(0, num_warps, 2))
 
 # Add colorbar
 cbar = plt.colorbar(im, ax=ax2, shrink=0.8)
-cbar.set_label('Thread Count', fontsize=14)
+cbar.set_label('Thread Count', fontsize=16)
 
 plt.tight_layout()
 output_dir = os.path.dirname(os.path.abspath(__file__))
