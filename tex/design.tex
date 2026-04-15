@@ -24,13 +24,13 @@ However, the CPU eBPF model does not directly transfer to GPUs. In CPU eBPF syst
 
 \textbf{Memory-scheduling coupling.} CPU extensibility treats scheduling and memory as independent subsystems (\texttt{sched\_ext} and \texttt{cache\_ext}), but on GPU, limited device memory tightly couples these domains, as a page fault is simultaneously a memory event and a scheduling stall. GPU policies must coordinate across both.
 
-\textbf{Fragmented visibility.} CPU eBPF runs on the same processor it manages, but in GPU stacks, policy-relevant state is split across layers. Downward, GPU-internal execution state such as per-warp access patterns and SM utilization remains opaque to the host (\S\ref{sec:arch-gpu}). Upward, GPU runtimes bypass the OS kernel for work submission (e.g., user-space command buffers and doorbells), so the driver sees only coarse lifecycle events, not individual GPU kernel launches or application phase transitions (e.g., LLM prefill-to-decode, FAISS build-to-search).
+\textbf{Fragmented visibility.} CPU eBPF runs on the same processor it manages, but in GPU stacks, policy-relevant state is split across layers. Downward, GPU-internal execution state such as per-warp access patterns and SM utilization remains opaque to the host (\S\ref{sec:arch-gpu}). Upward, GPU runtimes bypass the OS kernel for work submission (e.g., user-space command buffers and doorbells), so the driver sees only coarse resource events, not individual GPU kernel launches or application phase transitions (e.g., LLM prefill-to-decode, FAISS build-to-search).
 Naively exposing low-level GPU driver controls without addressing these mismatches risks resource leaks, hardware hangs, or OS kernel panics.
 
 \subsection{\sys{} Policy Execution Model}
 \label{sec:design-interfaces}
 
-\subsubsection{Programmable Lifecycle Transitions}
+\subsubsection{Programmable State Transitions}
 
 To address these challenges, \sys{} decouples policy triggers from their effects, modeling GPU resource management as programmable, asynchronous transitions on resource state machines. Policies are eBPF programs that direct state transitions through verified OS kernel functions (\emph{kfuncs}), and attach to diverse trigger points, including driver callbacks, application functions (uprobes), device-side execution events, and schedule tasks (\texttt{bpf\_wq}). Each trigger can initiate multiple state transitions asynchronously across memory and scheduling domains: i.e., without blocking on completion, proactively before faults occur, and on deferred schedules. For example, a uprobe at \texttt{cudaLaunchKernel} can asynchronously initiate a 6.6\,ms DMA prefetch informed by device-side observations while concurrently preempting another tenant's context to free GPU memory.
 
@@ -53,7 +53,7 @@ To address these challenges, \sys{} decouples policy triggers from their effects
 \input{tex/fig_exec_model}
 
 \arq{This seems like a very important point, but I don't find it very clear.  What are these "three dimensions"?  That is, what does it mean to modify/manage ordering, timing, and selection? }
-To ensure OS kernel safety boundaries, in \sys{}, verified kfuncs constrain lifecycle transitions to three dimensions: \emph{ordering} (evict chunk A before B), \emph{timing} (prefetch now rather than waiting), and \emph{selection} (preempt tenant X for Y), and the lifecycle is always managed by the driver mechanism. Policies can only reorder driver-maintained eviction lists, cannot allocate memory, and fall back to default FIFO behavior under pressure or misconfiguration. In multi-tenant settings, a single administrator-defined policy governs all tenants, as with sched\_ext; per-tenant policy isolation is future work.
+To ensure OS kernel safety boundaries, in \sys{}, verified kfuncs constrain state transitions to three dimensions: \emph{ordering} (evict chunk A before B), \emph{timing} (prefetch now rather than waiting), and \emph{selection} (preempt tenant X for Y), and the state machine is always managed by the driver mechanism. Policies can only reorder driver-maintained eviction lists, cannot allocate memory, and fall back to default FIFO behavior under pressure or misconfiguration. In multi-tenant settings, a single administrator-defined policy governs all tenants, as with sched\_ext; per-tenant policy isolation is future work.
 
 \subsubsection{Example: MoE Expert Offloading}
 

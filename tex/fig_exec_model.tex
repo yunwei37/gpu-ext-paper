@@ -33,7 +33,7 @@
 % BPF + maps
 \node[bpf, minimum height=1.4cm, minimum width=1.3cm, text width=1.1cm, align=center] (g_bpf) at (-0.3, -2.95) {BPF\\+ maps};
 
-% Effects (lifecycle transitions)
+% Effects (state transitions)
 \node[effect] (e_x) at (2.5, -2.3) {prefetch};
 \node[label, right=0.05cm of e_x] {\small async};
 \node[effect] (e_y) at (2.5, -2.95) {evict};
@@ -64,9 +64,9 @@
 \node[label] at (-2.9, -1.9) {triggers (open)};
 \node[label] at (2.5, -1.9) {effects (bounded)};
 
-% Lifecycle boundary box
+% State-transition boundary box
 \draw[thick, dotted, orange!60] (1.4, -2.0) rectangle (4.3, -3.95);
-\node[font=\small, orange!80!black, rotate=90] at (4.5, -2.95) {lifecycle};
+\node[font=\small, orange!80!black, rotate=90] at (4.5, -2.95) {state transitions};
 
 \end{tikzpicture}
 \caption{Policy execution model: sched\_ext / cache\_ext / XDP vs \sys{}.\arq{This figure does not make a lot of sense to me, and I don't think that it is adequently explained.  It also uses different words than the rest of the paper, which makes it very confusing.}}
