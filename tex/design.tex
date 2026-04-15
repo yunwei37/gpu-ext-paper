@@ -52,7 +52,8 @@ To address these challenges, \sys{} decouples policy triggers from their effects
 
 \input{tex/fig_exec_model}
 
-\arq{This seems like a very important point, but I don't find it very clear.  What are these "three dimensions"?  That is, what does it mean to modify/manage ordering, timing, and selection? }
+% \arq{This seems like a very important point, but I don't find it very clear.  What are these "three dimensions"?  That is, what does it mean to modify/manage ordering, timing, and selection? }
+% \yusheng{Resolved: reduced to two dimensions (selection + timing) with concrete examples for each.}
 To ensure OS kernel safety boundaries, in \sys{}, verified kfuncs constrain state transitions to two dimensions: \emph{selection} (which resource to transition, e.g., evict chunk A before B, preempt tenant X for Y) and \emph{timing} (when to initiate, e.g., prefetch proactively rather than waiting for a fault), and the state machine is always managed by the driver mechanism. Policies can only reorder driver-maintained queue (e.g, eviction lists), cannot allocate memory or delete rasks, and fall back to default FIFO behavior under pressure or misconfiguration. In multi-tenant settings, a single administrator-defined policy governs all tenants, as with sched\_ext; per-tenant policy isolation is future work.
 
 \subsubsection{Example: MoE Expert Offloading}
