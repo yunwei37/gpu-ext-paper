@@ -35,7 +35,7 @@ All 59 policies evaluated in this paper, including RQ1 single-tenant GPU kernel 
 
 \paragraph{Expert Offloading (llama.cpp GPT-OSS-120B).}
 We evaluate \sys on GPT-OSS-120B MXFP4 MoE (59~GiB, 116.83B parameters) in llama.cpp on RTX 5090 (32GB), requiring 1.84$\times$ oversubscription. We compare five configurations: framework-managed CPU offloading (\texttt{ncmoe=32/64}), default UVM, UVM with application-added user-space hints (\texttt{cudaMemAdvise}), and \sys with eBPF-based host-device prefetching (\S\ref{sec:design-interfaces}).
-\Cref{fig:llama-expert-offload} shows prefill and decode throughput. For decode (memory-bound), \sys achieves \textbf{1.76$\times$ speedup} over application-tuned UVM hints and 4.8$\times$ over framework offloading. Static hints (\texttt{cudaMemAdvise}) improve decode over default UVM but require application modification and degrade prefill by 40\%; \sys outperforms hints on decode while preserving prefill within 4\% of default UVM, without application changes. For prefill (compute-bound), framework offloading achieves 13\% higher throughput, but decode dominates end-to-end latency, so the decode improvement outweighs the prefill gap. The agent arrived at the final policy through iterative exploration: sequential prefetch degraded decode throughput due to mismatch with MoE stride access patterns (consistent with the 8\% degradation in \Cref{fig:clc-policies}a), leading to stride-based prefetch that matches the sequential weight scanning within each expert layer. Device-side BPF tracing of per-warp memory access patterns revealed that expert activations follow predictable stride sequences and identified frequently-accessed shared layers. For eviction, the agent tested FIFO ordering before converging on LFU, which retains frequently-accessed shared layers while evicting cold expert pages. The final policy combines device-side access observation, host-side stride prefetch, and LFU eviction (\S\ref{sec:design-interfaces}).
+\Cref{fig:llama-expert-offload} shows prefill and decode throughput. For decode (memory-bound), \sys achieves \textbf{1.76$\times$ speedup} over application-tuned UVM hints and 4.8$\times$ over framework offloading (\texttt{ncmoe=64}). Static hints (\texttt{cudaMemAdvise}) improve decode over default UVM but require application modification and degrade prefill by 40\%; \sys outperforms hints on decode while preserving prefill within 4\% of default UVM, without application changes. For prefill (compute-bound), framework offloading achieves 13\% higher throughput, but decode dominates end-to-end latency, so the decode improvement outweighs the prefill gap. The agent arrived at the final policy through iterative exploration: sequential prefetch degraded decode throughput due to mismatch with MoE stride access patterns (consistent with the 8\% degradation in \Cref{fig:clc-policies}a), leading to stride-based prefetch that matches the sequential weight scanning within each expert layer. Device-side BPF tracing of per-warp memory access patterns revealed that expert activations follow predictable stride sequences and identified frequently-accessed shared layers. For eviction, the agent tested FIFO ordering before converging on LFU, which retains frequently-accessed shared layers while evicting cold expert pages. The final policy combines device-side access observation, host-side stride prefetch, and LFU eviction (\S\ref{sec:design-interfaces}).
 
 \begin{figure}
 \centering
@@ -67,7 +67,7 @@ We compare vLLM's CPU-offload mode (\texttt{--cpu-offload-gb 8}) against \sys wi
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/vllm/ttft_tpot_combined.pdf}
 
-\caption{Time-to-first-token and decoding throughput on Qwen-30B FP8 MoE (100 concurrent requests, $\approx$60K tokens KV-cache).}
+\caption{Time-to-first-token and decoding throughput on Qwen-30B FP8 MoE (100 concurrent requests, $\approx$60K tokens KV-cache). Configurations: CPU Offload (8GB), UVM Baseline, UVM eBPF, and LMCache~\cite{lmcache}.}
 \label{fig:vllm-kv-offload}
 
 \end{figure}
@@ -107,7 +107,7 @@ We evaluate \sys on multi-tenant GPU workloads, comparing per-tenant policies ag
 \subsubsection{Microbenchmarks}
 
 \paragraph{Compute-bound Timeslice Scheduler (LC + BE).}
-We evaluate \sys's BPF struct\_ops scheduling policies on \emph{compute-bound} (SM-limited) multi-tenant workloads. 2 latency-critical (LC) processes and 4 best-effort (BE) processes run concurrently, each with 4 CUDA streams submitting 50 compute kernels. We compare the native scheduler against \sys with differentiated timeslices (LC: 1s, BE: 200$\mu$s) using a gpreempt-style preemption policy. \Cref{fig:scheduler-latency} shows that \sys reduces LC P99 launch latency by 95\%. BE throughput remains unchanged.
+We evaluate \sys's BPF struct\_ops scheduling policies on \emph{compute-bound} (SM-limited) multi-tenant workloads. 2 latency-critical (LC) processes and 4 best-effort (BE) processes run concurrently, each with 4 CUDA streams submitting 50 compute kernels. We compare the native scheduler against \sys with differentiated timeslices (LC: 1s, BE: 200$\mu$s) using a gpreempt-style preemption policy. \Cref{fig:scheduler-latency} shows that \sys reduces LC P99 launch latency by 95\% (1188$\mu$s $\to$ 53$\mu$s). BE throughput remains unchanged.
 
 \begin{figure}
 \centering
