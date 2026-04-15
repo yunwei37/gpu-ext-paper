@@ -69,7 +69,7 @@ dataset_markers = {
 }
 
 # ==================== 创建两个子图 ====================
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 7))
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
 
 # ==================== 左图: Build Index 进度 ====================
 for dataset in sorted(data_by_dataset.keys()):
@@ -160,7 +160,7 @@ fig.legend(handles=legend_elements, loc='lower center', ncol=4, fontsize=22,
            bbox_to_anchor=(0.5, -0.02), frameon=True, fancybox=True)
 
 # 调整布局，为底部图例留出空间
-plt.subplots_adjust(bottom=0.28)
+plt.subplots_adjust(bottom=0.35)
 
 # 保存图片
 output_path = results_dir / 'faiss_benchmark_results.png'
