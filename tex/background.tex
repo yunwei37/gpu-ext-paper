@@ -2,6 +2,8 @@
 \label{sec:background}
 % \arq{I don't think that we have enough description here of how GPU systems work; I think that a diagram would be useful.  I also think that more examples would be useful.  The goal here really should be to explain what GPU resource management means: what are those resources? What does it mean to manage them?  We currently don't discuss those ideas.  I also think that we should take 2.1 and merge it with the motivation section. And, take 2.2 and move that to design.  Basically, this shift means that we have a tight section "motivation" that describes what GPU resource management policies are, why we should care, and why the current approaches do not work well for exploring them.}
 % \yusheng{Structure done: diagram added (fig:motivation\_silos), examples added (access patterns + thread scheduling figures), eBPF primer moved to design. Resource management defined in L12. Remaining: L24 paragraph is long, consider splitting later.}
+% \arq{Think about the key things that you want to articulate in this section, because I don't think that they're coming through.  My list includes: 1. A brief overview of what GPU resource management looks like. 2. some experimentation that shows that we need workload-specific policies, 3. A summary of the gaps in existing approaches. 4. A summary of how eBPF works today that points to why a straightforward adoption of existing tooling would not work for our purposes.}
+% \arq{If we go forward with the idea of agent-based optimization, then I think this section should be more focused on what agent-based optimization would look like in this space. What it needs, what it lacks, etc.  It would be nice if we could do some agent-based optimization and show some kernel crashes (as an example) when given current extensibility mechanisms.}
 \subsection{GPU Systems and Workload Diversity}
 \label{sec:arch-gpu}
 
@@ -20,11 +22,13 @@ The GPU device executes kernels in the SIMT (Single Instruction, Multiple Thread
 
 % % need a better figure
 
-These resources require workload-specific management. UVM eviction and prefetch policy choice alone can change execution time by up to 73\%~\cite{ganguly2019interplay,park2025helm}. For compute scheduling, even within single deployments, optimal priority and preemption policies vary over time as multi-tenant demands fluctuate~\cite{fan2025gpreempt,wang2024gcaps}. \sys{}'s eBPF-based tracing tools (\S\ref{sec:eval}) results confirm this diversity: \Cref{fig:access_patterns} captures memory page-fault addresses over time under UVM, showing that LLM MoE inference exhibits periodic stride bursts from expert activations, benefiting from specialized eviction rather than default LRU~\cite{sheng2023flexgen,kwon2023efficient}; GNN training shows irregular random access from pointer-chasing graph traversal, requiring aggressive sequential prefetch~\cite{lin2024towards,wang2016gunrock}; and vector search alternates between sequential scans (index build) and random probes (query)~\cite{pan2024survey,cao2023gpu}, yet each strategy may degrade other workloads. \Cref{fig:thread_scheduling} reveals a 127$\times$ SM scheduling load imbalance in a vector-add GPU kernel, invisible to host-side drivers and amenable to custom thread scheduling. These patterns demand different strategies across all three domains, yet current drivers and firmwares apply one fixed policy to all.
+% \arq{The biggest mistake that novice writers make when it comes to figures is that they gesture at them without explaining them. Consider Figure 1. What takeaway do you want me, the reader, to have? What experiment did you actually run (what does UVM oversubscription mean?)  Why do I care?}
+These resources require workload-specific management. UVM eviction and prefetch policy choice alone can change execution time by up to 73\%~\cite{ganguly2019interplay,park2025helm}. For compute scheduling, even within single deployments, optimal priority and preemption policies vary over time as multi-tenant demands fluctuate~\cite{fan2025gpreempt,wang2024gcaps}. \sys{}'s eBPF-based tracing tools (\S\ref{sec:eval}) results confirm this diversity: \Cref{fig:access_patterns} captures memory page-fault addresses over time under UVM, showing that LLM MoE inference exhibits periodic stride bursts from expert activations, benefiting from specialized eviction rather than default LRU~\cite{sheng2023flexgen,kwon2023efficient}; GNN training shows irregular random access from pointer-chasing graph traversal, requiring aggressive sequential prefetch~\cite{lin2024towards,wang2016gunrock}; and vector search alternates between sequential scans (index build) and random probes (query)~\cite{pan2024survey,cao2023gpu}, yet each strategy may degrade other workloads. \Cref{fig:thread_scheduling} reveals a 127$\times$ SM scheduling load imbalance in a vector-add GPU kernel, invisible to host-side drivers and amenable to custom thread scheduling. These patterns demand different strategies across all three domains, yet current drivers and firmware apply one fixed policy to all.
 \begin{figure*}[t]
     \centering
     \includegraphics[width=\textwidth]{img/pattern/combined_patterns_1x5.pdf}
     \caption{Page-fault address traces over time across four workloads. Each pattern implies a different optimal prefetch/eviction strategy; no single policy fits all.}
+    \arq{These figures are wayyyyyyyyy tooo small to read. Like, WAYYYYYY too small}
     \label{fig:access_patterns}
 \end{figure*}
 
@@ -36,13 +40,15 @@ These resources require workload-specific management. UVM eviction and prefetch 
     \label{fig:thread_scheduling}
 \end{figure}
 
+% \arq{I know that this is background material, but it kinda breaks the flow of the paper when discussed here. I wonder if we could include it instead as background when we get to the design section?}
 \subsection{Agent-Based Policy Exploration}
 \label{sec:motivation-agent}
 
 Automated OS policy exploration assisted by AI agents is well-suited to the large GPU policy space, yet requires a safe and programmable interface that current GPU stacks do not provide. Unlike traditional parameter-tuning methods, AI agents~\cite{dwivedula2025policysmith,zheng2025schedcp} directly generate policy logic, evaluate performance, and refine based on feedback, exploring richer strategies tailored to specific workloads. However, without a safe OS interface, agent-generated policies risk OS kernel panics or GPU hangs from buggy code; with only user-space APIs, agents cannot explore driver-level decisions such as eviction ordering or fault-path prefetching.
 
-To enable effective agent-driven GPU policy optimization and benefit human developers, we require an OS interface with three key properties: dynamic and transparent policy loading, so agents can rapidly deploy and iterate policies at runtime without restarting applications or rebuilding OS kernel modules; programmable policy logic, to express flexible heuristics beyond fixed configuration knobs; and safety and isolation, to robustly handle automatically generated candidate policies without OS kernel panics or corrupting GPU device states. %No existing GPU resource management interface simultaneously meets these goals, motivating the need for a new OS abstraction tailored specifically to GPU extensions.
+To enable effective agent-driven GPU policy optimization and benefit human developers, we require an OS interface with three key properties: dynamic and transparent policy loading, so agents can rapidly deploy and iterate policies at runtime without restarting applications or rebuilding OS kernel modules; programmable policy logic, to express flexible heuristics beyond fixed configuration knobs; and safety and isolation, to robustly handle automatically generated candidate policies without OS kernel panics or corrupting GPU device states.
 
+% \arq{There's a lot of editorializing in here, even though we probably really just want to focus on what the Kernel driver *is* rather than what it does wrong (at least, at this point in the paper).}
 \subsection{Limitations of Existing Approaches}
 \label{sec:motivation-limitations}
 
