@@ -4,6 +4,8 @@
 
 \arq{This needs to be higher level: it should reference the specific required principles (safe, full-stack, and dynamic) that we articulate in the Motivation.  It should explain how it achieves each of those properties.  I also think that we should refer to \sys{} as an "OS subsystem" rather than repeatedly calling it (or focusing on its) interface.  This seems critical to me because the safe and dynamic properties do not seem like properties of just the interface but also of the desgin/implementation of the subsystem itself.}
 \sys{} provides a safe, programmable OS interface for GPU resource management, supporting dynamic AI-generated policies transparently. As identified in \S\ref{sec:motivation-challenges}, achieving these goals requires addressing three GPU-specific challenges: (1) cross-device latency that necessitates asynchronous policy execution, (2) memory-scheduling coupling that demands unified lifecycle management across both domains, and (3) fragmented visibility across the stack that requires both device-side verified BPF execution and user-defined triggers to bridge the application-driver-device gap.
+As shown in Figure~\ref{fig:system-design}, policy authors use standard eBPF tooling (e.g., \texttt{clang/libbpf}, \texttt{bpftool}) to build a single policy object containing both host and device parts, and deploy it via a loader library that installs policies, configures maps, and supports runtime redeployment without  application or driver restarts. The runtime spans host driver and GPU device, managing verification (\S\ref{sec:verification}), JIT compilation to native host CPU code or GPU-compatible instructions (e.g., PTX), and hierarchical map placement across host and device.
+\arq{What is the purpose of this subsection?  What are you trying to convey?  If you want the reader to understand about the high level architecture of the system, I actually would include this information in the intro of the section (i.e., before any subsections).  I would also *drastically* simplify the figure to just show \sys{}'s high level components, rather than depicting things like "verifier" and "JIT" which are unlikely to be referenced again.}
 
 \begin{figure}
 \centering
@@ -11,10 +13,6 @@
 \caption{\sys architecture. (a) bpf syscall deploys policies to verifier and driver hooks; (b) GPU JIT after verification; (c) DBI injects trampolines into GPU kernels.}
 \label{fig:system-design}
 \end{figure}
-
-\label{sec:arch}
-\arq{What is the purpose of this subsection?  What are you trying to convey?  If you want the reader to understand about the high level architecture of the system, I actually would include this information in the intro of the section (i.e., before any subsections).  I would also *drastically* simplify the figure to just show \sys{}'s high level components, rather than depicting things like "verifier" and "JIT" which are unlikely to be referenced again.}
-As shown in Figure~\ref{fig:system-design}, policy authors use standard eBPF tooling (e.g., \texttt{clang/libbpf}, \texttt{bpftool}) to build a single policy object containing both host and device parts, and deploy it via a loader library that installs policies, configures maps, and supports runtime redeployment without  application or driver restarts. The runtime spans host driver and GPU device, managing verification (\S\ref{sec:verification}), JIT compilation to native host CPU code or GPU-compatible instructions (e.g., PTX), and hierarchical map placement across host and device.
 
 \subsection{GPU-Specific Challenges for eBPF Extensibility}
 \label{sec:motivation-challenges}
