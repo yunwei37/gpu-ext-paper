@@ -1,6 +1,6 @@
 \section{\sys Design}
 
-\arq{Introduce \sys following the intro discussion}
+% \arq{Introduce \sys following the intro discussion}
 
 This section presents the design of \sys{}, a programmable OS subsystem that provides a safe, dynamic, and full-stack interface for GPU resource management. We first describe the system workflow (\S\ref{sec:workflow}), then define the resource state machines that \sys{} manages (\S\ref{sec:design-interfaces}), identify GPU-specific challenges for eBPF extensibility (\S\ref{sec:motivation-challenges}), and present the asynchronous execution model that addresses them (\S\ref{sec:exec-model}).
 
@@ -16,7 +16,7 @@ This section presents the design of \sys{}, a programmable OS subsystem that pro
 \label{fig:system-design}
 \end{figure}
 
-\arq{I think it makes sense to have a \sys{} workflow section that essentially describes how the system goes from eBPF input program to all of the steps for a running policy.  This can (basically) introduce all of the eBPF-based stuff that the reader needs to understand.}
+% \arq{I think it makes sense to have a \sys{} workflow section that essentially describes how the system goes from eBPF input program to all of the steps for a running policy.  This can (basically) introduce all of the eBPF-based stuff that the reader needs to understand.}
 
 \subsection{Resource State Machines}
 \label{sec:design-interfaces}
@@ -25,7 +25,7 @@ This section presents the design of \sys{}, a programmable OS subsystem that pro
 
 \subsection{GPU-Specific Challenges for eBPF Extensibility}
 \label{sec:motivation-challenges}
-\arq{If we're tight on space, I think this can become a paragraph in 3.0 instead of being a subsection.}
+% \arq{If we're tight on space, I think this can become a paragraph in 3.0 instead of being a subsection.}
 
 However, the CPU eBPF model does not directly transfer to GPUs. In CPU eBPF systems, each eBPF callback makes a single synchronous decision at a fixed transition point, with effects immediately taking place on local resources, and each subsystem is extended independently. The GPU is a discrete processor with its own execution model and resources, and policy decisions made in the host take effect on a separate device. Three mismatches between the CPU model and GPU architecture create challenges beyond the lack of safe programmable extension in GPU drivers:
 
@@ -36,7 +36,7 @@ However, the CPU eBPF model does not directly transfer to GPUs. In CPU eBPF syst
 \textbf{OS kernel bypass.} CPU eBPF runs on the same processor it manages, but GPU runtimes bypass the OS kernel for work submission (e.g., user-space command buffers and doorbells), so the driver sees only coarse resource events, not individual GPU kernel launches or application phase transitions (e.g., LLM prefill-to-decode, FAISS build-to-search). Policies must attach to user-space and device-side triggers, yet traditional eBPF does not allow such callbacks to modify OS state required to implement resource management policies.
 Naively exposing low-level GPU driver controls without addressing these mismatches risks resource leaks, hardware hangs, or OS kernel panics.
 
-\arq{Split into subsection on the state machine model and a separate subsection on the \sys{} execution model.  The example also needs to go... somewhere different?}
+% \arq{Split into subsection on the state machine model and a separate subsection on the \sys{} execution model.  The example also needs to go... somewhere different?}
 
 \subsection{Asynchronous Execution Model}
 \label{sec:exec-model}
@@ -68,7 +68,7 @@ To share state across asynchronous CPU and GPU contexts, \sys introduces cross-l
 
 \subsection{Example: MoE Expert Offloading}
 
-\arq{I think this would be a good final subsection that "summarizes" most of what we just read}
+% \arq{I think this would be a good final subsection that "summarizes" most of what we just read}
 We illustrate this model with Mixture-of-Experts (MoE) offloading where model size is larger than GPU memory. As not all expert parameters fit in device memory, the GPU driver continuously evicts and migrates expert pages. Each token activates only a subset of experts, but the default driver's LRU eviction and tree-based prefetching lack visibility into expert activation patterns, causing costly PCIe DMA stalls on cold expert page faults.
 
 A \sys{} policy uses three cooperating eBPF programs at different layers (\Cref{fig:moe-listing}), coordinating via a shared cross-layer map. First, during GPU kernel execution, a device-side eBPF handler inserted at warp entry tracks warp-level accesses to expert pages, recording per-page access counts for each warp in a hierarchical cross-layer map. Second, a uprobe eBPF program attached to \texttt{cuda\-Launch\-Kernel} proactively reads these counts to predict upcoming expert activations and asynchronously initiates cross-device prefetches (\texttt{bpf\_gpu\_\allowbreak{}prefetch\_async}), overlapping the millisecond-scale memory migration with computation to avoid expensive stalls (\emph{timing}). If memory pressure arises, this same program coordinates across memory and scheduling by preempting lower-priority GPU tasks via \texttt{gdrv\_sched\_\allowbreak{}preempt} (\emph{selection}). Finally, upon memory eviction (\emph{evict\_prepare}), a driver-side eBPF handler leverages the same expert access counts to evict cold pages first (LFU ordering), protecting hot experts (\emph{selection}). Unlike framework-level offloading that often migrates experts as atomic units, \sys{} operates at page granularity, enabling finer-grained compute-transfer overlap.
