@@ -15,8 +15,6 @@ Although our implementation targets NVIDIA GPUs, the host-side design aligns wit
 
 \paragraph{Scheduling Hooks.}
 We instrument Time-Slice Group (TSG) state transitions, including initialization (\texttt{task\_init}) and teardown (\texttt{task\_destroy}). The eBPF policy can configure scheduling parameters such as TSG priority, timeslice duration, and runlist interleave frequency via the \texttt{bpf\_gpu\_set\_attr} kfunc. Policies triggered from uprobes or tracepoints can also preempt running GPU kernels precisely with preemption requests kfuncs.
-% Our driver module extends the Linux eBPF verifier by registering GPU-specific struct\_ops and kfunc interfaces, leveraging BTF annotations to enforce type and memory safety.
-
 \subsection{GPU Runtime}
 \label{sec:impl-gpu}
 
