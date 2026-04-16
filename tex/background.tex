@@ -13,7 +13,7 @@ The GPU device executes GPU kernels in the SIMT (Single Instruction, Multiple Th
 \begin{figure}[t]
     \centering
     \includegraphics[width=\columnwidth]{img/gpu_stack_figure.pdf}
-    \caption{GPU system stack. User-space frameworks hold workload semantics; the kernel driver manages memory (UVM) and compute scheduling; GPU-internal state (HBM, SMs) remains opaque to host software.}
+    \caption{GPU system stack: user-space frameworks, kernel driver (memory and scheduling), and GPU hardware.}
     \label{fig:motivation_silos}
 \end{figure}
 

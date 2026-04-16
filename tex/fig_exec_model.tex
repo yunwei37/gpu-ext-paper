@@ -15,7 +15,7 @@
 % === sched_ext (top) ===
 \node[font=\small\bfseries] (sched_title) at (0, 0) {sched\_ext / cache\_ext / XDP (1:1, sync, same processor):};
 
-\node[trigger] (s_trans) at (-2.3, -0.7) {transition};
+\node[trigger] (s_trans) at (-2.3, -0.7) {event};
 \node[bpf]     (s_bpf)   at (0, -0.7)    {eBPF};
 \node[transition]  (s_eff)   at (2.5, -0.7)   {immediate transition};
 
@@ -27,46 +27,45 @@
 
 % Host triggers
 \node[trigger] (t_a) at (-2.9, -2.3) {driver hook};
-\node[trigger] (t_b) at (-2.9, -2.95) {uprobe};
-\node[trigger] (t_c) at (-2.9, -3.6) {bpf\_wq};
+\node[trigger] (t_b) at (-2.9, -2.8) {uprobe};
 
-% BPF + maps
-\node[bpf, minimum height=1.4cm, minimum width=1.3cm, text width=1.1cm, align=center] (g_bpf) at (-0.3, -2.95) {eBPF\\+ maps};
+% Left eBPF (event side)
+\node[bpf, minimum height=0.6cm, minimum width=1.0cm] (g_bpf_l) at (-1.0, -2.55) {eBPF};
+
+% Right eBPF (transition side)
+\node[bpf, minimum height=0.6cm, minimum width=1.0cm] (g_bpf_r) at (0.8, -2.55) {eBPF};
+
+% Curved double arrows between the two eBPF boxes, labeled workqueue
+\draw[arrow] (g_bpf_l.20) to[bend left=35] node[above, font=\scriptsize] {workqueue} (g_bpf_r.160);
+\draw[arrow] (g_bpf_r.200) to[bend left=35] (g_bpf_l.340);
 
 % Effects (state transitions)
-\node[transition] (e_x) at (2.5, -2.3) {prefetch};
-\node[label, right=0.05cm of e_x] {\small timing};
-\node[transition] (e_y) at (2.5, -2.95) {evict};
-\node[label, right=0.05cm of e_y] {\small selection};
-\node[transition] (e_z) at (2.5, -3.6) {preempt};
-\node[label, right=0.05cm of e_z] {\small selection};
+\node[transition] (e_x) at (2.8, -2.3) {prefetch};
+\node[transition] (e_y) at (2.8, -2.8) {evict};
+\node[transition] (e_z) at (2.8, -3.3) {preempt};
 
 % Device boundary (polyline: L-shape under triggers, up between BPF and effects)
 \draw[thick, dashed, gray]
-  (-3.8, -4.0) -- (0.9, -4.0) -- (0.9, -1.9);
-\node[font=\small\itshape, text=gray, align=center] at (0.9, -4.3) {device boundary};
+  (-3.8, -3.6) -- (1.7, -3.6) -- (1.7, -1.9);
+\node[font=\small\itshape, text=gray, align=center] at (1.7, -3.85) {device boundary};
 
 % Device trigger (below boundary, left)
-\node[trigger, fill=purple!10] (t_d) at (-2.9, -4.5) {device event};
+\node[trigger, fill=purple!10] (t_d) at (-2.9, -4.1) {device event};
 
-% Arrows from triggers to BPF
-\draw[arrow] (t_a) -- (g_bpf);
-\draw[arrow] (t_b) -- (g_bpf);
-\draw[arrow] (t_c) -- (g_bpf);
-\draw[dasharrow] (t_d) -- (g_bpf);
+% Arrows from triggers to left eBPF
+\draw[arrow] (t_a) -- (g_bpf_l);
+\draw[arrow] (t_b) -- (g_bpf_l);
+\draw[dasharrow] (t_d) -- (g_bpf_l);
 
-% Arrows from BPF to transitions (cross boundary)
-\draw[dasharrow] (g_bpf) -- (e_x);
-\draw[dasharrow] (g_bpf) -- (e_y);
-\draw[dasharrow] (g_bpf) -- (e_z);
+% Arrows from right eBPF to transitions (cross boundary)
+\draw[dasharrow] (g_bpf_r) -- (e_x);
+\draw[dasharrow] (g_bpf_r) -- (e_y);
+\draw[dasharrow] (g_bpf_r) -- (e_z);
 
 % Labels
-\node[label] at (-2.9, -1.9) {triggers (open)};
-\node[label] at (2.5, -1.9) {transitions (bounded)};
+\node[label] at (-2.9, -1.85) {events};
+\node[label] at (2.8, -1.85) {transitions};
 
-% State-transition boundary box
-\draw[thick, dotted, orange!60] (1.4, -2.0) rectangle (3.8, -3.95);
-\node[font=\small, orange!80!black, rotate=90] at (4.0, -2.95) {state machines};
 
 \end{tikzpicture}
 \caption{Policy execution model: sched\_ext / cache\_ext / XDP vs \sys{}.}
