@@ -43,7 +43,7 @@ To address these challenges, \sys{} separates callback triggers from their effec
 
 \input{tex/fig_exec_model}
 
-To ensure OS kernel safety, verified kfuncs restrict policy actions to two dimensions: \emph{selection} (choosing resources, e.g., eviction order, tenant preemption priority) and \emph{timing} (when to act, e.g., proactive prefetch). The driver always controls underlying state machines; policies only reorder existing driver-managed queues, cannot allocate memory or remove tasks, and revert to FIFO defaults under resource pressure or misconfiguration. Currently, a single administrator-defined policy manages all tenants, similar to sched\_ext; per-tenant isolation is future work.
+To ensure OS kernel safety, verified kfuncs restrict policy actions to two dimensions: \emph{selection} (choosing resources, e.g., eviction order, tenant preemption priority) and \emph{timing} (when to act, e.g., proactive prefetch). The driver always controls underlying state machines; policies only select ordering and timing of driver-managed operations, cannot allocate memory or remove tasks, and revert to FIFO defaults under resource pressure or misconfiguration. Currently, a single policy program is loaded system-wide but may internally differentiate tenant treatment for priorities, similar to sched\_ext; per-tenant isolation is future work.
 
 \subsection{Runtime Verification and Optimizations}
 \label{sec:verification}
