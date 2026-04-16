@@ -16,7 +16,7 @@
 \subsection{Resource State Machines}
 \label{sec:design-interfaces}
 
-\sys defines three resource domains. Memory chunks transition between on-host and on-device through eviction and prefetch. Both GPU kernel and GPU thread-block level compute contexts transition between ready, running and completed, with preemption at per-GPU-kernel granularity.
+\sys defines three resource domains. Memory chunks transition between host memory and device memory through eviction and prefetching. Both GPU kernel and GPU thread-block level compute contexts transition between ready, running and finished via scheduling and preemption operations.
 
 \subsection{GPU-Specific Challenges for eBPF Extensibility}
 \label{sec:motivation-challenges}
@@ -35,7 +35,7 @@ Naively exposing low-level GPU driver controls without addressing these mismatch
 
 \subsection{Asynchronous Execution Model}
 
-To address these challenges, \sys{} decouples policy triggers from their effects. Policies are eBPF programs that direct state transitions through verified OS kernel functions (\emph{kfuncs}), and attach to diverse trigger points, including driver callbacks, application functions (uprobes), device-side execution events, and schedule tasks (\texttt{bpf\_wq}). Each trigger can initiate multiple state transitions asynchronously across memory and scheduling domains: i.e., without blocking on completion, proactively before faults occur, and on deferred schedules. For example, a uprobe at \texttt{cudaLaunchKernel} can asynchronously initiate a 6.6\,ms DMA prefetch informed by device-side observations while concurrently preempting another tenant's context to free GPU memory.
+To address these challenges, \sys{} separates the effect of a callback from the trigger of the callback. Policies are eBPF programs that direct state transitions through verified OS kernel functions (\emph{kfuncs}), and attach to diverse trigger points, including driver callbacks, application functions (uprobes), device-side execution events, and schedule tasks (\texttt{bpf\_wq}). Each trigger can initiate multiple state transitions asynchronously across memory and scheduling domains: i.e., without blocking on completion, proactively before faults occur, and on deferred schedules. For example, a uprobe at \texttt{cudaLaunchKernel} can asynchronously initiate a 6.6\,ms DMA prefetch informed by device-side observations while concurrently preempting another tenant's context to free GPU memory.
 
 \input{tex/fig_exec_model}
 
