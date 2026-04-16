@@ -39,7 +39,7 @@ CPU eBPF does not directly transfer to GPUs. CPU eBPF callbacks make synchronous
 \subsection{Asynchronous Execution Model}
 \label{sec:exec-model}
 
-To address these challenges, \sys{} separates the effect of a callback from the trigger of the callback. Policies are eBPF programs that direct state transitions through verified OS kernel functions (\emph{kfuncs}), and attach to diverse trigger points, including driver callbacks, application functions (uprobes), device-side execution events, and schedule tasks (\texttt{bpf\_wq}). Each trigger can initiate multiple state transitions asynchronously across memory and scheduling domains: without blocking on completion, proactively before faults occur, or on deferred schedules. For example, a uprobe at \texttt{cudaLaunchKernel} can asynchronously initiate a 6.6\,ms DMA prefetch informed by device-side observations while concurrently preempting another tenant's context to free GPU memory.
+To address these challenges, \sys{} separates callback triggers from their effects. Policies, as verified eBPF programs invoking OS kernel functions (\emph{kfuncs}), can attach to driver events, user-space uprobes, device-side events, and scheduled tasks (\texttt{bpf\_wq}). Each trigger asynchronously initiates multiple proactive or deferred state transitions across memory and scheduling domains without blocking. For example, a uprobe on \texttt{cudaLaunchKernel} concurrently initiates a 6.6,ms DMA prefetch based on device observations and preempts another tenant to free GPU memory.
 
 \input{tex/fig_exec_model}
 
