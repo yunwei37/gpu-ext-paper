@@ -39,7 +39,7 @@ CPU eBPF does not directly transfer to GPUs. CPU eBPF callbacks make synchronous
 \subsection{Asynchronous Execution Model}
 \label{sec:exec-model}
 
-To address these challenges, \sys{} separates callback triggers from their effects (\Cref{fig:exec-model}). Policies, as verified eBPF programs invoking OS kernel functions (\emph{kfuncs}), can attach to driver events, user-space uprobes, and device-side events. Each trigger asynchronously initiates multiple proactive or deferred state transitions across memory and scheduling domains without blocking, coordinated through eBPF workqueues. For example, a uprobe on \texttt{cudaLaunchKernel} concurrently initiates a 6.6,ms DMA prefetch based on device observations and preempts another tenant to free GPU memory.
+To address these challenges, \sys{} separates callback triggers from their effects (\Cref{fig:exec-model}). Policies, as verified eBPF programs invoking OS kernel functions (\emph{kfuncs}), can attach to driver events, user-space uprobes, and device-side events. Each trigger asynchronously initiates multiple proactive or deferred state transitions across memory and scheduling domains without blocking, coordinated through eBPF workqueues. For example, a uprobe on \texttt{cudaLaunchKernel} concurrently initiates a 6.6\,ms DMA prefetch based on device observations and preempts another tenant to free GPU memory.
 
 \input{tex/fig_exec_model}
 
@@ -52,7 +52,7 @@ To ensure OS kernel safety, verified kfuncs restrict policy actions to two dimen
 
 \subsubsection{SIMT-aware Verification}
 
-Because GPUs execute in SIMT (Single Instruction, Multiple Threads) mode, device-side eBPF programs must maintain warp-level execution semantics within eBPF’s scalar model. \sys{} enforces warp-uniformity via SIMT-aware verification: it distinguishes \emph{warp-uniform} (identical across warp threads, e.g., region IDs) from \emph{lane-varying} (thread-local state) values. Lane-varying values cannot affect control flow or external side effects. Branch conditions, loop bounds, and map-update keys must be warp-uniform or warp-aggregated. Additionally, \sys{} forbids GPU-wide barriers, global synchronization, non-uniform atomics, and bounds resource usage per policy hook.
+Because GPUs execute in SIMT (Single Instruction, Multiple Threads) mode, device-side eBPF programs must maintain warp-level execution semantics within eBPF’s scalar model. \sys{} enforces warp-uniformity via SIMT-aware verification: it distinguishes \emph{warp-uniform} (identical across warp threads, e.g., region IDs) from \emph{lane-varying} (thread-local state) values. Lane-varying values cannot affect control flow or external side effects. Branch conditions, loop bounds, and map-update keys must be warp-uniform or warp-aggregated. Additionally, \sys{} forbids GPU-wide barriers, global synchronization, non-uniform atomics, and it bounds resource usage per policy hook.
 
 \subsubsection{Warp-level Execution Optimizations}
 
