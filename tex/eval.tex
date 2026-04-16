@@ -91,7 +91,7 @@ Native GPU allocation (no UVM) achieves the highest performance when data fits i
 We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4096,Flat index, scaling from 20M (9.5GB) to 50M (24GB) and 100M (48GB, exceeding GPU memory). IVF indexes have a two-level structure: frequently-accessed centroids and larger posting lists, and Faiss operations have two distinct phases: BUILD performs sequential scans while SEARCH issues random accesses.
 \sys reduces build time by 21--29\% on 50M, scaling to 27--40\% on 100M as memory pressure grows. For search workloads, \sys reduces latency by 10--16\% across different \texttt{nprobe} settings despite the random access patterns inherent in ANN search. As shown in \Cref{fig:faiss-perf}, the converged policy ($\sim$890~LOC: sequential prefetch 375~LOC + stride prefetch 472~LOC + device-side 45~LOC) prefetches posting lists sequentially for oversubscribed datasets and uses stride prediction for K-means iterations during index construction; device-side eBPF programs also trigger prefetching of corresponding posting lists.
 
-The agent tested 8 policies over 5 iterations. Initially, a momentum-based phase detector with cycle eviction improved BUILD but degraded SEARCH, as forward drift in search queries confused the detector. Fixing the classifier revealed eviction policy rather than phase detection controlled performance. Version three, pairing the corrected detector with default eviction, converged. A subsequent fast-path optimization introduced a state-machine bug (policy stuck in SEARCH mode), detected and fixed in one iteration. Only 2 of 8 configurations yielded positive results.
+The agent tested 8 policies over 5 iterations. Initially, a momentum-based phase detector with cycle eviction improved BUILD but degraded SEARCH, as forward drift in search queries confused the detector. Fixing the classifier revealed eviction policy rather than phase detection controlled performance. Version three, pairing the corrected detector with default eviction, converged. A subsequent fast-path optimization introduced a state-machine bug (policy stuck in SEARCH mode), detected and fixed in one iteration. Only 2 of 8 policies yielded positive results.
 
 \begin{figure}
 \centering
@@ -119,7 +119,7 @@ We evaluate \sys's eBPF struct\_ops scheduling policies on \emph{compute-bound} 
 % \vspace{-1.5em}
 \end{figure}
 
-\paragraph{Memory-bound Memory Priority Differentiation.}
+\paragraph{Memory-bound Priority Differentiation.}
 We evaluate \sys's memory policies for priority differentiation on \emph{memory-bound} workloads under UVM oversubscription using HotSpot~\cite{che2009rodinia} (spatial locality), GEMM from PolyBench~\cite{grauer2012auto} (compute-intensive, memory-bound under UVM oversubscription), and K-Means~\cite{gu2020uvmbench} (sparse access). Each experiment runs two concurrent processes competing for GPU memory. Policy labels use priority values 0--100 (lower = higher priority): \texttt{Prefetch(lo,hi)} prefetches pages for processes in that range (454~LOC), while \texttt{Evict(lo,hi)} selects eviction victims accordingly (472~LOC). We compare against: (1)~no-policy execution, (2)~single-process runtime (Single~1$\times$), and (3)~theoretical optimum (2$\times$Single~1$\times$).
 
 \Cref{fig:all-kernels-priority} shows that without policies, both processes degrade severely due to memory thrashing. With \sys memory priority policies, total completion time improves by 55--92\%, and high-priority processes complete 6--19\% faster. Critically, for these \emph{memory-bound} workloads, GPREEMPT-style~\cite{fan2025gpreempt} scheduler timeslice policies are \emph{ineffective} (<1\% improvement) because the bottleneck is UVM page faults and PCIe bandwidth, not GPU compute time. This contrasts with the compute-bound case above where the same GPREEMPT-equivalent scheduling policy is effective, showing that effective management requires selecting the right policy layer per workload.
@@ -153,7 +153,7 @@ We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp
 
 \subsection{RQ4: Overheads}
 
-We evaluate \sys's programmability and quantify mechanism and observability overhead.
+We quantify \sys's mechanism and observability overhead.
 
 
 %\paragraph{Policy Building Blocks.}
@@ -192,7 +192,7 @@ LatencyBudget (CLC) & Scheduling Block & Device & 19 \\
 % \paragraph{Device Verification.} Across 18 GPU programs, the SIMT-aware verifier accepts 13 and correctly rejects 5 unsafe cases (lane-varying branches, non-uniform atomics, varying map-update keys).  
 
 \paragraph{Device-side Overhead.}
-We evaluate device-side observability tools built on \sys (\Cref{tab:obs-overhead}) on NVIDIA P40 GPU using llama.cpp prefill (Llama 1B, sequence-mixed). Tools include \texttt{kernel\-ret\-snoop} (per-block finish timestamps), \texttt{thread\-hist} (load imbalance detection), and \texttt{launch\-late} (GPU kernel launch latency). Overhead is measured as token/s degradation during prefill. \sys achieves 3--14\% overhead versus NVBit's 85--93\%~\cite{villa2019nvbit}, due to warp-uniform execution model. Attaching to a running process takes 273\,ms on average from \texttt{bpftime trace} startup to first GPU kernel detection, without application restart.
+We evaluate device-side observability tools built on \sys (\Cref{tab:obs-overhead}) on NVIDIA P40 GPU using llama.cpp prefill (Llama 1B, sequence-mixed). Tools include \texttt{kernel\-ret\-snoop} (per-block finish timestamps), \texttt{thread\-hist} (load imbalance detection), and \texttt{launch\-late} (GPU kernel launch latency). Overhead is measured as token/s degradation during prefill. \sys achieves 3--14\% overhead versus NVBit's 85--93\%~\cite{villa2019nvbit}, due to the warp-uniform execution model. Attaching to a running process takes 273\,ms on average from \texttt{bpftime trace} startup to first GPU kernel detection, without application restart.
 
 % \texttt{gpu\_sched\_trace}, \texttt{prefetch\_trace}, and \texttt{eviction\_trace} provide host-side observability for scheduling and memory management policies (\Cref{tab:obs-overhead}).
 \begin{table}[t]

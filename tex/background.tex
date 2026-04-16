@@ -36,7 +36,7 @@ These diverse patterns require workload-specific policies across all three domai
 \subsection{Agent-Based Policy Exploration}
 \label{sec:motivation-agent}
 
-AI-assisted automated OS policy exploration fits the large GPU policy space but requires programmable interfaces missing in current GPU stacks. Unlike parameter-tuning methods, AI agents~\cite{dwivedula2025policysmith,zheng2025schedcp} directly generate and iteratively refine policy logic to explore richer, workload-specific strategies. However, existing GPU stacks provide only fixed knobs (e.g., \texttt{cudaMemAdvise}, driver module parameters), lacking programmability needed for complex heuristics such as workload-aware eviction or adaptive prefetching.
+Agentic OS policy exploration fits the large GPU policy space but requires programmable interfaces missing in current GPU stacks. Unlike parameter-tuning methods, AI agents~\cite{dwivedula2025policysmith,zheng2025schedcp} directly generate and iteratively refine policy logic to explore richer, workload-specific strategies. However, existing GPU stacks provide only fixed knobs (e.g., \texttt{cudaMemAdvise}, driver module parameters), lacking programmability needed for complex heuristics such as workload-aware eviction or adaptive prefetching.
 
 Effective GPU policy optimization requires an OS interface with three key properties: (1) \emph{safe}, robustly handling generated policies without kernel panics or GPU corruption; (2) \emph{dynamic}, rapidly deploying and iterating policies at runtime without application restarts or kernel rebuilds; and (3) \emph{full-stack}, observing GPU-internal states, coordinating across tenants, and controlling driver-level decisions like eviction and fault-path prefetching.
 

@@ -7,7 +7,7 @@ This section presents the design of \sys{}, a programmable OS subsystem for safe
 \subsection{\sys{} Workflow}
 \label{sec:workflow}
 
-\sys{} extends eBPF (extended Berkeley Packet Filter) to GPU resource management. eBPF programs are callbacks attached to hooks such as \texttt{struct\_ops}, \texttt{kprobe}, and \texttt{uprobe}, enabling safe in OS kernel execution via load-time verification and JIT compilation. The verifier ensures termination, memory safety, type correctness, and restricts calls to approved helpers and kfuncs (OS kernel functions). As shown in Figure~\ref{fig:system-design}, \sys{} extends this pipeline to GPUs: policies build and load with standard eBPF tools, contain both host and device components, run across the host driver and GPU, are verified with SIMT-aware checks (\S\ref{sec:verification}), JIT-compiled to CPU or GPU code (e.g., PTX), use cross-layer maps, and are dynamically installed via OS kernel hooks and DBI without application or driver restarts.
+\sys{} extends eBPF (extended Berkeley Packet Filter) to GPU resource management. eBPF programs are callbacks attached to hooks such as \texttt{struct\_ops}, \texttt{kprobe}, and \texttt{uprobe}, enabling safe execution within the OS kernel via load-time verification and JIT compilation. The verifier ensures termination, memory safety, type correctness, and restricts calls to approved helpers and kfuncs (OS kernel functions). As shown in Figure~\ref{fig:system-design}, \sys{} extends this pipeline to GPUs: policies build and load with standard eBPF tools, contain both host and device components, run across the host driver and GPU, are verified with SIMT-aware checks (\S\ref{sec:verification}), JIT-compiled to CPU or GPU code (e.g., PTX), use cross-layer maps, and are dynamically installed via OS kernel hooks and DBI without application or driver restarts.
 
 \begin{figure}
 \centering
@@ -33,7 +33,7 @@ CPU eBPF does not directly transfer to GPUs. CPU eBPF callbacks make synchronous
 
 \textbf{Memory-scheduling coupling.} CPU extensibility treats scheduling and memory independently, but GPU page faults simultaneously trigger memory events and scheduling stalls due to limited device memory. GPU policies must jointly coordinate these domains.
 
-\textbf{OS kernel bypass.} GPU runtimes bypass the OS kernel (e.g., user-space command buffers, doorbells), revealing only coarse-grained resource events to drivers, not fine-grained GPU kernel launches or application phases. GPU policies must attach to user-space application functions, yet standard eBPF prohibits these callbacks from modifying OS state required for resource management. Exposing GPU driver controls without addressing these mismatches risks resource leaks, hardware hangs, or kernel panics.
+\textbf{OS kernel bypass.} GPU runtimes bypass the OS kernel (e.g., user-space command buffers, doorbells), revealing only coarse-grained resource events to drivers, not fine-grained GPU kernel launches or application phases. GPU policies must attach to user-space application functions, yet standard eBPF prohibits these callbacks from modifying OS state required for resource management. Exposing GPU driver controls without addressing these mismatches risks resource leaks, hardware hangs, or OS kernel panics.
 % \arq{Split into subsection on the state machine model and a separate subsection on the \sys{} execution model.  The example also needs to go... somewhere different?}
 
 \subsection{Asynchronous Execution Model}
@@ -48,7 +48,7 @@ To ensure OS kernel safety, verified kfuncs restrict policy actions to two dimen
 \subsection{Runtime Verification and Optimizations}
 \label{sec:verification}
 
-\sys threat model mirrors standard eBPF: administrators are trusted, but policy code may be buggy or misconfigured. The trusted computing base (TCB) includes the OS kernel, \sys driver module, GPU compiler backend, and GPU driver/firmware. Host-side verification directly reuses the Linux eBPF verifier (\S\ref{sec:implementation}).
+\sys{}'s threat model mirrors standard eBPF: administrators are trusted, but policy code may be buggy or misconfigured. The trusted computing base (TCB) includes the OS kernel, \sys driver module, GPU compiler backend, and GPU driver/firmware. Host-side verification directly reuses the Linux eBPF verifier (\S\ref{sec:implementation}).
 
 \subsubsection{SIMT-aware Verification}
 
