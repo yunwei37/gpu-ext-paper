@@ -43,21 +43,21 @@ To address these challenges, \sys{} separates callback triggers from their effec
 
 \input{tex/fig_exec_model}
 
-To ensure OS kernel safety, verified kfuncs constrain state transitions to two dimensions: \emph{selection} (which resource to transition, e.g., evict chunk A before B, preempt tenant X for Y) and \emph{timing} (when to initiate, e.g., prefetch proactively rather than waiting for a fault), and the driver always manages the underlying state machine. Policies can only reorder driver-maintained queues (e.g., eviction lists), cannot allocate memory or delete tasks, and fall back to default FIFO behavior under pressure or misconfiguration. In multi-tenant settings, a single administrator-defined policy governs all tenants, as with sched\_ext; per-tenant policy isolation is future work.
+To ensure OS kernel safety, verified kfuncs restrict policy actions to two dimensions: \emph{selection} (choosing resources, e.g., eviction order, tenant preemption priority) and \emph{timing} (when to act, e.g., proactive prefetch). The driver always controls underlying state machines; policies only reorder existing driver-managed queues, cannot allocate memory or remove tasks, and revert to FIFO defaults under resource pressure or misconfiguration. Currently, a single administrator-defined policy manages all tenants, similar to sched_ext; per-tenant isolation is future work.
 
 \subsection{Runtime Verification and Optimizations}
 \label{sec:verification}
 
-\sys policies execute directly within privileged GPU driver and OS kernel contexts, making safety guarantees critical. The threat model follows standard eBPF: administrators are trusted, but policy code may be buggy or misconfigured. The trusted computing base (TCB) includes the OS kernel, \sys driver module, GPU compiler backend, and GPU driver/firmware. Host-side verification reuses the Linux eBPF verifier unchanged (\S\ref{sec:implementation}).
+\sys threat model mirrors standard eBPF: administrators are trusted, but policy code may be buggy or misconfigured. The trusted computing base (TCB) includes the OS kernel, \sys driver module, GPU compiler backend, and GPU driver/firmware. Host-side verification directly reuses the Linux eBPF verifier (\S\ref{sec:implementation}).
 
 \subsubsection{SIMT-aware Verification}
 
-Because the GPU executes in SIMT (Single Instruction, Multiple Threads) mode, device-side eBPF programs must respect warp-level execution semantics, while preserving eBPF's scalar programming model. \sys enforces warp-level uniformity constraints through a SIMT-aware verification pass.
-The key insight is that we distinguish \emph{warp-uniform} values (identical across warp threads, e.g., region identifiers) from \emph{lane-varying} values (thread-local GPU state). Policies may compute freely using lane-varying values, but these must not influence control-flow decisions or directly produce side effects visible outside a warp. To guarantee warp-level coherence, \sys mandates that branch conditions, loop bounds, and map-update keys be warp-uniform or derived via warp-level aggregation. Additionally, \sys prohibits GPU-wide barriers, global synchronization primitives, and non-uniform atomic operations, and imposes resource budgets per policy hook to bound memory and thread resource usage.
+Because GPUs execute in SIMT (Single Instruction, Multiple Threads) mode, device-side eBPF programs must maintain warp-level execution semantics within eBPF’s scalar model. \sys{} enforces warp-uniformity via SIMT-aware verification: it distinguishes \emph{warp-uniform} (identical across warp threads, e.g., region IDs) from \emph{lane-varying} (thread-local state) values. Lane-varying values cannot affect control flow or external side effects. Branch conditions, loop bounds, and map-update keys must be warp-uniform or warp-aggregated. Additionally, \sys{} forbids GPU-wide barriers, global synchronization, non-uniform atomics, and bounds resource usage per policy hook.
 
 \subsubsection{Warp-level Execution Optimizations}
 
-Even after SIMT verification, scalar per-thread eBPF execution still causes overhead (\eg duplicate map updates). To resolve this, \sys introduces a warp-level aggregated execution model: lanes first compute local contributions without influencing control flow or updating shared state, which are then aggregated at warp granularity; a designated warp leader executes the policy handler once and broadcasts the decision back to all lanes (\S\ref{sec:implementation}). \sys further employs compiler-level optimizations (specialization and inlining) tailored for warp-level execution.
+Even after SIMT verification, scalar per-thread eBPF execution incurs overhead (\eg duplicate map updates). To resolve this, \sys{} introduces warp-level aggregated execution: lanes compute local results without affecting control flow or shared state; these results are aggregated warp-wide, and a warp leader executes the policy once, broadcasting decisions back (\S\ref{sec:implementation}).
+
 
 \subsubsection{Hierarchical Cross-layer Maps for State Coordination}
 \label{sec:cross-layer-maps}
