@@ -169,7 +169,7 @@ def plot_main_figure():
     colors_uvm = '#e74c3c'  # Red for baseline UVM
     colors_bpf = '#2ecc71'  # Green for BPF
 
-    policies = ['Default\nUVM', 'eBPF\nUVM']
+    policies = ['Default\nUVM', 'gpubpf\nUVM']
     x = np.arange(len(policies))
     width = 0.35
 

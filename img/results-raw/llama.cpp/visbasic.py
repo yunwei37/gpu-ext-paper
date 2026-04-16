@@ -9,7 +9,7 @@ configs = [
     "ncmoe=32",
     "UVM only",
     "UVM user hint",
-    "UVM eBPF",
+    "UVM gpubpf",
 ]
 
 pp512 = [245.63, 260.14, 238.48, 144.00, 229.67]

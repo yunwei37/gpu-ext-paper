@@ -113,12 +113,12 @@ def plot_faiss_updated():
         ax1.plot(vecs, ts, marker='o', markersize=4, color=color,
                  linestyle='-', alpha=0.7, label=f"{ds_name} UVM Baseline")
 
-        # eBPF
+        # gpubpf
         prog2 = ebpf_d["index_add"]["progress"]
         vecs2 = [p["vectors_added"] / 1e6 for p in prog2]
         ts2 = [p["time"] for p in prog2]
         ax1.plot(vecs2, ts2, marker='s', markersize=4, color=color,
-                 linestyle='--', label=f"{ds_name} UVM eBPF")
+                 linestyle='--', label=f"{ds_name} UVM gpubpf")
 
     ax1.set_xlabel("Vectors Added (millions)", fontsize=18)
     ax1.set_ylabel("Time (seconds)", fontsize=18)
@@ -174,7 +174,7 @@ def plot_faiss_updated():
     # Combined legend
     legend_elements = [
         Line2D([0], [0], color='tab:orange', marker='o', markersize=8, linewidth=2, linestyle='-', label='UVM Baseline'),
-        Line2D([0], [0], color='tab:red', marker='s', markersize=8, linewidth=2, linestyle='--', label='UVM eBPF'),
+        Line2D([0], [0], color='tab:red', marker='s', markersize=8, linewidth=2, linestyle='--', label='UVM gpubpf'),
         Line2D([0], [0], color='tab:blue', marker='o', markersize=10, linewidth=2, linestyle='-', label='SIFT50M'),
         Line2D([0], [0], color='tab:red', marker='s', markersize=10, linewidth=2, linestyle='-', label='SIFT100M'),
         Line2D([0], [0], color='gray', linestyle='--', linewidth=2, label='Baseline (1.0)'),

@@ -24,7 +24,7 @@ fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6))
 # (a) Memory Prefetch Microbenchmark
 # Normalized speedup (higher = better), baseline = 1.0
 # ============================================================
-mem_policies = ['Default\nUVM', 'Device\nPrefetch', 'Host+Dev.\nStride\neBPF', 'Host Seq.\neBPF']
+mem_policies = ['Default\nUVM', 'Device\nPrefetch', 'Host+Dev.\nStride\ngpubpf', 'Host Seq.\ngpubpf']
 mem_speedups = [1.0, 1.34, 1.77, 0.92]
 mem_colors = ['#7f7f7f', '#2ca02c', '#1f77b4', '#d62728']
 
