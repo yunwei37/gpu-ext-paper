@@ -107,9 +107,7 @@ The agent tested 8 policy over 5 iterations. Initially, a momentum-based phase d
 
 We evaluate \sys on multi-tenant GPU workloads, comparing per-tenant policies against global and framework-managed approaches.
 
-\subsubsection{Microbenchmarks}
-
-\paragraph{Compute-bound Timeslice Scheduler (LC + BE).}
+\paragraph{Compute-bound Scheduler (LC + BE).}
 We evaluate \sys's eBPF struct\_ops scheduling policies on \emph{compute-bound} (SM-limited) multi-tenant workloads, with no subscriptions. 2 latency-critical (LC) processes and 4 best-effort (BE) processes run concurrently, each with 4 CUDA streams submitting 50 compute kernels. We compare the native scheduler against \sys with differentiated timeslices (LC: 1s, BE: 200$\mu$s) using a preemption policy equivalent to GPREEMPT's~\cite{fan2025gpreempt} priority-based timeslice scheduling, implemented as a \sys eBPF program (925~LOC) without unsafe modification to the driver source. \Cref{fig:scheduler-latency} shows that \sys reduces LC P99 launch latency by 96\% (1188$\mu$s $\to$ 53$\mu$s). BE throughput remains unchanged.
 
 \begin{figure}
@@ -134,14 +132,8 @@ We evaluate \sys's memory policies for priority differentiation on \emph{memory-
 \label{fig:all-kernels-priority}
 \end{figure}
 
-\subsubsection{Case Studies}
-
-We apply the policy primitives from the microbenchmarks to realistic multi-tenant scenarios.
-
 \paragraph{Two-Tenant: High-Priority LLM Inference + Background Training.}
-We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp} inference service (LC workload) serving 100 ShareGPT prompts at 0.2 RPS, and T2 is a background PyTorch GNN training job (BE workload) with 8M nodes requiring 36GB peak memory (oversubscribed). We compare default UVM (driver FIFO/LRU) against \sys per-tenant memory policies ($\sim$926~LOC, combining Quota LRU and Tree-based Prefetch) where the LC tenant receives prefetch priority and the BE tenant yields bandwidth during inference.
-
-\Cref{fig:two-tenant} shows mutual improvement: LC TPOT drops by 40--45\% and TTFT by 14--20\%, while GNN training simultaneously improves by 28\%, approaching the ideal fair share baseline. This shows \sys reduces contention for both workloads rather than favoring one over the other.
+We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp} inference service (LC workload) serving 100 ShareGPT prompts at 0.2 RPS, and T2 is a background PyTorch GNN training job (BE workload) with 8M nodes requiring 36GB peak memory (oversubscribed). We compare default UVM (driver FIFO/LRU) against \sys per-tenant memory and scheduler policy described in previous 2 paragraphs. \Cref{fig:two-tenant} shows mutual improvement: LC TPOT drops by 40--45\% and TTFT by 14--20\%, while GNN training simultaneously improves by 28\%, approaching the ideal fair share baseline. This shows \sys reduces contention for both workloads rather than favoring one over the other.
 
 \begin{figure}
 \centering
