@@ -2,7 +2,7 @@
 
 \arq{Introduce \sys following the intro discussion}
 
-\sys{} is a programmable OS subsystem that extends eBPF (extended Berkeley Packet Filter) to provide safe, dynamic, and full-stack GPU resource management. eBPF programs are callbacks attached to hook points such as \texttt{struct\_ops}, \texttt{kprobe}, and \texttt{uprobe}, allowing user-supplied programs to run safely inside the OS kernel: programs are verified at load time, then JIT-compiled to native code. The verifier guarantees termination, memory safety, type correctness, and that programs call only approved helpers and kfuncs (OS kernel functions). As shown in Figure~\ref{fig:system-design}, \sys{} extends this pipeline to GPUs: policy authors use the standard eBPF toolchain to build and load policies containing both host and device parts. The runtime spans host driver and GPU device, verifies policies with SIMT-aware checks for device-side programs (\S\ref{sec:verification}), only allows changing transition timing and order to ensure safety, JIT-compiles them to native CPU code or GPU instructions (e.g., PTX), places maps hierarchically, and uses kernel hooks and DBI tools to dynamically install policies without application or driver restarts.
+\sys{} is a programmable OS subsystem that extends eBPF (extended Berkeley Packet Filter) to provide safe, dynamic, and full-stack GPU resource management. eBPF programs are callbacks attached to hook points such as \texttt{struct\_ops}, \texttt{kprobe}, and \texttt{uprobe}, allowing user-supplied programs to run safely inside the OS kernel: programs are verified at load time, then JIT-compiled to native code. The verifier guarantees termination, memory safety, type correctness, and that programs call only approved helpers and kfuncs (OS kernel functions). As shown in Figure~\ref{fig:system-design}, \sys{} extends this pipeline to GPUs: policy authors use the standard eBPF toolchain to build and load policies containing both host and device parts. The runtime spans host driver and GPU device, verifies policies with SIMT-aware checks for device-side programs (\S\ref{sec:verification}), only allows changing transition timing and order to ensure safety, JIT-compiles them to native CPU code or GPU instructions (e.g., PTX), places maps hierarchically, and uses kernel hooks and DBI tools to dynamically install policies without application or driver restarts. Device-side eBPF captures fine-grained runtime state and coordinates with host-side policies via shared cross-layer maps (\S\ref{sec:impl-host}).
 
 \begin{figure}
 \centering
@@ -12,6 +12,11 @@
 \end{figure}
 
 \arq{I think it makes sense to have a \sys{} workflow section that essentially describes how the system goes from eBPF input program to all of the steps for a running policy.  This can (basically) introduce all of the eBPF-based stuff that the reader needs to understand.}
+
+\subsection{Resource State Machines}
+\label{sec:design-interfaces}
+
+\sys defines three resource domains. Memory chunks transition between on-host and on-device through eviction and prefetch. Both GPU kernel and GPU thread-block level compute contexts transition between ready, running and completed, with preemption at per-GPU-kernel granularity.
 
 \subsection{GPU-Specific Challenges for eBPF Extensibility}
 \label{sec:motivation-challenges}
@@ -26,16 +31,11 @@ However, the CPU eBPF model does not directly transfer to GPUs. In CPU eBPF syst
 \textbf{OS kernel bypass.} CPU eBPF runs on the same processor it manages, but GPU runtimes bypass the OS kernel for work submission (e.g., user-space command buffers and doorbells), so the driver sees only coarse resource events, not individual GPU kernel launches or application phase transitions (e.g., LLM prefill-to-decode, FAISS build-to-search). Policies must attach to user-space and device-side triggers, yet traditional eBPF does not allow such callbacks to modify OS state required to implement resource management policies.
 Naively exposing low-level GPU driver controls without addressing these mismatches risks resource leaks, hardware hangs, or OS kernel panics.
 
-\subsection{\sys{} Policy Execution Model}
-\label{sec:design-interfaces}
-
 \arq{Split into subsection on the state machine model and a separate subsection on the \sys{} execution model.  The example also needs to go... somewhere different?}
 
-\subsubsection{Programmable State Transitions}
+\subsection{Asynchronous Execution Model}
 
-To address these challenges, \sys{} decouples policy triggers from their effects, modeling GPU resource management as programmable, asynchronous transitions on resource state machines. Policies are eBPF programs that direct state transitions through verified OS kernel functions (\emph{kfuncs}), and attach to diverse trigger points, including driver callbacks, application functions (uprobes), device-side execution events, and schedule tasks (\texttt{bpf\_wq}). Each trigger can initiate multiple state transitions asynchronously across memory and scheduling domains: i.e., without blocking on completion, proactively before faults occur, and on deferred schedules. For example, a uprobe at \texttt{cudaLaunchKernel} can asynchronously initiate a 6.6\,ms DMA prefetch informed by device-side observations while concurrently preempting another tenant's context to free GPU memory.
-
-\sys defines three resource domains. Memory chunks transition between on-host and on-device through policy-reordered eviction and prefetch. Both GPU kernel and GPU thread-block level compute contexts transition between ready, running and completed, with preemption at per-GPU-kernel granularity. Device-side eBPF captures fine-grained runtime state and coordinates with host-side policies via shared cross-layer maps (\S\ref{sec:impl-host}).
+To address these challenges, \sys{} decouples policy triggers from their effects. Policies are eBPF programs that direct state transitions through verified OS kernel functions (\emph{kfuncs}), and attach to diverse trigger points, including driver callbacks, application functions (uprobes), device-side execution events, and schedule tasks (\texttt{bpf\_wq}). Each trigger can initiate multiple state transitions asynchronously across memory and scheduling domains: i.e., without blocking on completion, proactively before faults occur, and on deferred schedules. For example, a uprobe at \texttt{cudaLaunchKernel} can asynchronously initiate a 6.6\,ms DMA prefetch informed by device-side observations while concurrently preempting another tenant's context to free GPU memory.
 
 \input{tex/fig_exec_model}
 
