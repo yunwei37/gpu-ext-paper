@@ -2,7 +2,7 @@
 
 % \arq{Introduce \sys following the intro discussion}
 
-This section presents the design of \sys{}, a programmable OS subsystem that provides a safe, dynamic, and full-stack interface for GPU resource management. We first describe the system workflow (\S\ref{sec:workflow}), then define the resource state machines that \sys{} manages (\S\ref{sec:design-interfaces}), identify GPU-specific challenges for eBPF extensibility (\S\ref{sec:motivation-challenges}), and present the asynchronous execution model that addresses them (\S\ref{sec:exec-model}).
+This section presents the design of \sys{}, a programmable OS subsystem for safe, dynamic, full-stack GPU resource management. We describe the system workflow (\S\ref{sec:workflow}), resource state machines (\S\ref{sec:design-interfaces}), GPU-specific eBPF challenges (\S\ref{sec:motivation-challenges}), and our asynchronous execution model (\S\ref{sec:exec-model}).
 
 \subsection{\sys{} Workflow}
 \label{sec:workflow}
