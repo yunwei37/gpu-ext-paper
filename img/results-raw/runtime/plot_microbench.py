@@ -117,7 +117,7 @@ def main():
 
     ax_left.bar(x_gpu - width/2, gpu_old_overhead, width, label='eGPU-style',
                 color='#7f7f7f', edgecolor='black', linewidth=0.5)
-    ax_left.bar(x_gpu + width/2, gpu_new_overhead, width, label='gBPF (ours)',
+    ax_left.bar(x_gpu + width/2, gpu_new_overhead, width, label='gpubpf',
                 color='#2ca02c', edgecolor='black', linewidth=0.5)
 
     ax_left.set_ylabel('Overhead (μs)', fontsize=20)
