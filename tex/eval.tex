@@ -161,7 +161,7 @@ We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp
 
 We evaluate \sys's programmability and quantify mechanism and observability overhead.
 
-\arq{What is going on with this programability? Is there a research quesiton }
+\arq{What is going on with this programability?  Are we somehow answering a research question with this? It seems like this would be more of a design/impl thing than an evaluation thing.}
 
 \paragraph{Policy Building Blocks.}
 \Cref{tab:support-matrix} shows policy building blocks with lines of code and execution domain. These components can be composed to construct policies; for example, the multi-tenant benchmark in RQ3 combines Quota LRU, Priority Tree Prefetch, and Dynamic Timeslice. All policies attach to unmodified frameworks via runtime instrumentation, requiring only tens to hundreds of lines.
@@ -194,7 +194,7 @@ LatencyBudget (CLC) & Scheduling Block & Device & 19 \\
 
 \paragraph{Host Runtime Overhead.} We quantify the overhead of the \sys driver runtime independent of policy logic using GEMM from PolyBench~\cite{grauer2012auto} and HotSpot~\cite{che2009rodinia} (1.1$\times$ oversubscription, 35~GB working set) on RTX 5090. With hooks enabled but no policy attached, the overhead is less than 0.2\%.
 
-\paragraph{Device Verification.} Across 18 GPU programs, the SIMT-aware verifier accepts 13 and correctly rejects 5 unsafe cases (lane-varying branches, non-uniform atomics, varying map-update keys).
+\paragraph{Device Verification.} Across 18 GPU programs, the SIMT-aware verifier accepts 13 and correctly rejects 5 unsafe cases (lane-varying branches, non-uniform atomics, varying map-update keys).  \arq{this is an odd experiment. Is it just 18 random programs? }
 
 \paragraph{Device-side Overhead.}
 We evaluate device-side observability tools built on \sys (\Cref{tab:obs-overhead}) on NVIDIA P40 GPU using llama.cpp prefill (Llama 1B, IO3, sequence-mixed). Tools include \texttt{kernel\-ret\-snoop} (per-block finish timestamps), \texttt{thread\-hist} (load imbalance detection), and \texttt{launch\-late} (GPU kernel launch latency). Overhead is measured as token/s degradation during prefill. \sys achieves 3--14\% overhead versus NVBit's 85--87\%~\cite{villa2019nvbit}, due to warp-uniform execution model. Attaching to a running process takes 273\,ms on average from \texttt{bpftime trace} startup to first GPU kernel detection, without application restart.
@@ -223,4 +223,4 @@ launchlate & 347 & Host+Device & 14\% & 93\% \\
 \end{table}
 
 \paragraph{Device-side Runtime Optimization.}
-We evaluate device-side \sys mechanisms using a vector-add CUDA GPU kernel (32 elements, 10K iterations) from cuda-sample~\cite{nvidia_cuda_samples} on RTX 5090. \Cref{fig:microbench}(a) compares \sys's SIMT-aware warp-level execution against the prior workshop version baseline~\cite{egpu} that injects eBPF bytecode without SIMT-specific verification and optimizations. The baseline incurs overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead by 60--80\%. \Cref{fig:microbench}(b) shows CPU map access via PCIe is 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU. We do not compare policy-level performance against the prior workshop version or Neutrino because they are limited to read-only observability (\S\ref{sec:background}).
+We evaluate device-side \sys mechanisms using a vector-add CUDA GPU kernel (32 elements, 10K iterations) from cuda-sample~\cite{nvidia_cuda_samples} on RTX 5090. \Cref{fig:microbench}(a) compares \sys's SIMT-aware warp-level execution against the prior workshop version baseline~\cite{egpu} that injects eBPF bytecode without SIMT-specific verification and optimizations. The baseline incurs overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead by 60--80\%. \Cref{fig:microbench}(b) shows CPU map access via PCIe is 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU. We do not compare policy-level performance against the prior workshop version or Neutrino because they are limited to read-only observability (\S\ref{sec:background}). \arq{Do we need this experimentation?  I guess you're wanting to show that this current version of the system is better than the workshop version, but I wonder if that is entirely surprising.}
