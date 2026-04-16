@@ -24,7 +24,7 @@ However, the CPU eBPF model does not directly transfer to GPUs. In CPU eBPF syst
 
 \textbf{Memory-scheduling coupling.} CPU extensibility treats scheduling and memory as independent subsystems (\texttt{sched\_ext} and \texttt{cache\_ext}), but on GPU, limited device memory tightly couples these domains, as a page fault is simultaneously a memory event and a scheduling stall. GPU policies must coordinate across both.
 
-\textbf{Fragmented visibility.} CPU eBPF runs on the same processor it manages, but in GPU stacks, policy-relevant state is split across layers. Downward, GPU-internal execution state such as per-warp access patterns and SM utilization remains opaque to the host (\S\ref{sec:arch-gpu}). Upward, GPU runtimes bypass the OS kernel for work submission (e.g., user-space command buffers and doorbells), so the driver sees only coarse resource events, not individual GPU kernel launches or application phase transitions (e.g., LLM prefill-to-decode, FAISS build-to-search).
+\textbf{OS kernel bypass.} CPU eBPF runs on the same processor it manages, but GPU runtimes bypass the OS kernel for work submission (e.g., user-space command buffers and doorbells), so the driver sees only coarse resource events, not individual GPU kernel launches or application phase transitions (e.g., LLM prefill-to-decode, FAISS build-to-search). Policies must attach to user-space and device-side triggers, yet traditional eBPF does not allow such callbacks to modify OS state required to implement resource management policies.
 Naively exposing low-level GPU driver controls without addressing these mismatches risks resource leaks, hardware hangs, or OS kernel panics.
 
 \subsection{\sys{} Policy Execution Model}
