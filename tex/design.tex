@@ -7,7 +7,7 @@ This section presents the design of \sys{}, a programmable OS subsystem for safe
 \subsection{\sys{} Workflow}
 \label{sec:workflow}
 
-\sys{} extends eBPF (extended Berkeley Packet Filter) to GPU resource management. eBPF programs are callbacks attached to hook points such as \texttt{struct\_ops}, \texttt{kprobe}, and \texttt{uprobe}, allowing user-supplied code to run safely inside the OS kernel: programs are verified at load time, then JIT-compiled to native code. The verifier guarantees termination, memory safety, type correctness, and that programs call only approved helpers and kfuncs (OS kernel functions). As shown in Figure~\ref{fig:system-design}, \sys{} extends this pipeline to GPUs: policy authors use the standard eBPF toolchain to build and load policies containing both host and device parts. The runtime spans host driver and GPU device, verifies policies with SIMT-aware checks for device-side programs (\S\ref{sec:verification}), JIT-compiles them to native CPU code or GPU instructions (e.g., PTX), places maps hierarchically, uses kernel hooks and DBI tools to dynamically install policies without application or driver restarts.
+\sys{} extends eBPF (extended Berkeley Packet Filter) to GPU resource management. eBPF programs are callbacks attached to hooks such as \texttt{struct\_ops}, \texttt{kprobe}, and \texttt{uprobe}, enabling safe in OS kernel execution via load-time verification and JIT compilation. The verifier ensures termination, memory safety, type correctness, and restricts calls to approved helpers and kfuncs (OS kernel functions). As shown in Figure~\ref{fig:system-design}, \sys{} extends this pipeline to GPUs: policies build and load with standard eBPF tools, contain both host and device components, run across the host driver and GPU, are verified with SIMT-aware checks (\S\ref{sec:verification}), JIT-compiled to CPU or GPU code (e.g., PTX), use cross-layer maps, and are dynamically installed via kernel hooks and DBI without application or driver restarts.
 
 \begin{figure}
 \centering
@@ -21,7 +21,7 @@ This section presents the design of \sys{}, a programmable OS subsystem for safe
 \subsection{Resource State Machines}
 \label{sec:design-interfaces}
 
-\sys defines three resource domains. Memory chunks transition between host memory and device memory through eviction and prefetching. Both GPU kernel and GPU thread-block level compute contexts transition between ready, running and finished via scheduling and preemption operations.
+\sys defines three resource domains. Memory chunks transition between host memory and device memory through eviction and prefetching. Both GPU kernel and GPU thread-block compute contexts transition between ready, running and finished via scheduling and preemption operations.
 
 \subsection{GPU-Specific Challenges for eBPF Extensibility}
 \label{sec:motivation-challenges}
