@@ -10,7 +10,7 @@
 This paper focuses on three domains of GPU resource management that span the software stack: memory placement and migration, compute scheduling, and on-device thread scheduling.
 User-space frameworks and applications (e.g., vLLM~\cite{kwon2023efficient}, Salus~\cite{yu2020fine}, PILOT~\cite{ravi2021pilot}) encode semantic information (e.g., neural network structures, latency constraints) and implement policies like request scheduling and KV-cache offloading.
 The OS kernel driver manages memory placement, compute scheduling, and multi-tenant resource isolation through privileged hardware mechanisms (MMU, interrupts). Under Unified Virtual Memory (UVM), which shares a virtual address space between host and device memory, applications may oversubscribe device memory, triggering driver-managed page faults and host-device migrations. Drivers typically employ fixed application-agnostic algorithms, such as LRU eviction.
-The GPU device executes kernels in the SIMT (Single Instruction, Multiple Threads) model: on NVIDIA GPUs, warps of 32 threads execute the same instruction in lockstep, and firmware schedules them on Streaming Multiprocessors (SMs). Internal execution states such as warp access patterns remain opaque to host-side drivers.
+The GPU device executes GPU kernels in the SIMT (Single Instruction, Multiple Threads) model: on NVIDIA GPUs, warps of 32 threads execute the same instruction in lockstep, and firmware schedules them on Streaming Multiprocessors (SMs). Internal execution states such as warp access patterns remain opaque to host-side drivers.
 
 
 \begin{figure}[t]

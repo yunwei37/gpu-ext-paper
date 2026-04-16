@@ -16,7 +16,7 @@
 \node[font=\small\bfseries] (sched_title) at (0, 0) {sched\_ext / cache\_ext / XDP (1:1, sync, same processor):};
 
 \node[trigger] (s_trans) at (-2.3, -0.7) {transition};
-\node[bpf]     (s_bpf)   at (0, -0.7)    {BPF};
+\node[bpf]     (s_bpf)   at (0, -0.7)    {eBPF};
 \node[transition]  (s_eff)   at (2.5, -0.7)   {immediate transition};
 
 \draw[arrow] (s_trans) -- (s_bpf);
@@ -31,7 +31,7 @@
 \node[trigger] (t_c) at (-2.9, -3.6) {bpf\_wq};
 
 % BPF + maps
-\node[bpf, minimum height=1.4cm, minimum width=1.3cm, text width=1.1cm, align=center] (g_bpf) at (-0.3, -2.95) {BPF\\+ maps};
+\node[bpf, minimum height=1.4cm, minimum width=1.3cm, text width=1.1cm, align=center] (g_bpf) at (-0.3, -2.95) {eBPF\\+ maps};
 
 % Effects (state transitions)
 \node[transition] (e_x) at (2.5, -2.3) {prefetch};

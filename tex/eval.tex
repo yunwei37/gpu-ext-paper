@@ -34,12 +34,12 @@ All 59 policies evaluated in this paper, including RQ1 single-tenant GPU kernel 
 We evaluate \sys on GPT-OSS-120B MXFP4 MoE (59~GiB) in llama.cpp on RTX 5090 (32GB), requiring 1.84$\times$ oversubscription. We compare five configurations: framework-managed CPU offloading (\texttt{ncmoe=\allowbreak{}32/64}), default UVM, UVM with application-level hints (\texttt{cuda\-Mem\-Advise}), and \sys with eBPF-based host-device prefetching (\S\ref{sec:design-interfaces}).
 \Cref{fig:llama-expert-offload} shows prefill and decode throughput. For decode (memory-bound), \sys achieves \textbf{1.76$\times$ speedup} over application-tuned UVM hints (\texttt{cuda\-Mem\-Advise}) and 4.8$\times$ over framework offloading (\texttt{ncmoe=64}). These hints improve decode over default UVM but require application modification and degrade prefill by 40\%; \sys outperforms hints on decode while preserving prefill within 4\% of default UVM, without application changes. For prefill (compute-bound), framework offloading achieves 13\% higher throughput, but decode dominates end-to-end latency, so the decode improvement outweighs the prefill gap.
 
-The agent arrived at the final policy through iterative exploration: sequential prefetch degraded decode throughput due to mismatch with MoE stride access patterns (consistent with the 8\% degradation in \Cref{fig:clc-policies}a), leading to stride-based prefetch that matches the sequential weight scanning within each expert layer. Device-side BPF tracing of per-warp memory access patterns revealed that expert activations follow predictable stride sequences and identified frequently-accessed shared layers. For eviction, the agent tested FIFO ordering before converging on LFU, which retains frequently-accessed shared layers while evicting cold expert pages. The final policy combines device-side access observation, host-side stride prefetch, and LFU eviction (\S\ref{sec:design-interfaces}).
+The agent arrived at the final policy through iterative exploration: sequential prefetch degraded decode throughput due to mismatch with MoE stride access patterns (consistent with the 8\% degradation in \Cref{fig:clc-policies}a), leading to stride-based prefetch that matches the sequential weight scanning within each expert layer. Device-side eBPF tracing of per-warp memory access patterns revealed that expert activations follow predictable stride sequences and identified frequently-accessed shared layers. For eviction, the agent tested FIFO ordering before converging on LFU, which retains frequently-accessed shared layers while evicting cold expert pages. The final policy combines device-side access observation, host-side stride prefetch, and LFU eviction (\S\ref{sec:design-interfaces}).
 
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/clc/microbench_combined.pdf}
-\caption{Single-tenant policy evaluation (normalized speedup, higher is better): (a) memory prefetch policies on stride vector-add (1.25$\times$ oversubscription); (b) block scheduling policies on two GEMM workloads.}
+\caption{Single-tenant policy evaluation (normalized speedup, higher is better): (a) memory prefetch policies on vector-add; (b) block scheduling policies on GEMM.}
 \label{fig:clc-policies}
 
 \end{figure}
@@ -87,7 +87,7 @@ Native GPU allocation (no UVM) achieves the highest performance when data fits i
 
 \paragraph{Faiss Vector Search.}
 We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4096,Flat index, scaling from 20M (9.5GB) to 50M (24GB) and 100M (48GB, exceeding GPU memory). IVF indexes have a two-level structure: frequently-accessed centroids and larger posting lists, and Faiss operations have two distinct phases: BUILD performs sequential scans while SEARCH issues random accesses.
-\sys reduces build time by 21--29\%, with benefits scaling from 27\% to 40\% as memory pressure grows. For search workloads, \sys reduces latency by 10--16\% across different \texttt{nprobe} settings despite the random access patterns inherent in ANN search. The converged policy prefetches posting lists sequentially for oversubscribed datasets and uses stride prediction for K-means iterations during index construction; device-side BPF programs also trigger prefetching of corresponding posting lists.
+\sys reduces build time by 21--29\%, with benefits scaling from 27\% to 40\% as memory pressure grows. For search workloads, \sys reduces latency by 10--16\% across different \texttt{nprobe} settings despite the random access patterns inherent in ANN search. The converged policy prefetches posting lists sequentially for oversubscribed datasets and uses stride prediction for K-means iterations during index construction; device-side eBPF programs also trigger prefetching of corresponding posting lists.
 
 The agent iterated through 5 policy versions, testing 8 configurations total. The first used a momentum-based phase detector with cycle eviction; BUILD improved but SEARCH degraded because forward drift in search queries fooled the detector. Fixing the classifier revealed that eviction policy, not phase detection, was the real performance lever. The third version paired the corrected detector with default eviction and converged. A subsequent fast-path optimization introduced a state-machine bug (policy stuck in SEARCH mode); the agent detected and fixed the regression in one iteration. Of 8 configurations, only 2 were positive.
 
@@ -108,7 +108,7 @@ We evaluate \sys on multi-tenant GPU workloads, comparing per-tenant policies ag
 \subsubsection{Microbenchmarks}
 
 \paragraph{Compute-bound Timeslice Scheduler (LC + BE).}
-We evaluate \sys's BPF struct\_ops scheduling policies on \emph{compute-bound} (SM-limited) multi-tenant workloads. 2 latency-critical (LC) processes and 4 best-effort (BE) processes run concurrently, each with 4 CUDA streams submitting 50 compute kernels. We compare the native scheduler against \sys with differentiated timeslices (LC: 1s, BE: 200$\mu$s) using a preemption policy equivalent to GPREEMPT's~\cite{fan2025gpreempt} priority-based timeslice scheduling, implemented as a \sys BPF program without unsafe modification to the driver source. \Cref{fig:scheduler-latency} shows that \sys reduces LC P99 launch latency by 95\% (1188$\mu$s $\to$ 53$\mu$s). BE throughput remains unchanged.
+We evaluate \sys's eBPF struct\_ops scheduling policies on \emph{compute-bound} (SM-limited) multi-tenant workloads. 2 latency-critical (LC) processes and 4 best-effort (BE) processes run concurrently, each with 4 CUDA streams submitting 50 compute kernels. We compare the native scheduler against \sys with differentiated timeslices (LC: 1s, BE: 200$\mu$s) using a preemption policy equivalent to GPREEMPT's~\cite{fan2025gpreempt} priority-based timeslice scheduling, implemented as a \sys eBPF program without unsafe modification to the driver source. \Cref{fig:scheduler-latency} shows that \sys reduces LC P99 launch latency by 95\% (1188$\mu$s $\to$ 53$\mu$s). BE throughput remains unchanged.
 
 \begin{figure}
 \centering
@@ -128,7 +128,7 @@ We evaluate \sys's memory policies for priority differentiation on \emph{memory-
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/all_kernels_stacked.pdf}
 
-\caption{Multi-tenant memory priority differentiation under UVM oversubscription. Single 1$\times$: ideal single-process time; 2$\times$Single 1$\times$: theoretical lower bound.}
+\caption{Multi-tenant memory priority differentiation. Single 1$\times$: single-process time; 2$\times$Single 1$\times$: theoretical lower bound.}
 \label{fig:all-kernels-priority}
 \end{figure}
 
