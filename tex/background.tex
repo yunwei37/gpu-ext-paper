@@ -7,6 +7,7 @@
 \subsection{GPU Systems and Workload Diversity}
 \label{sec:arch-gpu}
 
+\arq{I think this is too many ideas for one paragraph  It should probably reference Figure 1 (!)}
 This paper focuses on three domains of GPU resource management that span the software stack: memory placement and migration, compute scheduling, and on-device thread scheduling.
 User-space frameworks and applications (e.g., vLLM~\cite{kwon2023efficient}, Salus~\cite{yu2020fine}, PILOT~\cite{ravi2021pilot}) encode semantic information (e.g., neural network structures, latency constraints) and implement policies like request scheduling and KV-cache offloading.
 The OS kernel driver manages memory placement, compute scheduling, and multi-tenant resource isolation through privileged hardware mechanisms (MMU, interrupts). Under Unified Virtual Memory (UVM), which shares a virtual address space between host and device memory, applications may oversubscribe device memory, triggering driver-managed page faults and host-device migrations. Drivers typically employ fixed application-agnostic algorithms, such as LRU eviction.
@@ -23,6 +24,7 @@ The GPU device executes GPU kernels in the SIMT (Single Instruction, Multiple Th
 % % need a better figure
 
 % \arq{The biggest mistake that novice writers make when it comes to figures is that they gesture at them without explaining them. Consider Figure 1. What takeaway do you want me, the reader, to have? What experiment did you actually run (what does UVM oversubscription mean?)  Why do I care?}
+\arq{I think this should be two paragraphs: one that talks about workload diversity and the second that then talks about the need for different policies.}
 These resources require workload-specific management. UVM eviction and prefetch policy choice alone can change execution time by up to 73\%~\cite{ganguly2019interplay,park2025helm}. For compute scheduling, even within single deployments, optimal priority and preemption policies vary over time as multi-tenant demands fluctuate~\cite{fan2025gpreempt,wang2024gcaps}. \sys{}'s eBPF-based tracing tools (\S\ref{sec:eval}) results confirm this diversity: \Cref{fig:access_patterns} captures memory page-fault addresses over time under UVM, showing that LLM MoE inference exhibits periodic stride bursts from expert activations, benefiting from specialized eviction rather than default LRU~\cite{sheng2023flexgen,kwon2023efficient}; GNN training shows irregular random access from pointer-chasing graph traversal, requiring aggressive sequential prefetch~\cite{lin2024towards,wang2016gunrock}; and vector search alternates between sequential scans (index build) and random probes (query)~\cite{pan2024survey,cao2023gpu}, yet each strategy may degrade other workloads. \Cref{fig:thread_scheduling} reveals a 127$\times$ SM scheduling load imbalance in a vector-add GPU kernel, invisible to host-side drivers and amenable to custom thread scheduling. These patterns demand different strategies across all three domains, yet current drivers and firmware apply one fixed policy to all.
 \begin{figure*}[t]
     \centering
@@ -50,6 +52,7 @@ To enable effective agent-driven GPU policy optimization and benefit human devel
 \subsection{Limitations of Existing Approaches}
 \label{sec:motivation-limitations}
 
+\arq{Make sure to critique these existing approaches by saying they are not safe, dynamic, or full-stack.}
 Existing approaches fail to simultaneously provide a safe, dynamic, and full-stack programmable OS interface for GPU resource management.
 
 \paragraph{Driver-Level Policies.}
