@@ -1,0 +1,330 @@
+ASPLOS'27 - April cycle Paper #1797 Reviews and Comments
+===========================================================================
+Paper #1797 Safe and Programmable OS-Level GPU Resource Management with
+eBPF
+
+
+Review #1797A
+===========================================================================
+
+Reviewer confidence
+-------------------
+4. I understood quite well
+
+Advances computer architecture research
+---------------------------------------
+3. Neutral
+
+Advances programming languages research
+---------------------------------------
+2. Disagree
+
+Advances operating systems research
+-----------------------------------
+5. Strongly agree
+
+Introduces new area
+-------------------
+4. Agree
+
+Overall Merit
+-------------
+4. Accept
+
+Strengths
+---------
+- A well-written paper, and an interesting application by extending the bpftime
+framework
+- Leveraging this for agentic workflow is a timely exploration of the future
+of systems research
+
+Comments for authors
+--------------------
+Overall I quite enjoy reading this paper, and it seems to be an impressive
+engineering feat to have the components working across the stack, and then
+leveraging this infrastructure to allow agents to design novel scheduling
+policies. I think this points out an exciting future of systems research where
+solid systems work enables us to reap the benefits of agentic systems, while
+have the guardrail in place for rapid iteration.
+
+Just a few points that might be worth clarifying in the paper:
+- How does gpubpf handles when existing optimization heuristic baked into the
+workload adversarially affects the gpubpf policies, especially given the
+constraints of not changing the workload.
+- How does it work with workloads ship as SASS or binary? Is there a way to
+handle patching without relying on PTX?
+- Can you clarify a bit more how the BPF maps are stored? There are shards stored
+on the GPU, but the CPU code needs to be able to access it. And the hierarchical
+approach seems to only easily work with composable data (for example, taking the
+min in a tree fashion across layers). Can you foresee any use cases that might
+require other forms of data to make better scheduling decisions, but the current
+map structure cannot quite accommodate?
+- It's worth adding some discussion of how this affects the design of future
+accelerators: how much to implement in hardware, what kind of abstraction to expose,
+both for traditional performance debugging, and also for developing new sets of
+tools.
+- Any reason why device side overhead is only measured on P40?
+
+Questions to be addressed in Author Response
+--------------------------------------------
+Please see above.
+
+
+
+Review #1797B
+===========================================================================
+
+Advances computer architecture research
+---------------------------------------
+3. Neutral
+
+Advances programming languages research
+---------------------------------------
+3. Neutral
+
+Advances operating systems research
+-----------------------------------
+4. Agree
+
+Introduces new area
+-------------------
+2. Disagree
+
+Overall Strong ASPLOS paper
+---------------------------
+3. Neutral
+
+Confidence
+----------
+2. Neutral
+
+Decision Rationale
+------------------
+This paper proposes a potentially interesting way to make GPU resource management decisions in a programmable way. From the first two pages, it is difficult to gauge whether the claimed safety guarantees for a fully asynchronous mechanism like this are really possible.
+
+
+
+Review #1797C
+===========================================================================
+
+Advances computer architecture research
+---------------------------------------
+4. Agree
+
+Advances programming languages research
+---------------------------------------
+4. Agree
+
+Advances operating systems research
+-----------------------------------
+5. Strongly agree
+
+Introduces new area
+-------------------
+4. Agree
+
+Overall Strong ASPLOS paper
+---------------------------
+5. Strongly agree
+
+Confidence
+----------
+3. High confidence
+
+Decision Rationale
+------------------
+This paper appears to solve a number of real-world issues and use cases around eBPF based resource management in GPU systems. The resulting performance improvements reported based on AI-generated policies leveraging this new system are compelling.
+
+
+
+Review #1797D
+===========================================================================
+
+Reviewer confidence
+-------------------
+2. I understood the main idea but missed many details
+
+Paper summary
+-------------
+​The paper presents an intriguing architectural solution called gpubpf, which integrates the Linux kernel’s proven eBPF framework into the GPU driver domain to mitigate severe bottleneck stalls caused by VRAM oversubscription. To bypass the substantial cross-device latency inherent in PCIe communication, the authors introduce an asynchronous resource state machine that decouples runtime scheduling from physical memory migrations. The architecture also features a SIMT-aware verifier combined with warp-level execution aggregation to ensure safe code execution inside complex GPU hardware without introducing noticeable system overhead. State synchronization across the host-device boundary is managed flexibly through hierarchical cross-layer map shards that operate on an eventual consistency model rather than costly real-time synchronization. Consequently, the system demonstrates an impressive ability to boost the throughput of contemporary LLM MoE serving and graph neural network training by up to 4.8x without requiring any modifications to the underlying application code.
+
+Advances computer architecture research
+---------------------------------------
+3. Neutral
+
+Advances programming languages research
+---------------------------------------
+3. Neutral
+
+Advances operating systems research
+-----------------------------------
+3. Neutral
+
+Introduces new area
+-------------------
+3. Neutral
+
+Overall Merit
+-------------
+3. Weak accept (Generally positive, some issues can be fixed with effective
+   shepherding or minor revision)
+
+Strengths
+---------
+​The primary innovation of this research lies in its ability to break down traditional structural barriers by unifying memory management and task scheduling paths into a single co-designed control layer. By controlling resources at a fine-grained page granularity, the framework enables precise asynchronous DMA prefetching that effectively overlaps background data transfers with active computational cycles. The design successfully eliminates micro-level overheads and atomic map contention within massive parallel architectures, maintaining GPU-side overhead within a minimal single-digit percentage. It establishes an exceptionally stable sandbox environment where automated AI coding agents can aggressively generate and stress-test driver-level heuristics with zero risk of inducing catastrophic kernel panics. Furthermore, the capacity to dynamically attach and detach optimization policies on the fly without system reboots or service interruptions delivers immense practical and operational value for real-world data centers.
+
+Weaknesses
+----------
+​Despite its technical merits, the system’s host-side implementation remains tightly coupled with explicit hooks in the proprietary GPU driver module, creating a significant vulnerability to future manufacturer firmware or architectural updates. Relying on an eventual consistency model for cross-layer maps implies that during highly volatile workload transitions, the system might make sub-optimal decisions based on stale statistics and trigger sudden bursts of memory thrashing. The current framework is also constrained by a single system-wide policy loading architecture, meaning it cannot yet support independent, custom isolated resource policies for individual tenants in shared cloud environments. The reliance on dynamic binary instrumentation via ptrace to inject monitoring code directly into running user applications introduces intrusive workarounds that could spark stability and security compliance rejections in enterprise production environments. Finally, because the runtime stack targets NVIDIA’s proprietary PTX instruction set, it lacks immediate out-of-the-box portability to competitive hardware ecosystems like AMD or Intel, presenting a market adoption barrier.
+1,
+
+Comments for authors
+--------------------
+​The authors deserve significant credit for their bold and highly original approach of extending eBPF—a technology that revolutionized Linux kernel networking and observability—into the complex domain of heterogeneous accelerator hardware. The engineering discipline demonstrated in masking severe host-to-device memory latencies through an elegant hierarchical map sharding architecture is highly commendable. Leveraging an autonomous AI agent to rigorously stress-test the safety verifier over hundreds of iterations provides incredibly compelling and pragmatic validation data for the system's sandbox stability. However, the heavy reliance on application-level binary patching and dynamic trampoline injection feels somewhat artificial and slightly detracts from a clean, pure kernel-level abstraction layer. Ultimately, if these core state machine concepts can successfully transition into standard, vendor-neutral system frameworks like Linux HMM or DRM schedulers, this research has the potential to drive widespread industry transformation.
+
+Questions to be addressed in Author Response
+--------------------------------------------
+​1. How does the system handle or mitigate sudden bursts of VRAM thrashing when workload access patterns mutate faster than your periodic cross-layer map synchronization interval?
+​2. Can the proposed asynchronous resource state machine model scale seamlessly into hybrid server environments that incorporate emerging disaggregated memory architectures like tiered CXL memory pools?
+​3. In a highly competitive multi-tenant cloud data center environment, what architectural enhancements are required to allow multiple users to safely execute their own distinct, custom eBPF resource policies simultaneously without cross-interference?
+​4. Does the runtime overhead of application-level trampoline hooks scale efficiently when executing massive, complex accelerator kernels characterized by extreme block counts and heavy thread utilization?
+
+
+
+Review #1797E
+===========================================================================
+
+Reviewer confidence
+-------------------
+3. I understood the paper but missed some details
+
+Paper summary
+-------------
+GPU resource management policies govern how a system places and migrates memory and schedules GPU tasks. They play an important role in determining application performance, and the ideal policy for a given deployment often depends on low-level details such as the application, workloads, and hardware. AI agents would make it possible to automatically optimize GPU resource management policies, but require three properties of a system: safety, to ensure that a broken policy cannot cause a system crash; dynamism, to enable policy changes without requiring the system and applications to be restarted; and full-stack, to ensure that the policy can observe device and application states and control low-level hardware.
+
+Authors introduce gpubpf, a new system that provides an OS interface for GPU resource management that is safe, dynamic, and full-stack by turning to eBPF: gpubpf policies include eBPF callback functions that the system invokes on a specified event (e.g., when code reaches a function). The system includes a novel execution model that separates the effect of a callback from its triggering event (GPU operations, e.g., page migration across PCIe, take milliseconds). gpubpf supports policies that asynchronously transition resources between states, potentially invoking multiple transitions at a single point-in-time.
+
+gpubpf is implemented on the Linux NVIDIA GPU driver and improves throughput by 1.76× over application-tuned baselines, while reducing tail latency by up to 2×, without application modifications. There were zero OS kernel panics through the optimization process, highlighting gpubpf’s safety.
+
+Advances computer architecture research
+---------------------------------------
+2. Disagree
+
+Advances programming languages research
+---------------------------------------
+2. Disagree
+
+Advances operating systems research
+-----------------------------------
+4. Agree
+
+Introduces new area
+-------------------
+2. Disagree
+
+Overall Merit
+-------------
+2. Leaning reject (Generally negative, requires a major overhaul)
+
+Strengths
+---------
+Builds upon open GPU OS kernel modules [32] and provides an eBPF SIMT verifier and JIT runtime for GPU devices.
+
+Evaluated across diverse AI scenarios (LLM inference, GNN training, vector search), and multi-tenant scenarios.
+
+All tests with gpubpf policies require no application modifications.
+
+Agent-Driven Policy Exploration Case Studies were interesting to read, need more studies like that published, though more details are needed about the agent setup (prompts used for Claude, etc.) to make it more informative.
+
+Unlike framework-level offloading that often migrates experts as atomic units, gpubpf operates at page granularity, enabling finer-grained compute-transfer overlap.
+
+Weaknesses
+----------
+Although eBPF-based solution for GPU resource management is interesting and relevant, I think more evaluation is needed before acceptance:
+
+1. Regarding multi-tenant demand use case, SemiAnalysis, for example, questions its real-life value. For example, gpubpf compares itself to MIG GPU partitioning in 2.3, but SemiAnalysis reports that inferencing workloads do not really use it [https://newsletter.semianalysis.com/p/amd-advancing-ai-mi350x-and-mi400-ualoe72-mi500-ual256].
+
+2. Authors compare gpubpf to framework-managed policies: llama.cpp ncmoe, vLLM CPU offload, LMCache. Regarding MoE memory management, there is related work like https://arxiv.org/pdf/2303.06182 that moves experts dynamically into HBM based on the gating function outcome, while overlapping the movement with collectives. I think the work needs to compare against SOTA research from the field.
+
+Questions to be addressed in Author Response
+--------------------------------------------
+KVCache offload (section 5.3) is increasingly to storage these days rather than CPU memory due to huge volumes required by coding agents, with Context offloading solutions from Weka, Vast, EverPure, etc. or  Nvidia's CMX. How would ebpf handle such use case?
+
+
+
+Review #1797F
+===========================================================================
+
+Reviewer confidence
+-------------------
+3. I understood the paper but missed some details
+
+Paper summary
+-------------
+The paper proposes **gpubpf**, a programmable operating system subsystem for safe, dynamic, and full-stack GPU resource management based on eBPF.
+
+gpubpf defines three GPU resource policy domains—GPU memory, GPU kernels, and GPU thread blocks—along with their corresponding resource states and state transitions.
+
+It also introduces an asynchronous execution model that decouples callback triggering from policy enforcement, enabling proactive management and support for longer-running GPU operations. Furthermore, gpubpf supports executing eBPF programs both on the host (kernel) side and on the GPU by compiling eBPF programs into GPU assembly and using binary instrumentation to modify compiled GPU kernels.
+
+For the evaluation, the authors compare gpubpf-based policies against driver defaults (UVM LRU/FIFO eviction and the native GPU scheduler), application-level hints, and framework-managed policies. They evaluate both single-tenant and multi-tenant resource management policies, demonstrate agent-driven policies, and analyze the runtime overhead introduced by gpubpf.
+
+Advances computer architecture research
+---------------------------------------
+2. Disagree
+
+Advances programming languages research
+---------------------------------------
+3. Neutral
+
+Advances operating systems research
+-----------------------------------
+4. Agree
+
+Introduces new area
+-------------------
+4. Agree
+
+Overall Merit
+-------------
+2. Leaning reject (Generally negative, requires a major overhaul)
+
+Strengths
+---------
+- While the paper primarily focuses on systems and operating systems, it also spans computer architecture and programming languages, making it highly relevant to the ASPLOS community
+
+- The core idea of enabling eBPF-based extensibility for GPU resource management is compelling. GPU resource management and policy enforcement are currently split across multiple layers of the software stack (userspace, kernel space, and device kernels), making cross-layer resource management policies difficult to implement cleanly.
+
+- The agentic-driven policy exploration use case further motivates the need for the safety guarantees provided by eBPF..
+
+Weaknesses
+----------
+- The design and implementation sections are relatively thin. Several key design mechanisms are described at a high level, making it difficult to fully understand how they operate. These sections would benefit from a more detailed explanation.
+
+- The evaluation compares only against state-of-practice baselines (driver defaults, application-level hints, and framework-managed policies), even though the motivation and related work discuss several state-of-the-art research systems for GPU scheduling and memory management/offloading. A comparison against at least some of these research systems would better position the proposed approach.
+
+- The paper does not clearly distinguish between the benefits of the general gpubpf mechanism and those of the specific hand-written policies evaluated. It should clarify which results rely on gpubpf's OS- and device-level programmability and which could be achieved by existing approaches, albeit with different trade-offs.
+
+- Safety is a central part of the paper's motivation, but its evaluation and discussion are relatively limited. I would expect a more detailed analysis of the verifier's guarantees, examples of rejected unsafe policies, potential failure modes, the trusted computing base (TCB), and how the system handles buggy or pathological policies.
+
+- The portability of the proposed mechanism is discussed only briefly and would benefit from a more thorough evaluation or discussion
+
+Comments for authors
+--------------------
+Thank you for submitting your work to ASPLOS. I find the core idea of the paper very interesting, and I appreciate both the design and the engineering effort required to enable GPU-side eBPF.
+
+I believe the design section should be expanded to more clearly present the key design decisions, mechanisms, and trade-offs underlying gpubpf.
+
+My main concern is the gap between the paper's motivation and its evaluation baselines. While the motivation and related work discuss several state-of-the-art approaches to GPU memory management and scheduling, the evaluation primarily compares against state-of-practice baselines.
+
+Additionally, it is not clear which of the policies implemented with gpubpf in the evaluation could also be implemented (or are already supported) by existing frameworks, and what trade-offs would be involved.
+
+Finally, safety appears to be one of the paper's primary motivations for adopting eBPF, yet its evaluation and discussion receive relatively limited attention. I would have expected a more thorough evaluation of the safety guarantees provided by the system.
+
+Questions to be addressed in Author Response
+--------------------------------------------
+* Are there state-of-the-art research systems for GPU memory management or scheduling that could be included as evaluation baselines? If not, why are they not applicable or directly comparable?
+
+* To what extent can the performance improvements observed in the evaluation be attributed to gpubpf? Which of the evaluated policies could already be implemented by existing frameworks, runtimes, driver modifications, or instrumentation systems, and what trade-offs does gpubpf improve?
+
+* What safety properties are enforced by the verifier? What kinds of unsafe or pathological policies are rejected, and how are invalid policies handled?
