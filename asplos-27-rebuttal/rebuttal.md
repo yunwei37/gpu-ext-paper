@@ -67,19 +67,13 @@ For D's isolation question: describe the path to per-tenant isolation — per-cg
 
 No additional commitment needed — the mechanism explanation (staleness affects optimality not correctness, FIFO fallback) suffices for D who is already a weak accept.
 
-## Q6. How would gpubpf handle KV-cache offloading to storage instead of CPU memory? (E — Major)
-
-**E-Q1:** "KVCache offload is increasingly to storage these days... with Context offloading solutions from Weka, Vast, EverPure, etc. or Nvidia's CMX. How would eBPF handle such use case?"
-
-**How to address:** The resource state machine naturally extends to a storage tier by adding new states and transitions. The millisecond-scale storage transfers fit the asynchronous model well. A cuFile/GDS kfunc could select demotion targets — this is complementary to Weka/VAST/CMX (which provide the transport layer); gpubpf would supply the cross-tier placement policy deciding what to demote and when. Frame as a natural extension, not something already implemented.
-
-## Q7. How does gpubpf handle workload-internal optimization heuristics that conflict with its policies? (A — Minor)
+## Q6. How does gpubpf handle workload-internal optimization heuristics that conflict with its policies? (A — Minor)
 
 **A-C1:** "How does gpubpf handle when existing optimization heuristics baked into the workload adversarially affects the gpubpf policies, especially given the constraints of not changing the workload."
 
 **How to address:** Cite the KV-cache agent case study as a concrete example: the agent detected thrashing between gpubpf's prefetch policy and vLLM's own allocator, and converged to a region-differentiated prefetch that works with (not against) the application's behavior. Also note that instant policy detachment bounds pathological interactions — if a policy degrades performance, it can be removed without restart.
 
-## Q8. How does gpubpf work with workloads shipped as SASS binaries without PTX? (A — Minor)
+## Q7. How does gpubpf work with workloads shipped as SASS binaries without PTX? (A — Minor)
 
 **A-C2:** "How does it work with workloads shipped as SASS or binary? Is there a way to handle patching without relying on PTX?"
 
@@ -87,45 +81,33 @@ No additional commitment needed — the mechanism explanation (staleness affects
 
 **Verify before submitting:** (1) PTX-in-fatbin claim holds for actual target applications (llama.cpp, vLLM/PyTorch, Faiss). (2) SASS patching prototype is in a presentable state — confirm what workloads it covers and any limitations, so the claim is precise.
 
-## Q9. Can the hierarchical BPF map structure support non-composable data for scheduling decisions? (A — Minor)
+## Q8. Can the hierarchical BPF map structure support non-composable data for scheduling decisions? (A — Minor)
 
 **A-C3:** "Can you clarify a bit more how the BPF maps are stored?... Can you foresee any use cases that might require other forms of data to make better scheduling decisions, but the current map structure cannot quite accommodate?"
 
 **How to address:** Explain that shards hold associative aggregates (counters, min/max); the eviction list is host-authoritative. Acknowledge honestly that non-composable global state (e.g., a sorted priority queue across all warps) cannot use the hierarchical shard model and must pin maps host-side at PCIe latency cost (Fig.15b shows CPU map access is 6000x slower than GPU-side). This is a real limitation for policies requiring globally-ordered data structures.
 
-## Q10. Can the asynchronous state machine model extend to CXL disaggregated memory architectures? (D — Minor)
-
-**D-Q2:** "Can the proposed asynchronous resource state machine model scale seamlessly into hybrid server environments that incorporate emerging disaggregated memory architectures like tiered CXL memory pools?"
-
-**How to address:** CXL adds additional memory tiers (states) and transitions atop the existing HMM/migrate_vma abstractions. The state machine model is unchanged — new tiers are new states, new DMA paths are new transitions. The asynchronous model is actually a better fit for CXL's higher latencies.
-
-## Q11. How does gpubpf affect the design of future accelerators? (A — Minor)
-
-**A-C4:** "It's worth adding some discussion of how this affects the design of future accelerators: how much to implement in hardware, what kind of abstraction to expose."
-
-**How to address:** Agree and offer a thesis: verified state-transitions could serve as the abstraction future accelerators expose natively — architected attach points, firmware-validated transition tables, privileged telemetry counters. This feeds A's "future of systems research" framing and strengthens A as champion.
-
-## Q12. Why was device-side overhead only measured on P40? (A — Minor)
+## Q9. Why was device-side overhead only measured on P40? (A — Minor)
 
 **A-C5:** "Any reason why device-side overhead is only measured on P40?"
 
 **How to address:** At submission time, device-side instrumentation was validated on P40. We have since extended support to RTX 5090 and will add device-side overhead numbers on RTX 5090 in revision.
 
-## Q13. What was the agent setup for the policy exploration case studies? (E — Minor)
+## Q10. What was the agent setup for the policy exploration case studies? (E — Minor)
 
 **E:** "More details are needed about the agent setup (prompts used for Claude, etc.) to make it more informative."
 
 **How to address:** Commit to releasing prompts, benchmark harness, all 59 generated policies, and 974-run logs as a publicly available artifact.
 
-## Q14. How portable is gpubpf beyond NVIDIA GPUs? (F, D — Minor)
+## Q11. How portable is gpubpf beyond NVIDIA GPUs? (F, D — Minor)
 
 **F-W5:** "The portability of the proposed mechanism is discussed only briefly."
 
 **D-W5:** "Relies on NVIDIA's proprietary PTX instruction set, lacks immediate out-of-the-box portability to AMD or Intel."
 
-**How to address:** Host-side design aligns with generic Linux abstractions (HMM/migrate_vma, DRM scheduler). Device-side can target vendor-neutral IR via SPIR-V backend (Section 4). The ~100 LOC driver hooks are over the open GPL modules. Keep this brief — portability is minor for all reviewers.
+**How to address:** Host-side design aligns with generic Linux abstractions (HMM/migrate_vma, DRM scheduler). Device-side can target vendor-neutral IR via SPIR-V backend (Section 4). Keep this brief — portability is minor for all reviewers.
 
-## Q15. How intrusive is the ptrace-based instrumentation, and does trampoline overhead scale with kernel size? (D — Minor)
+## Q12. How intrusive is the ptrace-based instrumentation, and does trampoline overhead scale with kernel size? (D — Minor)
 
 **D-W1:** "Host-side implementation remains tightly coupled with explicit hooks in the proprietary GPU driver module."
 
@@ -134,3 +116,13 @@ No additional commitment needed — the mechanism explanation (staleness affects
 **D-Q4:** "Does the runtime overhead of application-level trampoline hooks scale efficiently when executing massive, complex accelerator kernels characterized by extreme block counts and heavy thread utilization?"
 
 **How to address:** For driver coupling: hooks are ~100 LOC over the open GPL kernel modules, aligned with HMM/migrate_vma and DRM abstractions — not proprietary internals. For ptrace: it is a one-time attach (273ms startup), used only for device-side hooks; LD_PRELOAD is supported as an alternative — no ptrace needed in production. Host-side driver-hook policies touch no application code at all. For trampoline scaling: overhead is per-warp (warp leader executes, shuffle-broadcasts result), O(1) w.r.t. block count; Table 1 shows 3-14% on llama.cpp prefill.
+
+## Q13. How does gpubpf's model extend to storage-tier offloading, CXL memory, and future accelerator design? (E, D, A — Minor)
+
+**E-Q1:** "KVCache offload is increasingly to storage these days... How would eBPF handle such use case?"
+
+**D-Q2:** "Can the proposed asynchronous resource state machine model scale seamlessly into hybrid server environments that incorporate emerging disaggregated memory architectures like tiered CXL memory pools?"
+
+**A-C4:** "It's worth adding some discussion of how this affects the design of future accelerators: how much to implement in hardware, what kind of abstraction to expose."
+
+**How to address:** All three are natural extensions of the state machine model. Storage tier: add new states and transitions; ms-scale transfers fit the async model; gpubpf supplies placement policy, complementary to Weka/VAST/CMX transport. CXL: new memory tiers map to new states atop HMM/migrate_vma; the async model fits CXL's higher latencies. Future accelerators: verified state-transitions could serve as the abstraction hardware exposes natively — architected attach points, firmware-validated transition tables, privileged telemetry. Each is one sentence in the rebuttal; this is the lowest-priority section and the first to cut if over word limit.
