@@ -9,13 +9,14 @@
 | E | 2 — Leaning reject (OS-advance: 4) | Medium; lists five strengths | Missing SOTA MoE baseline (arXiv:2303.06182); MIG real-world relevance (SemiAnalysis); KV-cache offload to storage; wants agent prompts/details | Move 2→3 via existing evidence + gating-policy commitment + artifact release |
 | F | 2 — Leaning reject (OS-advance: 4) | Most substantive negative; "core idea very interesting" | SOTA research baselines; mechanism-vs-policy attribution; safety-evaluation depth (verifier, rejected policies, failure modes, TCB); thin design sections; portability | Convert objections to "fixable in revision" |
 
-## Q1. Why doesn't the evaluation compare against state-of-the-art research systems? (E, F — Critical)
+## Q1. Why doesn't the evaluation compare against state-of-the-art research systems? (E, F)
 
 **E:** "There is related work like arXiv:2303.06182 that moves experts dynamically into HBM based on the gating function outcome... I think the work needs to compare against SOTA research from the field."
 
 **F-Q1:** "Are there state-of-the-art research systems for GPU memory management or scheduling that could be included as evaluation baselines? If not, why are they not applicable or directly comparable?"
 
 **How to address:** Point out that two SOTA comparisons already exist in the paper but were not foregrounded clearly enough:
+
 1. GPREEMPT [14] (ATC'25) — we implemented its priority-timeslice policy as a 925-LOC gpubpf program with zero driver modification, achieving LC P99 latency reduction of 96% (Fig.12).
 2. LMCache [9] — gpubpf matches its throughput with better tail latency (Fig.9).
 
@@ -23,7 +24,7 @@ For driver-level systems (TimeGraph, Gdev, GCAPS, LithOS): these require unsafe 
 
 For E's specific citation (arXiv:2303.06182, MoE expert offloading via gating): explain that it is a framework-level solution that migrates experts as atomic units and requires runtime integration. Its gating-based prediction is expressible as a gpubpf uprobe policy on the gating function. We commit to implementing this gating-aware policy and comparing directly in revision.
 
-Note: gpubpf's current approach (device-side stride tracing) and gating-based prediction are different mechanisms — stride tracing uses memory access patterns, gating uses the MoE router output. They are complementary, not equivalent. Do not claim they achieve "similar behavior."
+Note: gpubpf's current approach (device-side stride tracing) and gating-based prediction are different mechanisms — stride tracing uses memory access patterns, gating uses the MoE router output. They are complementary, not equivalent."
 
 ## Q2. How much of the performance improvement comes from gpubpf itself vs. the specific policies evaluated? (F — Critical)
 
