@@ -81,34 +81,34 @@ No additional commitment needed — the evidence is already in the paper. Summar
 
 **A-C1:** "How does gpubpf handle when existing optimization heuristics baked into the workload adversarially affects the gpubpf policies, especially given the constraints of not changing the workload."
 
-**How to address:** Cite the KV-cache agent case study as a concrete example: the agent detected thrashing between gpubpf's prefetch policy and vLLM's own allocator, and converged to a region-differentiated prefetch that works with (not against) the application's behavior. Also note that instant policy detachment bounds pathological interactions — if a policy degrades performance, it can be removed without restart.
+**Response:** The KV-cache agent case study (Section 5.3) demonstrates exactly this scenario: the agent detected thrashing between gpubpf's prefetch policy and vLLM's own allocator, and converged to a region-differentiated prefetch that works with the application's behavior rather than against it. More generally, instant policy detachment bounds pathological interactions — if a policy degrades performance, it can be removed without restart.
 
-## Q8. How does gpubpf work with workloads shipped as SASS binaries without PTX? (A)
+## Q9. How does gpubpf work with workloads shipped as SASS binaries without PTX? (A)
 
 **A-C2:** "How does it work with workloads shipped as SASS or binary? Is there a way to handle patching without relying on PTX?"
 
 **How to address:** Distinguish two cases: host-side policies (memory management, scheduling) need no PTX at all — they operate entirely in the kernel driver. Device-side hooks primarily use PTX (present in fatbinaries for JIT compatibility in common ML frameworks). For SASS-only binaries, we have a working prototype of SASS-level patching leveraging NVBit's compiler infrastructure.
 
 
-## Q9. Can the hierarchical BPF map structure support non-composable data for scheduling decisions? (A)
+## Q10. Can the hierarchical BPF map structure support non-composable data for scheduling decisions? (A)
 
 **A-C3:** "Can you clarify a bit more how the BPF maps are stored?... Can you foresee any use cases that might require other forms of data to make better scheduling decisions, but the current map structure cannot quite accommodate?"
 
 **How to address:** Explain that shards hold associative aggregates (counters, min/max); the eviction list is host-authoritative. Acknowledge honestly that non-composable global state (e.g., a sorted priority queue across all warps) cannot use the hierarchical shard model and must pin maps host-side at PCIe latency cost (Fig.15b shows CPU map access is 6000x slower than GPU-side). This is a real limitation for policies requiring globally-ordered data structures.
 
-## Q10. Why was device-side overhead only measured on P40? (A)
+## Q11. Why was device-side overhead only measured on P40? (A)
 
 **A-C5:** "Any reason why device-side overhead is only measured on P40?"
 
 **How to address:** At submission time, device-side instrumentation was validated on P40. We have since extended support to RTX 5090 and will add device-side overhead numbers on RTX 5090 in revision.
 
-## Q11. What was the agent setup for the policy exploration case studies? (E)
+## Q12. What was the agent setup for the policy exploration case studies? (E)
 
 **E:** "More details are needed about the agent setup (prompts used for Claude, etc.) to make it more informative."
 
 **How to address:** Commit to releasing prompts, benchmark harness, all 59 generated policies, and 974-run logs as a publicly available artifact.
 
-## Q12. How intrusive is the ptrace-based instrumentation, and does trampoline overhead scale with kernel size? (D)
+## Q13. How intrusive is the ptrace-based instrumentation, and does trampoline overhead scale with kernel size? (D)
 
 **D-W1:** "Host-side implementation remains tightly coupled with explicit hooks in the proprietary GPU driver module."
 
@@ -118,7 +118,7 @@ No additional commitment needed — the evidence is already in the paper. Summar
 
 **How to address:** For driver coupling: hooks are ~100 LOC over the open GPL kernel modules, aligned with HMM/migrate_vma and DRM abstractions — not proprietary internals. For ptrace: it is a one-time attach (273ms startup), used only for device-side hooks; LD_PRELOAD is supported as an alternative — no ptrace needed in production. Host-side driver-hook policies touch no application code at all. For trampoline scaling: overhead is per-warp (warp leader executes, shuffle-broadcasts result), O(1) w.r.t. block count; Table 1 shows 3-14% on llama.cpp prefill.
 
-## Q13. How does gpubpf's model extend to storage-tier offloading, CXL memory, and future accelerator design? (E, D, A)
+## Q14. How does gpubpf's model extend to storage-tier offloading, CXL memory, and future accelerator design? (E, D, A)
 
 **E-Q1:** "KVCache offload is increasingly to storage these days... How would eBPF handle such use case?"
 
