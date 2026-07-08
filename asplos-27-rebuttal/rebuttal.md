@@ -30,8 +30,6 @@ Note: gpubpf's current approach (device-side stride tracing) and gating-based pr
 
 **F-Q3:** "What safety properties are enforced by the verifier? What kinds of unsafe or pathological policies are rejected, and how are invalid policies handled?"
 
-**B:** "From the first two pages, it is difficult to gauge whether the claimed safety guarantees for a fully asynchronous mechanism like this are really possible."
-
 **How to address:** Explain the two-layer safety model:
 
 Layer 1 — Program safety: the unmodified Linux eBPF verifier (termination, memory safety, restricted kfuncs) plus SIMT-aware passes. Branches, loop bounds, and map keys must be warp-uniform; barriers, global synchronization, and non-uniform atomics are forbidden; per-hook resources are bounded (Section 3.5.1).
@@ -42,17 +40,19 @@ Empirical evidence: 59 agent-generated policies, 974 runs, 50 safety events (24 
 
 The paper already contains: verifier rules (Section 3.5.1), TCB (Section 3.5), transition validity / FIFO fallback (Section 3.4), and empirical safety data (Section 5.3). The rebuttal should consolidate these existing answers rather than promising new content. For B specifically: note that the safety argument exists but is scattered — we will surface the two-layer invariant earlier in Section 1.
 
-## Q3. Is multi-tenant GPU sharing a real use case, and how would per-tenant policy isolation work? (E, D)
+## Q3. Is multi-tenant GPU sharing a real use case? (E)
 
 **E-W1:** "SemiAnalysis questions [MIG's] real-life value... inferencing workloads do not really use it."
 
+**How to address:** SemiAnalysis's quote ("all online inferencing workloads require one GPU at a minimum") targets hyperscaler deployments (Meta, OpenAI, x.AI). But GPU underutilization is a widespread real problem: production clusters report 42% GPU memory utilization (MuxFlow, ByteDance, 20K+ GPUs, SCIS'24), and inference+training co-location is an active ASPLOS'25 topic (Tally). Software co-location (not hardware partitioning like MIG) is how operators address this — which is exactly what gpubpf targets (Fig.14: LC TPOT drops 40-45% while BE improves 28%). More importantly, multi-tenant is only one of four evaluation scenarios (RQ3); the paper's primary contributions (RQ1/RQ2) are entirely single-tenant.
+
+## Q4. How would per-tenant policy isolation work? (D)
+
 **D-Q3:** "What architectural enhancements are required to allow multiple users to safely execute their own distinct, custom eBPF resource policies simultaneously without cross-interference?"
 
-**How to address:** For E's MIG/SemiAnalysis point: SemiAnalysis's quote ("all online inferencing workloads require one GPU at a minimum") targets hyperscaler deployments (Meta, OpenAI, x.AI). But GPU underutilization is a widespread real problem: 75% of organizations report GPU utilization below 70% at peak (ClearML 2025 survey), and most waste 40-60% of capacity due to static allocation. Software co-location (not hardware partitioning like MIG) is how operators address this — which is exactly what gpubpf targets (Fig.14: LC TPOT drops 40-45% while BE improves 28%).
+**How to address:** Describe the path: per-cgroup policy attachment, verifier-enforced map namespacing, per-tenant hook budgets, driver-arbitrated cross-tenant transitions. The current single-policy design mirrors sched_ext's architecture; per-tenant isolation is future work.
 
-For D's isolation question: describe the path to per-tenant isolation — per-cgroup policy attachment, verifier-enforced map namespacing, per-tenant hook budgets, driver-arbitrated cross-tenant transitions. Note that the current single-policy design mirrors sched_ext's architecture; per-tenant isolation is future work.
-
-## Q4. How much of the performance improvement comes from gpubpf itself vs. the specific policies evaluated? (F)
+## Q5. How much of the performance improvement comes from gpubpf itself vs. the specific policies evaluated? (F)
 
 **F-Q2:** "To what extent can the performance improvements observed in the evaluation be attributed to gpubpf? Which of the evaluated policies could already be implemented by existing frameworks, runtimes, driver modifications, or instrumentation systems, and what trade-offs does gpubpf improve?"
 
