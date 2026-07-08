@@ -81,7 +81,7 @@
 
 **A-C5:** "Any reason why device-side overhead is only measured on P40?"
 
-**Response:** At submission time, device-side instrumentation was validated on P40. We have since extended support to RTX 5090 and will add device-side overhead numbers in revision.
+**Response:** At submission time, NVbit did not yet support RTX 5090 and our device-side instrumentation was validated and compared on P40. We will add RTX 5090 device-side overhead numbers in revision.
 
 ## Q12. What was the agent setup for the policy exploration case studies? (E)
 
