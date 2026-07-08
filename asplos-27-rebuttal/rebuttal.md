@@ -81,7 +81,7 @@
 
 **A-C5:** "Any reason why device-side overhead is only measured on P40?"
 
-**Response:** At submission time, NVbit did not yet support RTX 5090 and our device-side instrumentation was validated and compared on P40. We will add RTX 5090 device-side overhead numbers in revision.
+**Response:** At evaluation time, while our device-side instrumentation supports 5090 and our cuda version, NVbit did not yet support RTX 5090, so our device-side instrumentation was validated and compared on P40. We will add RTX 5090 device-side overhead numbers in revision.
 
 ## Q12. What was the agent setup for the policy exploration case studies? (E)
 
@@ -97,7 +97,7 @@
 
 **D-Q4:** "Does the runtime overhead of application-level trampoline hooks scale efficiently when executing massive, complex accelerator kernels characterized by extreme block counts and heavy thread utilization?"
 
-**Response:** The driver hooks are ~100 LOC over the open GPL kernel modules, aligned with HMM/migrate_vma and DRM abstractions rather than proprietary internals. ptrace is a one-time attach (273ms startup) used only for device-side hooks; LD_PRELOAD is supported as an alternative, so no ptrace is needed in production. Host-side driver-hook policies touch no application code at all. Trampoline overhead is per-warp (warp leader executes, shuffle-broadcasts result), O(1) with respect to block count; Table 1 shows 3-14% on llama.cpp prefill.
+**Response:** ptrace is a one-time attach (273ms startup) used only for device-side hooks; LD_PRELOAD is supported as an alternative, so no ptrace is needed in production. Host-side driver-hook policies touch no application code at all. Trampoline overhead is per-warp (warp leader executes, shuffle-broadcasts result), O(1) with respect to block count; Table 1 shows 3-14% on llama.cpp prefill.
 
 ## Q14. How does gpubpf's model extend to storage-tier offloading, CXL memory, and future accelerator design? (E, D, A)
 
