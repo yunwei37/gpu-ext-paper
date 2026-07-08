@@ -30,6 +30,8 @@ Note: gpubpf's current approach (device-side stride tracing) and gating-based pr
 
 **F-Q3:** "What safety properties are enforced by the verifier? What kinds of unsafe or pathological policies are rejected, and how are invalid policies handled?"
 
+**B:** "From the first two pages, it is difficult to gauge whether the claimed safety guarantees for a fully asynchronous mechanism like this are really possible."
+
 **How to address:** Explain the two-layer safety model:
 
 Layer 1 — Program safety: the unmodified Linux eBPF verifier (termination, memory safety, restricted kfuncs) plus SIMT-aware passes. Branches, loop bounds, and map keys must be warp-uniform; barriers, global synchronization, and non-uniform atomics are forbidden; per-hook resources are bounded (Section 3.5.1).
@@ -60,7 +62,7 @@ The paper already contains: verifier rules (Section 3.5.1), TCB (Section 3.5), t
 
 No additional commitment needed — the evidence is already in the paper. Summarize it concisely in the rebuttal.
 
-## Q5. How portable is gpubpf beyond NVIDIA GPUs? (F, D)
+## Q6. How portable is gpubpf beyond NVIDIA GPUs? (F, D)
 
 **F-W5:** "The portability of the proposed mechanism is discussed only briefly."
 
@@ -68,15 +70,14 @@ No additional commitment needed — the evidence is already in the paper. Summar
 
 **How to address:** Host-side design aligns with generic Linux abstractions (HMM/migrate_vma, DRM scheduler). Device-side can target vendor-neutral IR via SPIR-V backend (Section 4). Keep this brief — portability is minor for all reviewers.
 
-## Q6. How does the system handle VRAM thrashing when workload patterns change faster than the map sync interval? (D)
+## Q7. How does the system handle VRAM thrashing when workload patterns change faster than the map sync interval? (D)
 
 **D-Q1:** "How does the system handle or mitigate sudden bursts of VRAM thrashing when workload access patterns mutate faster than your periodic cross-layer map synchronization interval?"
 
 **How to address:** Explain that staleness affects optimality, not correctness — the driver's state machines enforce valid transitions regardless of map freshness. Snapshots merge at GPU kernel completions. Policies can rate-limit via PCIe-utilization guards (as the KV-cache policy already does). Under rapid mutation, the system degenerates to default FIFO eviction, which is no worse than baseline UVM.
 
-No additional commitment needed — the mechanism explanation (staleness affects optimality not correctness, FIFO fallback) suffices for D who is already a weak accept.
 
-## Q7. How does gpubpf handle workload-internal optimization heuristics that conflict with its policies? (A)
+## Q8. How does gpubpf handle workload-internal optimization heuristics that conflict with its policies? (A)
 
 **A-C1:** "How does gpubpf handle when existing optimization heuristics baked into the workload adversarially affects the gpubpf policies, especially given the constraints of not changing the workload."
 
@@ -88,7 +89,6 @@ No additional commitment needed — the mechanism explanation (staleness affects
 
 **How to address:** Distinguish two cases: host-side policies (memory management, scheduling) need no PTX at all — they operate entirely in the kernel driver. Device-side hooks primarily use PTX (present in fatbinaries for JIT compatibility in common ML frameworks). For SASS-only binaries, we have a working prototype of SASS-level patching leveraging NVBit's compiler infrastructure.
 
-**Verify before submitting:** (1) PTX-in-fatbin claim holds for actual target applications (llama.cpp, vLLM/PyTorch, Faiss). (2) SASS patching prototype is in a presentable state — confirm what workloads it covers and any limitations, so the claim is precise.
 
 ## Q9. Can the hierarchical BPF map structure support non-composable data for scheduling decisions? (A)
 
