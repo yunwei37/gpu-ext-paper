@@ -27,7 +27,8 @@ The profile 4/3/5/3/2/2 is classic borderline. Rough estimate (PC dynamics unobs
 4. **Agree-and-reframe on MIG (E):** SemiAnalysis's observation that inference avoids MIG *supports* the paper's critique of static partitioning; do not argue against it.
 5. **B is low-cost/high-return:** one tight paragraph on the request-validation two-layer model, plus a commitment to surface the invariant in §1 (B judged from the first two pages).
 6. **Cultivate two champions; treat A as the primary defender.** C supplies the score but wrote two sentences; when F raises detailed objections in discussion, only A has the engagement depth to push back. Champion cultivation must be content-shaped (the response is visible to all reviewers): (a) substantive, *honest* answers to A1–A5 — including openly admitting the A3 non-composable-data limitation, because a champion must trust the authors won't embarrass them; (b) the theme sections double as quotable counter-ammunition A can deploy against E/F (GPREEMPT-in-925-LOC, Fig.13's <1% vs. 55–92%); (c) feed A's stated vision — A4 is upgraded from a bare feature list to a thesis (verified state-transitions as the abstraction future accelerators expose natively), which also plays to the "Introduces new area" axis F rated 4; (d) eliminate the one brush-off risk: A5's "toolchain constraints" is the single answer vague enough to cost goodwill — verify and state the real P40 reason (checklist item 1).
-## 4. Author Response (final — 697 words by `wc -w`; re-verify with HotCRP's counter)
+
+## 4. Author Response 
  
 We thank all reviewers. The main requests—SOTA research baselines (E,F), safety depth (B,F), and attribution (F)—are answered below with evidence already in the paper.
  
