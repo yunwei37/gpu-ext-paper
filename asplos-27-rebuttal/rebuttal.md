@@ -48,7 +48,7 @@ The paper already contains: verifier rules (Section 3.5.1), TCB (Section 3.5), t
 
 **D-Q3:** "What architectural enhancements are required to allow multiple users to safely execute their own distinct, custom eBPF resource policies simultaneously without cross-interference?"
 
-**How to address:** For E's MIG point, use the "agree-and-reframe" approach. SemiAnalysis's exact quote: "No customers are asking for [GPU partitioning]. Meta, OpenAI, x.AI are all not asking for this because all online inferencing workloads require one GPU at a minimum." This criticizes **static hardware partitioning** (MIG) — which is exactly our motivation in Section 2.3. gpubpf does software-level dynamic sharing, not hardware partitioning. Our experiments use no MIG; they target the software co-location operators actually deploy (Fig.14: LC TPOT drops 40-45% while BE improves 28%).
+**How to address:** For E's MIG/SemiAnalysis point: SemiAnalysis's quote ("all online inferencing workloads require one GPU at a minimum") targets hyperscaler deployments (Meta, OpenAI, x.AI). But GPU underutilization is a widespread real problem: 75% of organizations report GPU utilization below 70% at peak (ClearML 2025 survey), and most waste 40-60% of capacity due to static allocation. Software co-location (not hardware partitioning like MIG) is how operators address this — which is exactly what gpubpf targets (Fig.14: LC TPOT drops 40-45% while BE improves 28%).
 
 For D's isolation question: describe the path to per-tenant isolation — per-cgroup policy attachment, verifier-enforced map namespacing, per-tenant hook budgets, driver-arbitrated cross-tenant transitions. Note that the current single-policy design mirrors sched_ext's architecture; per-tenant isolation is future work.
 
