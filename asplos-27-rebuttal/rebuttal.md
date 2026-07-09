@@ -9,102 +9,71 @@
 | E | 2 — Leaning reject (OS-advance: 4) | Medium; lists five strengths | Missing SOTA MoE baseline (arXiv:2303.06182); MIG real-world relevance (SemiAnalysis); KV-cache offload to storage; wants agent prompts/details | Move 2→3 via existing evidence + gating-policy commitment + artifact release |
 | F | 2 — Leaning reject (OS-advance: 4) | Most substantive negative; "core idea very interesting" | SOTA research baselines; mechanism-vs-policy attribution; safety-evaluation depth (verifier, rejected policies, failure modes, TCB); thin design sections; portability | Convert objections to "fixable in revision" |
 
+**Response:**
+
+Thanks for reviewing our paper! 
+
 ## Q1. Why doesn't the evaluation compare against state-of-the-art research systems? (E, F)
 
-**E:** "There is related work like arXiv:2303.06182 that moves experts dynamically into HBM based on the gating function outcome... I think the work needs to compare against SOTA research from the field."
+We compare gpubpf to standard baselines (e.g., llama.cpp and vllm) as well as two SOTA system: GPREEMPT [ATC25] (implemented as a gpubpf policy in Section 5.4) and LMCache [Arxiv25] (Section 5.2).  Many systems require unsafe driver modifications (GPREEMPT, TimeGraph, Gdev, GCAPS) and do not provide gpubpf's safety nor its dynamism; their policies could be implemented in gpubpf as in the experiment with GPREEMPT (Section 5.4). Concerning arXiv:2303.06182, the algorithms presented in the work could be expressed as gpubpf policies. 
 
-**F-Q1:** "Are there state-of-the-art research systems for GPU memory management or scheduling that could be included as evaluation baselines? If not, why are they not applicable or directly comparable?"
+## Q2. What safety guarantees does gpubpf provide? (F, B)
 
-**Response:** Two SOTA comparisons already exist in the paper: (1) GPREEMPT [14] (ATC'25), whose priority-timeslice policy we implemented as a 925-LOC gpubpf program with zero driver modification, achieving LC P99 latency reduction of 96% (Fig.12); and (2) LMCache [9], where gpubpf matches its throughput with better tail latency (Fig.9). Driver-level systems (TimeGraph, Gdev, GCAPS, LithOS) require unsafe driver modification and restarts; the relevant comparison axis is whether their policies are expressible via gpubpf, and the GPREEMPT result demonstrates they are. For arXiv:2303.06182 specifically, this is a framework-level solution that migrates experts as atomic units and requires runtime integration; its gating-based prediction is expressible as a gpubpf uprobe policy on the gating function. We can implement this gating-aware policy and compare directly in revision. (Note: gpubpf's current stride tracing and gating-based prediction are different, complementary mechanisms.)
+gpubpf builds safety using two layers.  In the first layer, gpubpf ensures program safety using verificaiton.  It uses the unmodified Linux eBPF verifier to enforce termination, memory safety, and restricted kfuncs, and custom SIMT-aware passes to enforce warp-uniform branches, no global synchronization, nor non-uniform atomics (Section 3.5.1). In the second layer, gpubpf ensures safety through transition validity since callbacks never mutate state directly and the system validates each state changes against the current state before applying them (Section 3.4).  gpubpf rejects policies that fail program safety and turns invalid transitions into no ops.  We describe the impact of gpubpf's safety for supporting agent-generated policies, where it prevents 50 safety violations from reaching deployment (Section 5.3).
 
-## Q2. What safety guarantees does gpubpf provide for its fully asynchronous execution model? (F, B)
+## Q3. How portable is gpubpf beyond NVIDIA GPUs? (F, D)
 
-**F-Q3:** "What safety properties are enforced by the verifier? What kinds of unsafe or pathological policies are rejected, and how are invalid policies handled?"
-
-**B:** "From the first two pages, it is difficult to gauge whether the claimed safety guarantees for a fully asynchronous mechanism like this are really possible."
-
-**Response:** Safety rests on two independent layers. First, program safety: the unmodified Linux eBPF verifier enforces termination, memory safety, and restricted kfuncs, while SIMT-aware passes require warp-uniform branches, loop bounds, and map keys, and forbid barriers, global synchronization, and non-uniform atomics (Section 3.5.1). Second, transition validity: callbacks never mutate state directly but enqueue requests on driver-owned state machines, which validate each request against current state; stale or conflicting requests become no-ops, never invalid states (Section 3.4). Asynchrony affects optimality, not integrity, with FIFO fallback under pressure. Empirically, 59 agent-generated policies across 974 runs produced 50 safety events (24 logic bugs, 18 performance regressions, 2 verifier rejections, 2 GPU verifier-caught overflows, 4 other) with zero OS panics or data corruption (Section 5.3). The paper already contains all these elements (verifier rules in Section 3.5.1, TCB in Section 3.5, FIFO fallback in Section 3.4); for B's concern that the first two pages do not convey this, we will surface the two-layer invariant earlier in Section 1.
-
-## Q3. Is multi-tenant GPU sharing a real use case? (E)
-
-**E-W1:** "SemiAnalysis questions [MIG's] real-life value... inferencing workloads do not really use it."
-
-**Response:** SemiAnalysis's observation applies to hyperscaler deployments (Meta, OpenAI, x.AI), but GPU underutilization remains widespread: production clusters report 42% GPU memory utilization across 20K+ GPUs (MuxFlow, SCIS'24), and inference+training co-location is an active research direction at ASPLOS'25 (Tally). gpubpf targets software co-location rather than hardware partitioning like MIG (Fig.14: LC TPOT drops 40-45% while BE improves 28%). We also note that multi-tenant is only one of four evaluation scenarios (RQ3); the paper's primary contributions (RQ1/RQ2) are entirely single-tenant.
-
-## Q4. How would per-tenant policy isolation work? (D)
-
-**D-Q3:** "What architectural enhancements are required to allow multiple users to safely execute their own distinct, custom eBPF resource policies simultaneously without cross-interference?"
-
-**Response:** The path to per-tenant isolation involves per-cgroup policy attachment, verifier-enforced map namespacing, per-tenant hook budgets, and driver-arbitrated cross-tenant transitions. The current single-policy design mirrors sched_ext's architecture; per-tenant isolation is future work.
-
-## Q5. How much of the performance improvement comes from gpubpf itself vs. the specific policies evaluated? (F)
-
-**F-Q2:** "To what extent can the performance improvements observed in the evaluation be attributed to gpubpf? Which of the evaluated policies could already be implemented by existing frameworks, runtimes, driver modifications, or instrumentation systems, and what trade-offs does gpubpf improve?"
-
-**Response:** Fig.13 already separates mechanism from policy: on memory-bound multi-tenant workloads, the GPREEMPT-style scheduling policy (expressible by existing frameworks) yields <1% improvement, while gpubpf memory policies (impossible in user space, unsafe as driver patches) yield 55-92%. Fig.7a isolates device-side hooks: device-only prefetch gives 1.34x, combined host+device gives 1.77x. cudaMemAdvise captures part of the decode gain but requires application changes and costs 40% prefill throughput (Fig.8).
-
-## Q6. How portable is gpubpf beyond NVIDIA GPUs? (F, D)
-
-**F-W5:** "The portability of the proposed mechanism is discussed only briefly."
-
-**D-W5:** "Relies on NVIDIA's proprietary PTX instruction set, lacks immediate out-of-the-box portability to AMD or Intel."
-
-**Response:** The host-side design aligns with generic Linux abstractions (HMM/migrate_vma, DRM scheduler), and the device-side can target vendor-neutral IR via the SPIR-V backend described in Section 4.
-
-## Q7. How does the system handle VRAM thrashing when workload patterns change faster than the map sync interval? (D)
-
-**D-Q1:** "How does the system handle or mitigate sudden bursts of VRAM thrashing when workload access patterns mutate faster than your periodic cross-layer map synchronization interval?"
-
-**Response:** Staleness affects optimality, not correctness: the driver's state machines enforce valid transitions regardless of map freshness, and snapshots merge at GPU kernel completions. Policies can rate-limit via PCIe-utilization guards, as the KV-cache policy already does. Under rapid mutation, the system degenerates to default FIFO eviction, which is no worse than baseline UVM.
+gpubpf's design aligns with generic linux abstractions and is not coupled with the NVIDIA implementation. Porting gpubpf to non-NVIDIA kernel drivers should be straightforward, as the NVIDIA driver instrumenation only required ~100 LOC (Section 4).  gpubpf can target SPIR-V to support non-NVIDIA devices; we have a prototype implementation that shows this approach is viable. 
 
 
-## Q8. How does gpubpf handle workload-internal optimization heuristics that conflict with its policies? (A)
+## Q4. How does gpubpf's model extend to storage-tier offloading, CXL memory, and future accelerator design? (A, D, E)
 
-**A-C1:** "How does gpubpf handle when existing optimization heuristics baked into the workload adversarially affects the gpubpf policies, especially given the constraints of not changing the workload."
+gpubpf's asynchronous state machine model could be extended to support storage-tier offloading, memory tiering, or future accelerator designs.  A storage tier adds new states and transitions where millisecond-scale transfers fit the async model, with gpubpf supplying placement policy complementary to Weka/VAST/CMX transport. CXL memory tiers map to new states atop HMM/migrate_vma, and the async model is a natural fit for CXL's higher latencies. For future accelerators, verified state-transitions could serve as the abstraction hardware exposes natively through architected attach points, firmware-validated transition tables, and privileged telemetry.
 
-**Response:** The KV-cache agent case study (Section 5.3) demonstrates exactly this scenario: the agent detected thrashing between gpubpf's prefetch policy and vLLM's own allocator, and converged to a region-differentiated prefetch that works with the application's behavior rather than against it. More generally, instant policy detachment bounds pathological interactions — if a policy degrades performance, it can be removed without restart.
+## Q5. How does gpubpf handle workload-internal optimization heuristics that conflict with gpubpf's policies? (A)
 
-## Q9. How does gpubpf work with workloads shipped as SASS binaries without PTX? (A)
-
-**A-C2:** "How does it work with workloads shipped as SASS or binary? Is there a way to handle patching without relying on PTX?"
-
-**Response:** Host-side policies (memory management, scheduling) need no PTX at all and operate entirely in the kernel driver. Device-side hooks primarily use PTX, which is present in fatbinaries for JIT compatibility in common ML frameworks. For SASS-only binaries, we have a working prototype of SASS-level patching leveraging NVBit's compiler infrastructure.
+We encoutered a similar issue of trashing caused by inteference between an application (VLLM) and gpubpf policies in the KV-cache agent case study (Section 5.3).  Gpubpf currently employ two mechanisms to alleviate the impact of such a probrlem.  First, the agent using gpubpf can adapt the gpubpf policy that it employs to address an application's heuristics that conflict with its goals, i.e., the gpubpf policie does not need to be static.  Second, gpubpf builds on the NVIDIA driver, which already provides [online support for detectin and minimizing the imapct of certain trashing issues](https://github.com/NVIDIA/open-gpu-kernel-modules/blob/main/kernel-open/nvidia-uvm/uvm_perf_thrashing.h).  As an example, the NVIDIA driver will disable gpubpf prefetches if they lead to considerable memory trahsing.  
 
 
-## Q10. Can the hierarchical BPF map structure support non-composable data for scheduling decisions? (A)
+## Q6. How does gpubpf work with workloads shipped as SASS binaries without PTX? (A)
 
-**A-C3:** "Can you clarify a bit more how the BPF maps are stored?... Can you foresee any use cases that might require other forms of data to make better scheduling decisions, but the current map structure cannot quite accommodate?"
+gpubpf host-side policies (memory management, scheduling) do not need PTX as they perate only in the kernel driver.  gpubpf device-side hooks use PTX, but, we have a working prototype of SASS-level patching that uses NVBit's compiler infrastructure.
 
-**Response:** Shards hold associative aggregates (counters, min/max), and the eviction list is host-authoritative. Non-composable global state such as a sorted priority queue across all warps cannot use the hierarchical shard model and must pin maps host-side at PCIe latency cost (Fig.15b: CPU map access is 6000x slower than GPU-side). This is a real limitation for policies requiring globally-ordered data structures.
 
-## Q11. Why was device-side overhead only measured on P40? (A)
+## Q7. Can the hierarchical BPF map structure support non-composable data for scheduling decisions? (A)
 
-**A-C5:** "Any reason why device-side overhead is only measured on P40?"
+gpubpf maps store data across memory tiers (e.g., host DRAM, GPU global memory, GPU thread-block shared memory) to allow device-side and host-side extensions to share data (Section 3.5.3).  gpubpf device-side extesions usually place data that must be shared with host-side extensions (e.g., profiling data) into GPU global memory, and data that is only accessed by gpu extensions (e.g., intermediate values) into GPU thread-block shared memory.  This design can support both aggregate/composite data and raw data, and we have experimented on both.  For example the Expert Offloading and KV-Cache Offloading case studies (Section 5.3) both use device-side memory tracing extensions that sample the device's memory accesses and place them into GPU global memory.  We have experimented with other use cases that exploit both GPU thread-block shared memory and GPU global memory, although, we did not include them in the current draft of the paper. 
 
-**Response:** At evaluation time, while our device-side instrumentation supports 5090 and our cuda version, NVbit did not yet support RTX 5090, so our device-side instrumentation was validated and compared on P40. We will add RTX 5090 device-side overhead numbers in revision.
+## Q8. Why was device-side overhead only measured on P40? (A)
 
-## Q12. What was the agent setup for the policy exploration case studies? (E)
+Figure 15 (a) shows gpubpf overheads on common device-side operations measured on RTX 5090. In future drafts, we will add experiments on the RTX 5090 when comparing gpubpf to existing device-side observability tools in Table 1.
 
-**E:** "More details are needed about the agent setup (prompts used for Claude, etc.) to make it more informative."
+## Q9. How would per-tenant policy isolation work? (D)
 
-**Response:** We will release prompts, benchmark harness, all 59 generated policies, and 974-run logs as a publicly available artifact.
+Supporting per-tenant policy isolation in gpubpf would require changes to many components, although the system's high-level ayschronous resourouce state machine model would remain unchanged.  In particular, per-tenant policy isolation requires per-cgroup policy attachment, gpubpf verifier-enforced map namespacing, per-tenant hook budgets to minimize overhead interference across tenancts, and a number of permission issues.  
 
-## Q13. How intrusive is the ptrace-based instrumentation, and does trampoline overhead scale with kernel size? (D)
+## Q10. How does the system handle VRAM thrashing when workload patterns change faster than the map sync interval? (D)
 
-**D-W1:** "Host-side implementation remains tightly coupled with explicit hooks in the proprietary GPU driver module."
+This is an interesting challenge, albiet one that we have not observed in practice.  gpubpf allows policies to issue map synchronization operations.  So, a gpubpf policy could alleviate the impact of such thrashing by issuing more frequently synchornization operations when trashing increases. 
 
-**D-W4:** "Reliance on dynamic binary instrumentation via ptrace... could spark stability and security compliance rejections in enterprise production."
+## Q11 Does trampoline overhead scale with kernel size? (D)
 
-**D-Q4:** "Does the runtime overhead of application-level trampoline hooks scale efficiently when executing massive, complex accelerator kernels characterized by extreme block counts and heavy thread utilization?"
+gpubpf imposes trampoline overhead on a per warp basis (warp leader executes, shuffle-broadcasts result); it is a constant overhead with respect to block count. 
 
-**Response:** ptrace is a one-time attach (273ms startup) used only for device-side hooks; LD_PRELOAD is supported as an alternative, so no ptrace is needed in production. Host-side driver-hook policies touch no application code at all. Trampoline overhead is per-warp (warp leader executes, shuffle-broadcasts result), O(1) with respect to block count; Table 1 shows 3-14% on llama.cpp prefill.
+## Q12. How intrusive is the ptrace-based instrumentation (D)
 
-## Q14. How does gpubpf's model extend to storage-tier offloading, CXL memory, and future accelerator design? (E, D, A)
+In addition to ptrace, the prototype supports LD_PRELOAD, which may be more palitable for security compliance.  The tradeoff is that LD_PRELOAD reduces dynamism as gpbuf cannot modify GPU-device policies while the host application executes when using LD_PRELOAD.
 
-**E-Q1:** "KVCache offload is increasingly to storage these days... How would eBPF handle such use case?"
+## Q13. Is multi-tenant GPU sharing a real use case? (E)
 
-**D-Q2:** "Can the proposed asynchronous resource state machine model scale seamlessly into hybrid server environments that incorporate emerging disaggregated memory architectures like tiered CXL memory pools?"
+gpubpf supports custom policies for both multi-tenant (Section 5.4) and single-tenant scenarios (Section 5.3, 5.4).  Academic (e.g., Tally [ASPLOS25], LithOS [OSDI25]) and industrial (e.g., MuxFlow [Arxiv23]) systems use multi-tenant GPU sharing to improve GPU utilization; gpubpf's experiments on multi-tenancy builds on this line of work.
 
-**A-C4:** "It's worth adding some discussion of how this affects the design of future accelerators: how much to implement in hardware, what kind of abstraction to expose."
+## Q14. What was the agent setup for the policy exploration case studies? (E)
 
-**Response:** All three are natural extensions of the state machine model. A storage tier adds new states and transitions where millisecond-scale transfers fit the async model, with gpubpf supplying placement policy complementary to Weka/VAST/CMX transport. CXL memory tiers map to new states atop HMM/migrate_vma, and the async model is a natural fit for CXL's higher latencies. For future accelerators, verified state-transitions could serve as the abstraction hardware exposes natively through architected attach points, firmware-validated transition tables, and privileged telemetry.
+We will release prompts and benchmark harnesses as a publicly available artifact.
+
+## Q15. How much of the performance improvement comes from gpubpf itself vs. the specific policies evaluated? (F)
+
+gpubpf provides a safe and dynamic method for writing custom resource management policies; our evaluation shows that the policies that it supports improves performance relative to standard baselines and SOTA appraoches (see Q1).  Similar improvements are possible by implementing the evaluted policies (Section 5) in existing frameworks, through driver modifications, or with instrumenation systems, at the cost of lost safety and dynamism.  Additionally, the evaluation shows that gpubpf has lower overhead compared to existing device-side extension tools (Section 5.5).
+
+
