@@ -5,11 +5,12 @@ Supporting inventory and safety limits: `reproducibility-commitments.md`.
 
 ## R0. Author checklist (do not paste)
 
-- [ ] R1 names MoE-Infinity and XSched from `sota-baseline-feasibility.md`. Neither has been built on this host yet. Smoke-test both before sending, or soften to "we are evaluating" if a build fails today.
+- [ ] R1 names MoE-Infinity and XSched from `sota-baseline-feasibility.md`, neither of which has been built on this host yet. The short version commits to at least one runnable baseline per axis and names these two as the ones being brought up, so a single failed build is survivable, but both failing is not. Smoke-test them early; `sota-feas-moe.md` lists DeepSpeed ZeRO-Inference and PowerInfer as fallbacks for the MoE axis, and `sota-feas-sched.md` lists Orion for the scheduling axis.
 - [ ] R6: NVBit added SM_120 support in v1.7.4, released 2025-02-11, so the old "NVBit lacks Blackwell support" line cannot be reused. The only defensible reason the submitted table used the P40 is that those runs predate that release. A 5090 re-run is feasible; `sota-feas-sched.md` recommends v1.7.5 for a driver-575 header match.
 - [ ] R1: XSched's public implementation gives Level-1 inter-kernel preemption on sm_120 (`arch.cpp` falls through to `CudaQueueLv1`; Level-2 and Level-3 return `nullptr`). Label the numbers accordingly, or a reviewer who knows the artifact will read them as paper-level preemption.
 - [ ] Fix the LOC errors found in `loc-reconciliation.md` before the revised paper goes out. The 925 (`gpu_preempt_ctrl`) and 408 (`gpu_sched_set_timeslices`) figures check out and are separate entries, but the sequential prefetch claim of 375 should be 573, which shifts the two composite totals at `eval.tex:64` and `eval.tex:92`, and the two-tenant total of 926 at `eval.tex:136` omits the 408 timeslice component it names, so it should be 1334.
 - [ ] Confirm the agent safety-event breakdown in R5 matches the numbers in `eval.tex`.
+- [ ] The submitted author response was `rebuttal.md`, not `rebuttal-v3.md` or `fable.md`. The meta-review binds us to what that file says, which is only two hard commitments: RTX 5090 experiments in the Table 1 device-side comparison (Q8) and a public release of prompts and benchmark harnesses (Q14). Everything else in this plan is a voluntary addition, so it can be scoped, but the two above cannot. Note in particular that `fable.md`'s promise to implement a gating-aware MoE policy and compare directly was never submitted and does not bind us.
 
 ---
 
@@ -54,14 +55,12 @@ Pick one of the two, do not send both. Same commitments, no supporting detail.
 
 ---
 
-We thank the reviewers, and we plan the following revisions.
+We thank the reviewers and the committee! We will implement these changes:
 
-**Baselines (Reviewers E, F).** We will compare against the research systems that can actually run on our hardware, a single RTX 5090 with no A100 and no MIG available: MoE-Infinity on the MoE offloading workload, XSched on multi-tenant scheduling, and LMCache's local-disk backend for the storage-tier case Reviewer E raised. When a system's artifact cannot run on our machine but its policy fits our hooks, we will implement the policy instead. GPREEMPT's priority timeslicing already runs this way, as a gpubpf program with no driver source change (Fig. 12), and Expert Buffering's hot-expert residency becomes a page-granularity eviction and prefetch policy on our MoE workload. For the remaining systems we will state plainly why a head-to-head is not possible: GPREEMPT's own artifact is a kernel module built against driver 550, Tally's evaluation requires an A100, G10 exists only in simulation, and DeepUM and LithOS were never released.
+**Q1, state-of-the-art baselines (Reviewers E, F).** We will add at least three runnable state-of-the-art research baselines, such as MoE-Infinity and XSched and LMCache comparison with local-disk backend. When an artifact cannot run on our hardware but its policy fits our hooks, we will implement the policy instead, as we already do for GPREEMPT's priority timeslicing (Fig. 12) and will do for Expert Buffering's hot-expert residency. Where neither route is open we will name the system and say why.
 
-**Expressibility and attribution (Reviewers E, F).** We will add a table showing which policies are feasible in user space, which require driver modification, and which gpubpf supports, and we will expand Fig. 13, where memory policies improve completion time by 55 to 92% while the scheduling policy contributes under 1%.
+**Q2, safety and design depth (Reviewers B, F).** We will add transition-validation pseudocode, the SIMT verifier algorithm, examples of rejected policies, a failure-mode taxonomy, and an explicit account of the trusted computing base to the design and implementation sections.
 
-**Safety and design depth (Reviewers B, F).** Sections 3.4 and 4 will gain transition-validation pseudocode, the SIMT verifier algorithm, examples of rejected policies, a failure-mode taxonomy, and an explicit account of the trusted computing base.
+**Policy versus mechanism (Reviewer F).** We will add a policy expressibility table separating what is feasible in user space, what requires driver modification, and what gpubpf supports, and we will expand Fig. 13, where memory policies improve completion time by 55 to 92% while the scheduling policy contributes under 1%. Each policy class will state which of the two its result depends on.
 
-**Measurements, artifacts, and discussion.** We will add RTX 5090 numbers to Table 1 (Reviewer A) and release the agent prompts and benchmark harnesses (Reviewer E). The text will also address thrashing under stale state, CXL tiers, per-tenant policies, trampoline overhead at high block counts, and portability of the driver hooks (Reviewers A, D).
-
-We will not attempt multi-vendor ports, a storage tier inside gpubpf, or re-running the original artifact of every related system.
+**Measurements, artifacts, and discussion.** We will add RTX 5090 numbers to Table 1 (Reviewer A) and release the agent prompts and benchmark harnesses (Reviewer E). The text will also address thrashing under stale state, CXL tiers, per-tenant policies, trampoline scaling, and portability (Reviewers A, D).
