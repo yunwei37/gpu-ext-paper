@@ -9,11 +9,14 @@ Q1–Q15 author response, and the submitted revision/shepherd comments; the
 experiments, paper integration and artifact publication separately.
 MoE-Infinity, XSched, the GPreempt contention study, FineMoE, Hummingbird and
 POD have completed their scoped comparisons, including adverse results. Two
-actual strict-device counter positive/negative pairs pass; native init and
-invalid-prefetch transition tests remain open. LMCache disk is paused at the
-user's request after a cross-arm correctness failure; its promised measurement
-is not complete. RTX 5090 Table 1 and the original Expert Buffering policy
-remain in progress. Original agent transcripts have not been recovered.
+actual strict-device counter positive/negative pairs pass. The
+[invalid-prefetch transition campaign](../../experiment/revision-safety/prefetch-invalid-575-02/result-review.md)
+now completes all three live controls and exact old-UVM restoration; native
+scheduler-init commit remains open. LMCache disk is paused at the user's
+request after a cross-arm correctness failure; its promised measurement is not
+complete. Expert Buffering has completed its matched-policy study, while RTX
+5090 Table 1 remains in progress. Original agent transcripts have not been
+recovered.
 The integrated draft was built and visually checked (16 pages, conclusion on
 page 14); the working page budget and unmeasured commitments remain open.
 
