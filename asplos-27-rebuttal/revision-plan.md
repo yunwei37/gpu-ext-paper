@@ -3,17 +3,19 @@
 ## Current execution record — 2026-09-03
 
 This file retains the historical proposal below, not a completion report.
-The submitted author response and shepherd follow-up are preserved
-[verbatim](../../revision-shepherd-comment.md); the
+The [review archive](README.md) preserves all seven reviews, the original
+Q1–Q15 author response, and the submitted revision/shepherd comments; the
 [live completion checklist](../../revision-completion-checklist.md) tracks
 experiments, paper integration and artifact publication separately.
 MoE-Infinity, XSched, the GPreempt contention study, FineMoE, Hummingbird and
 POD have completed their scoped comparisons, including adverse results. Two
 actual strict-device counter positive/negative pairs pass; native init and
-invalid-prefetch transition tests remain open. LMCache disk, RTX 5090 Table 1
-and the original Expert Buffering policy remain in progress. Original agent
-transcripts have not been recovered. Paper source integration and condensation
-are in progress, pending a fresh final build and review.
+invalid-prefetch transition tests remain open. LMCache disk is paused at the
+user's request after a cross-arm correctness failure; its promised measurement
+is not complete. RTX 5090 Table 1 and the original Expert Buffering policy
+remain in progress. Original agent transcripts have not been recovered.
+The integrated draft was built and visually checked (16 pages, conclusion on
+page 14); the working page budget and unmeasured commitments remain open.
 
 Several assertions in the old proposal were corrected by source/raw-data audit:
 the old 96% launch-latency metric was not host-to-kernel-entry latency; historical

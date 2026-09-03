@@ -3,6 +3,15 @@ ASPLOS'27 - April cycle Paper #1797 Reviews and Comments
 Paper #1797 Safe and Programmable OS-Level GPU Resource Management with
 eBPF
 
+Record updated from the author's HotCRP text supplied on 2026-09-03.
+Review wording is retained, including reviewer assertions that are not verified
+system guarantees. The earlier export had E's pre-response score of 2; the
+supplied current review gives 3. A/D/E post-response comments and G were absent
+from that export and are included below. Dates supplied: A Jul 22, D Jul 16,
+E Jul 21. HotCRP navigation, PC-conflict names and upload metadata are omitted.
+The complete submitted Q1-Q15 response is in rebuttal.md; the Aug 3 revision
+commitments and Aug 14 shepherd follow-up are in revision-comments.md.
+
 
 Review #1797A
 ===========================================================================
@@ -64,6 +73,10 @@ accelerators: how much to implement in hardware, what kind of abstraction to exp
 both for traditional performance debugging, and also for developing new sets of
 tools.
 - Any reason why device side overhead is only measured on P40?
+
+Post Author Response
+--------------------
+Overall, I'm quite like the approach presented in the paper, and the response mostly addressed my concerns. I do not have addition concerns apart from what other reviewers have raised. Specifically, the paper content related to Q1/Q2 of the response should be expanded to make the paper stronger.
 
 Questions to be addressed in Author Response
 --------------------------------------------
@@ -182,6 +195,8 @@ Comments for authors
 --------------------
 ​The authors deserve significant credit for their bold and highly original approach of extending eBPF—a technology that revolutionized Linux kernel networking and observability—into the complex domain of heterogeneous accelerator hardware. The engineering discipline demonstrated in masking severe host-to-device memory latencies through an elegant hierarchical map sharding architecture is highly commendable. Leveraging an autonomous AI agent to rigorously stress-test the safety verifier over hundreds of iterations provides incredibly compelling and pragmatic validation data for the system's sandbox stability. However, the heavy reliance on application-level binary patching and dynamic trampoline injection feels somewhat artificial and slightly detracts from a clean, pure kernel-level abstraction layer. Ultimately, if these core state machine concepts can successfully transition into standard, vendor-neutral system frameworks like Linux HMM or DRM schedulers, this research has the potential to drive widespread industry transformation.
 
+[Post Author Response] Thank you for your response. It seems to me covered all my concerns and questions.
+
 Questions to be addressed in Author Response
 --------------------------------------------
 ​1. How does the system handle or mitigate sudden bursts of VRAM thrashing when workload access patterns mutate faster than your periodic cross-layer map synchronization interval?
@@ -224,7 +239,7 @@ Introduces new area
 
 Overall Merit
 -------------
-2. Leaning reject (Generally negative, requires a major overhaul)
+3. Weak accept (Generally positive, some issues can be fixed with effective shepherding or minor revision)
 
 Strengths
 ---------
@@ -245,6 +260,11 @@ Although eBPF-based solution for GPU resource management is interesting and rele
 1. Regarding multi-tenant demand use case, SemiAnalysis, for example, questions its real-life value. For example, gpubpf compares itself to MIG GPU partitioning in 2.3, but SemiAnalysis reports that inferencing workloads do not really use it [https://newsletter.semianalysis.com/p/amd-advancing-ai-mi350x-and-mi400-ualoe72-mi500-ual256].
 
 2. Authors compare gpubpf to framework-managed policies: llama.cpp ncmoe, vLLM CPU offload, LMCache. Regarding MoE memory management, there is related work like https://arxiv.org/pdf/2303.06182 that moves experts dynamically into HBM based on the gating function outcome, while overlapping the movement with collectives. I think the work needs to compare against SOTA research from the field.
+
+Comments for authors
+--------------------
+Post Author Response
+Provide a discussion on how ebpf handles storage offload use case.
 
 Questions to be addressed in Author Response
 --------------------------------------------
@@ -328,3 +348,18 @@ Questions to be addressed in Author Response
 * To what extent can the performance improvements observed in the evaluation be attributed to gpubpf? Which of the evaluated policies could already be implemented by existing frameworks, runtimes, driver modifications, or instrumentation systems, and what trade-offs does gpubpf improve?
 
 * What safety properties are enforced by the verifier? What kinds of unsafe or pathological policies are rejected, and how are invalid policies handled?
+
+
+
+Review #1797G
+===========================================================================
+
+Meta Review
+------------
+Congratulations on having your paper accepted at ASPLOS subject to major review.
+
+Please work with your shepherd to make the changes below.
+
+Please implement all of the changes you have indicated in your author response.
+Please pay particular attention to Q1 and Q2 which are seen as major sticking points for acceptance.
+Please pay attention to Reviewer F's concern with distinguishing between policy improvements and mechanism improvements.
