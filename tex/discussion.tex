@@ -1,7 +1,65 @@
-\section{Related Work}
+\section{Discussion and Related Work}
 \label{sec:related}
+
+\paragraph{Stale state and thrashing}
+Delayed observations can select obsolete prefetches or retain cold pages even
+when every individual request is legal. Transition validation protects the
+covered driver mutation, not policy optimality or freedom from thrashing.
+Policies should expire stale observations and bound speculative work;
+hysteresis and bandwidth-aware admission require workload-specific evaluation.
+The driver retains native memory-reclamation authority. Associative counters
+can be merged across map shards, whereas eviction-list order or unique
+ownership cannot be recovered by summing snapshots; such state needs a single
+authority and explicit synchronization.
+% TODO: Add synchronization-interval sensitivity evidence before claiming
+% robustness to a particular update interval or access-pattern change rate.
+
+\paragraph{Tenants and software co-location}
+The system-wide policy can distinguish registered processes, but does not
+provide independently isolated policies for mutually distrustful tenants.
+Per-tenant deployment would require attachment authorization, map namespacing,
+per-hook budgets and driver arbitration of conflicting requests.
+Our experiments use software co-location on an unpartitioned GPU, not MIG.
+SemiAnalysis's criticism of fixed subdevices for large-model
+inference~\cite{semianalysis2025partitioning} concerns that static partitioning
+choice; it neither evaluates our software policies nor establishes their
+production benefit. Co-location remains workload-dependent, with foreground
+latency and background progress reported together.
+
+\paragraph{Storage, CXL and portability}
+A tiered-memory extension needs destination, lifetime, completion and failure
+semantics in addition to placement policy. The asynchronous model can describe
+such operations, but the current driver interface does not implement CXL or
+disk transport. LMCache's local-disk backend is a separate framework-controlled
+path, not evidence of transparent driver-managed storage paging. Mapping host
+hooks to HMM/\texttt{migrate\_vma} or DRM is a portability direction, not a measured
+AMD/Intel port. Device instrumentation additionally depends on available code,
+helper semantics, compilation and launch/resource limits; PTX generation alone
+does not support another vendor. Architected validated transition hooks could
+reduce future driver coupling, but would not remove those implementation and
+verification obligations.
+
+\paragraph{Trampoline scaling}
+Warp aggregation reduces duplicated policy work per hook; it does not make
+total overhead independent of grid size. Instrumented warp-event counts grow
+with executed blocks and hook frequency, while register pressure, occupancy,
+map traffic and contention can change elapsed overhead. The workload results
+therefore do not establish constant total cost for arbitrarily large kernels.
+One-time attachment cost is separate from recurring per-event execution.
+% TODO: Integrate grid-scaling measurements and the complete matching RTX 5090
+% observability comparison before closing those measurement promises.
+
+\paragraph{Artifact scope}
+The release includes benchmark harnesses, policy source, compatibility patches
+and per-cell records for the completed revision comparisons. Original agent
+interaction logs and prompts are not fully available; derived summaries and
+new reproduction prompts must not be presented as the missing originals.
+% TODO: Complete the prompt/log inventory and release; a public harness alone
+% does not fulfill the original-interaction artifact commitment.
+
+\paragraph{Related mechanisms}
 
 %\arq{This is a really short related work section. One additional change, don't say "A prior workshop version", it deanonymizes us and we'll get rejected for it.  Just name the prior system.}
 
-\texttt{sched\_ext}~\cite{schedext-docs}, \texttt{cache\_ext}~\cite{zussman2025cache_ext}, and XDP extend Linux subsystems via synchronous eBPF callbacks at fixed decision points; \sys generalizes this to asynchronous, cross-device effects on user-defined events (\S\ref{sec:design-interfaces}). Driver-level GPU resource managers~\cite{kato2011timegraph,kato2012gdev,kernelintercept,fan2025gpreempt,wang2024gcaps,coppock2025lithos} require unsafe OS kernel driver modifications and service interruptions to change policy. User-space frameworks~\cite{ng2023paella,shen2025xsched,gim2025pie,chen2025ktransformers} offer programmability but lack cross-tenant visibility and privileged hardware control (\S\ref{sec:motivation-limitations}). \sys offers runtime-programmable policies without either limitation.
-NVBit~\cite{villa2019nvbit} and Neutrino~\cite{neutrino} inject instrumentation into GPU binaries for device-side visibility, but lack safety guarantees and target offline profiling rather than online policy enforcement. A prior workshop paper~\cite{egpu} extends eBPF to GPU instrumentation but remains limited to read-only observability with high overhead (\S\ref{sec:eval}) due to per-thread scalar execution on SIMT hardware; \sys introduces SIMT-aware verification and warp-level execution for safe, low-overhead policy enforcement.
+\texttt{sched\_ext}~\cite{schedext-docs}, \texttt{cache\_ext}~\cite{zussman2025cache_ext}, and XDP provide programmable Linux hooks; \sys targets cross-device resource effects (\S\ref{sec:design-interfaces}). Driver-level GPU resource managers~\cite{kato2011timegraph,kato2012gdev,kernelintercept,fan2025gpreempt,wang2024gcaps,coppock2025lithos} put policy and privileged mechanisms in the driver trust boundary. Their update and recovery costs depend on the implementation, rather than every driver modification being inherently unsafe. User-space frameworks~\cite{ng2023paella,shen2025xsched,gim2025pie,chen2025ktransformers} can coordinate registered applications, but their controls differ from fault-time and cross-context driver hooks (\S\ref{sec:policy-mechanism}).
+NVBit~\cite{villa2019nvbit} and Neutrino~\cite{neutrino} provide programmable GPU instrumentation; instrumentation alone does not establish safe resource-policy enforcement. eGPU~\cite{egpu} extends eBPF to GPU instrumentation with per-thread scalar execution. \sys combines a separately tested SIMT-verifier prototype with warp-level execution; enforcement limits are described in \S\ref{sec:verification}.

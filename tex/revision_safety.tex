@@ -1,0 +1,73 @@
+\subsection{Runtime Verification and Optimizations}
+\label{sec:verification}
+
+\sys{} separates \emph{program checks} from \emph{transition checks}. The former restrict what policy code may execute; the latter validate a requested resource change against driver-owned state. Neither establishes that a legal policy will improve performance. Administrators selecting hooks and deploying programs are trusted.
+
+\subsubsection{Driver-owned Transition Validation}
+
+Typed setters record a callback-local request without mutating the resource. Presence is explicit, so zero can remain a legal value. An identical repeat is idempotent within the callback; a different second request latches a conflict, even if the first value was invalid. After the callback, driver code checks the request before invoking its native actuator.
+
+For physical-memory-manager (PMM) reordering, the snapshot contains the owning PMM, root identity, source list, and generation. Validation and commitment occur under the existing list lock. Only used/unused allocation lists and head/tail positions are permitted. Cross-list changes advance the generation; same-list reordering does not. The access path is:
+
+\begin{lstlisting}[language={},xleftmargin=0pt,numbers=none]
+record(r, destination, position):
+  if not r.attempted: store first raw request
+  else if r.pair != (destination, position):
+    r.conflict = true
+
+finish_access(root, snapshot, request, action):
+  assert PMM list lock held
+  result = validate identity, current source,
+           generation, conflict, and request range
+  if action not in {DEFAULT, BYPASS}: preserve
+  else if result == APPLY:
+    revalidate; commit one checked native move
+  else if result == NO_REQUEST and action == DEFAULT:
+    perform native tail move
+  else: preserve entry state
+\end{lstlisting}
+
+Fallback is operation-specific. Invalid PMM requests preserve entry state; an invalid initial prefetch action or region uses native prefetch behavior. Prefetch endpoints remain wide until ordering, bounds and translation overflow have been checked. Scheduler initialization validates timeslice and interleave independently before native setters; the persistent-timeslice control path returns an error for an invalid attempted request. These are covered local transitions, not a general transaction or lifetime protocol for arbitrary deferred objects. The previous raw integer-VA-space migration interface is excluded from the validated interface.
+
+% Source: nv-gpu-transition-validator.h:139,336,450,475,503;
+% uvm_pmm_gpu.c:435,487,510; uvm_perf_prefetch.c:117,149;
+% 575 nv-gpu-timeslice-control.h:42; kernel_channel_group_api.c:1482.
+% TODO(Q2): retain all scheduler verifier-load fixture outcomes and an
+% explicit initialization commit-path safety run on the matching custom driver.
+% TODO(Q2): retain live invalid-prefetch action/region fallback tests;
+% offline production-header tests do not replace these observations.
+
+\subsubsection{SIMT-aware Verification}
+
+The separately tested GPU-verifier prototype applies PREVAIL~\cite{prevail-verifier} with GPU-specific helper and map descriptions, followed by uniformity analysis and SIMT checks. This is distinct from the Linux verifier used for kernel-loaded host policies. Forward dataflow tracks register values, stack bytes, pointer provenance, and map identity using \emph{unknown}, \emph{uniform}, and \emph{varying} tags. A worklist propagates instruction effects and joins predecessor states until stable; the final pass checks reachable instructions:
+
+\begin{lstlisting}[language={},xleftmargin=0pt,numbers=none]
+verify_gpu(program, maps):
+  reject malformed input or unsupported maps
+  require PREVAIL bounds/type/termination checks
+  initialize entry state and worklist
+  while worklist nonempty:
+    pc = pop(worklist)
+    out = transfer(program[pc], state[pc])
+    join out into successors; enqueue changed states
+  require uniform conditional-branch operands
+  require uniform atomic target addresses
+  require uniform map keys and update flags
+  require uniform shared-map values and checked outputs
+  reject prohibited helpers or unsafe bridge payloads
+\end{lstlisting}
+
+Concrete rejection/control pairs use the public verifier entry point: an eight-byte stack write at offset $-520$ versus $-8$; an unbounded helper-dependent loop versus a constant-bounded loop; a lane-ID branch versus a warp-ID branch; lane-derived versus warp-uniform map keys and shared-map values; and an atomic target from a per-thread map versus a shared map. A prohibited memory-barrier helper is rejected while the warp-ID helper is admitted. Atomics are therefore not universally forbidden: the checked target must be uniform. These executable cases are not a soundness proof for the entire compiler/runtime stack.
+
+The prototype rejects failed programs at attachment only when built with verification enabled and configured in strict mode. Its default warning mode may continue, and the device-policy performance runtime used in this revision has GPU verification disabled. Those performance measurements do not establish enforced SIMT safety. Host-uBPF algorithm ports are also separate from both Linux kernel verification and this device verifier.
+
+% Source: bpftime-r5 commit 36610ee, gpu_verifier.cpp:267;
+% uniformity_analysis.cpp:760; simt_safety_check.cpp:174;
+% gpu_revision_safety_test.cpp:146; nv_attach_impl.cpp:228.
+% TODO(Q2): retain strict-mode rejection-before-launch and positive execution
+% controls in the actual device-policy runtime, then update the deployment
+% statement only if that evidence changes. Current build-cuda-pr503 has
+% ENABLE_EBPF_VERIFIER=OFF; CPU tests alone do not close this requirement.
+
+\paragraph{Failure classes and TCB}
+We distinguish rejected programs, invalid resource requests, valid but ineffective policies, and failures outside policy verification. Stale statistics can cause thrashing or poor scheduling even when a transition is legal. Workload OOM, GPU faults, loader failures, and driver bugs require diagnosis at their own layer; absence of an OS kernel panic does not imply that none occurred. The TCB includes Linux's verifier/JIT, driver hooks and validators, native actuators and their locking/lifetime rules; for the verified device path it additionally includes PREVAIL, SIMT analysis, helper/map models, eBPF-to-PTX and GPU compilation, instrumentation, and the loader/map runtime. NVIDIA driver, firmware and hardware remain trusted. These checks do not provide per-tenant confidentiality, side-channel resistance, fairness, or a performance guarantee.

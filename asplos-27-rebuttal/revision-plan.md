@@ -1,5 +1,30 @@
 # ASPLOS'27 #1797 Revision Plan
 
+## Current execution record — 2026-09-03
+
+This file retains the historical proposal below, not a completion report.
+The submitted author response and shepherd follow-up are preserved
+[verbatim](../../revision-shepherd-comment.md); the
+[live completion checklist](../../revision-completion-checklist.md) tracks
+experiments, paper integration and artifact publication separately.
+MoE-Infinity, XSched, the GPreempt contention study and FineMoE have completed
+their scoped comparisons. Hummingbird is running; POD, LMCache disk, RTX 5090
+Table 1 and remaining live safety checks are still open. Original agent
+transcripts have not been recovered. Paper source integration is in progress,
+pending a fresh build and review.
+
+Several assertions in the old proposal were corrected by source/raw-data audit:
+the old 96% launch-latency metric was not host-to-kernel-entry latency; historical
+Fig. 13 did not prove scheduler engagement; invalid transitions have
+operation-specific fallback rather than universal no-ops; the GPU prototype
+uses PREVAIL plus SIMT analysis, distinct from Linux kernel verification; and
+per-warp instrumentation does not make total cost independent of block count.
+Those sentences below must not be reused as current paper claims. The old R0
+statement that only two items bind the revision also does not supersede the
+subsequently submitted author/shepherd commitments.
+
+## Historical proposal
+
 Draft for the HotCRP comment. Body text below R0 is copy-paste ready.
 Supporting inventory and safety limits: `reproducibility-commitments.md`.
 

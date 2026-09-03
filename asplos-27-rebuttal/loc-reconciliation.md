@@ -1,6 +1,16 @@
 # Lines-of-Code Reconciliation: Paper Claims vs. Source on Disk
 
 ASPLOS'27 major revision, paper #1797 ("gpubpf").
+
+2026-09-03 correction: the original component counts below were rechecked
+against retained gpu_ext revision `aab36b8` using `git show` and `wc -l`.
+The active draft now uses 573 for sequential prefetch, approximately 880 for
+573+304, 1090 for 573+472+45, and 1334 for 472+454+408; its counting convention
+is explicit. Current LFU/scheduler sources have additional revision code
+(306/501 lines including loaders), so they are not silently substituted for
+these historical counts. Observability LOC still needs the exact Table 1
+per-run sources; the unresolved old counts below are not verified by this fix.
+
 Scope: every policy-LOC number asserted in the paper, checked against the
 source tree at `/home/yunwei37/workspace/gpu/gpu_ext` (HEAD, no git changes
 made). All `wc -l` values below were actually run; every path listed exists.
