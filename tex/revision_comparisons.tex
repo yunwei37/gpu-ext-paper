@@ -76,6 +76,17 @@ about 9\% BE goodput; BPF/C changes $-1.32$\% $[-4.19\%,+0.51\%]$.
 All 270,000 foreground requests complete in-window. Neither scheduling metric
 measures a preemption quantum or permits cross-workload ranking.
 
+\paragraph{Expert Buffering}
+We port Section VI's inactive-first/LIFO expert residency policy~\cite{huang2023towards}
+to the same Qwen/FineMoE whole-expert executor as a fixed-$K{=}16$ FIFO baseline.
+Five randomized blocks yield 5.508/5.663/5.621 token/s for FIFO/native/host-uBPF.
+Native/FIFO is $+2.55\%$ [$+2.10\%$,$+3.09\%$]; BPF/FIFO is
+$+1.79\%$ [$+0.79\%$,$+2.81\%$]. Native and BPF make identical residency
+decisions and reduce logical copy payload by 12.85\%, but BPF/native is
+$-0.74\%$ [$-1.40\%$,$-0.20\%$], exposing a small mechanism-path cost.
+This is a matched single-GPU policy port, not the original distributed system,
+model, or reported throughput reproduction; logical bytes are not PCIe traffic.
+
 \paragraph{FineMoE}
 Five blocks compare demand-only, an all-positive ablation, native dynamic sets
 and host-BPF~\cite{yu2026finemoe} with a shared Qwen1.5-MoE-A2.7B-Chat offloader.
@@ -133,5 +144,4 @@ Existing-algorithm ports are not agent discoveries; agent generation alone
 establishes no novelty. Historical single-round \Cref{fig:all-kernels-priority}
 lacks scheduler-engagement evidence. Host-JIT parity proves neither
 kernel admission nor enforced SIMT safety (\S\ref{sec:verification}).
-% TODO: Add complete LMCache local-disk and actual Expert Buffering policy
-% results. Preparation and incomplete cells do not count.
+% TODO: LMCache local-disk performance remains deferred after its correctness failure.
