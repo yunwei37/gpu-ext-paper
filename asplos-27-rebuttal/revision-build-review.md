@@ -3,6 +3,37 @@
 This is a checked draft checkpoint, **not a submission-ready or fully completed
 revision**. It preserves the pre-existing paper revision `d1ab623`.
 
+## Latest integrated build — 12:05 UTC
+
+The fresh `/tmp/gpubpf-paper-integrated-cC8g5i` build uses this tree's source
+and a newly generated BibTeX bibliography: **16 pages, 4,466,712 bytes**,
+conclusion and references beginning on page 14. There are no undefined
+references/citations or overfull horizontal boxes. Two vertical overflows
+(1.858 and 9.954 pt) and 80 bibliography metadata warnings remain. This is
+not a full citation audit or a completed page-budget reduction.
+
+Hummingbird's full negative result, POD's actual device-selector comparison
+and process-wide cost, and both strict-counter positive/negative pairs are
+now integrated. The source retains numerical-characterization limitations,
+the verification-disabled performance runtime, and the separate native
+driver-transition gaps. The POD citation was checked against the local
+author PDF's first-page metadata, including its DOI and 16-page length.
+
+Rendered and inspected pages 5, 10, 11 and 12: the SIMT listing is now whole
+on page 5; the four-panel scheduling figure, qualified historical memory
+figure and seven-row capability table remain readable. The new comparisons
+fit within the columns. Condensation removed duplicated setup/exploration
+prose and two non-result illustrations, retaining their assets and every
+reported adverse result; type size and margins were not reduced.
+
+The working original-body-plus-two-page target remains unmet. LMCache's
+repaired disk preflight has passed and its correctness/formal sequence is
+ongoing outside this paper build. Table 1, the actual Expert Buffering policy,
+remaining native safety tests, refreshed engaged memory/scheduling matrix
+and original-transcript recovery are not closed by this checkpoint.
+
+## Earlier checkpoint, retained for history
+
 ## Fresh build and visual checks
 
 - Built with system pdfLaTeX, BibTeX, and repeated pdfLaTeX in the new directory

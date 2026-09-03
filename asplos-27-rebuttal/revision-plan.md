@@ -7,11 +7,13 @@ The submitted author response and shepherd follow-up are preserved
 [verbatim](../../revision-shepherd-comment.md); the
 [live completion checklist](../../revision-completion-checklist.md) tracks
 experiments, paper integration and artifact publication separately.
-MoE-Infinity, XSched, the GPreempt contention study and FineMoE have completed
-their scoped comparisons. Hummingbird is running; POD, LMCache disk, RTX 5090
-Table 1 and remaining live safety checks are still open. Original agent
-transcripts have not been recovered. Paper source integration is in progress,
-pending a fresh build and review.
+MoE-Infinity, XSched, the GPreempt contention study, FineMoE, Hummingbird and
+POD have completed their scoped comparisons, including adverse results. Two
+actual strict-device counter positive/negative pairs pass; native init and
+invalid-prefetch transition tests remain open. LMCache disk, RTX 5090 Table 1
+and the original Expert Buffering policy remain in progress. Original agent
+transcripts have not been recovered. Paper source integration and condensation
+are in progress, pending a fresh final build and review.
 
 Several assertions in the old proposal were corrected by source/raw-data audit:
 the old 96% launch-latency metric was not host-to-kernel-entry latency; historical

@@ -3,16 +3,9 @@
 \subsection{GPU Systems and Workload Diversity}
 \label{sec:arch-gpu}
 
-% \arq{I think this is too many ideas for one paragraph  It should probably reference Figure 1 (!)}
-As shown in \Cref{fig:motivation_silos}, we focus on three GPU resource management domains across the software stack: memory placement and migration, compute scheduling, and on-device thread scheduling. User-space frameworks (e.g., vLLM~\cite{kwon2023efficient}, Salus~\cite{yu2020fine}, PILOT~\cite{ravi2021pilot}) leverage application semantics (e.g., neural structures, latency constraints) to implement request scheduling and KV-cache offloading policies. Kernel drivers manage memory, scheduling, and multi-tenant isolation via privileged hardware mechanisms (MMU, interrupts), typically using fixed, application-agnostic algorithms (e.g., LRU eviction) under Unified Virtual Memory (UVM), which transparently handles oversubscription through host-device page migrations. GPU devices execute kernels via SIMT (Single Instruction, Multiple Threads); on NVIDIA hardware, 32-thread warps run instructions in lockstep on SMs, with internal states (e.g., warp access patterns) opaque to host drivers.
+GPU policies span framework placement/admission, driver memory/compute scheduling and device thread scheduling. Frameworks exploit application semantics~\cite{kwon2023efficient,yu2020fine,ravi2021pilot}; drivers control MMU/interrupts and UVM host-device migration. NVIDIA devices execute 32-thread warps on SMs, whose internal access patterns are not directly visible to host drivers.
 
 
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\columnwidth]{img/gpu_stack_figure.pdf}
-    \caption{GPU system stack: user-space frameworks, kernel driver (memory and scheduling), and GPU hardware.}
-    \label{fig:motivation_silos}
-\end{figure}
 
 % \arq{I think this should be two paragraphs: one that talks about workload diversity and the second that then talks about the need for different policies.}
 GPU workloads exhibit diverse resource access patterns. Results from \sys{}'s eBPF-based tracing tools (\S\ref{sec:eval}) confirm this diversity: \Cref{fig:access_patterns} captures memory page-fault addresses over time under UVM, showing that LLM MoE inference exhibits periodic stride bursts from expert activations; GNN training shows irregular random access from pointer-chasing graph traversal; and vector search alternates between sequential scans (index build) and random probes (query)~\cite{pan2024survey,cao2023gpu}. \Cref{fig:thread_scheduling} reveals a 127$\times$ SM scheduling load imbalance in a vector-add GPU kernel, invisible to host-side drivers.
@@ -36,18 +29,14 @@ These diverse patterns require workload-specific policies across all three domai
 \subsection{Agent-Based Policy Exploration}
 \label{sec:motivation-agent}
 
-Agentic OS policy exploration fits the large GPU policy space but requires programmable interfaces at the relevant control boundaries. Unlike parameter-tuning methods, AI agents~\cite{dwivedula2025policysmith,zheng2025schedcp} directly generate and iteratively refine policy logic to explore richer, workload-specific strategies. Ordinary driver/UVM interfaces expose preset controls (e.g., \texttt{cudaMemAdvise}, driver module parameters), rather than arbitrary workload-aware eviction or fault-path prefetch callbacks. Framework and driver extensions can add programmability, with the boundaries discussed below.
-
-Effective GPU policy optimization requires an OS interface with three key properties: (1) \emph{safe}, robustly handling generated policies without kernel panics or GPU corruption; (2) \emph{dynamic}, rapidly deploying and iterating policies at runtime without application restarts or kernel rebuilds; and (3) \emph{full-stack}, observing GPU-internal states, coordinating across tenants, and controlling driver-level decisions like eviction and fault-path prefetching.
+Agents generate policy logic rather than preset parameters~\cite{dwivedula2025policysmith,zheng2025schedcp}. Runtime iteration requires the safe, dynamic and full-stack properties defined above: checked resource use, updates without restarts, and cross-layer observations/control. Ordinary UVM hints do not expose arbitrary fault or eviction policies.
 
 \subsection{Limitations of Existing Approaches}
 \label{sec:motivation-limitations}
 
 % \arq{Make sure to critique these existing approaches by saying they are not safe, dynamic, or full-stack.}
-Existing approaches fail to simultaneously provide a safe, dynamic, and full-stack programmable OS interface for GPU resource management.
-
 \paragraph{Driver-Level Policies}
-Driver-level approaches expose preset controls (e.g., \texttt{cudaMemAdvise} and driver module parameters) or add custom control paths. Systems like TimeGraph~\cite{kato2011timegraph}, Gdev~\cite{kato2012gdev}, and OS kernel interception methods~\cite{kernelintercept} embed scheduling or memory-management logic into driver modules. More recent work such as GPREEMPT~\cite{fan2025gpreempt} and GCAPS~\cite{wang2024gcaps} adds priority-based preemption, while LithOS~\cite{coppock2025lithos} provides a redesigned runtime. These systems have different trust and deployment boundaries; a modified driver is not inherently an unsafe implementation. The relevant distinction is whether a policy can change independently of trusted driver code, and which observations and actions its interface exposes. \Cref{tab:policy-expressibility} identifies those boundaries for the policies considered here.
+Driver extensions~\cite{kato2011timegraph,kato2012gdev,kernelintercept,fan2025gpreempt,wang2024gcaps} embed memory/scheduling control; LithOS~\cite{coppock2025lithos} redesigns the runtime. Their trust/update boundaries differ: modified drivers are not inherently unsafe. The relevant questions are whether policies update independently of trusted code and which observations/actuators are exposed (\Cref{tab:policy-expressibility}).
 
 \paragraph{Host User-Space Runtimes and Libraries}
-User-space frameworks~\cite{ng2023paella,gim2025pie,shen2025xsched,chen2025ktransformers,coppock2025lithos} can implement rich policies when applications expose the necessary state and controls. Framework integration supplies useful semantics but can require per-framework adapters. A shared user-space scheduler can coordinate participating tenants~\cite{xiao2018gandiva,yu2020fine}; process boundaries do not make such coordination impossible. Ordinary application APIs do not, however, place arbitrary policy code inside a UVM fault handler or expose PMM eviction-list transitions. Device-side instrumentation and cooperating kernels provide other observations and controls, with their own integration requirements. Our comparison therefore concerns specific missing control boundaries, not a blanket inability of user space to schedule across tenants or observe GPU execution.
+Frameworks~\cite{ng2023paella,gim2025pie,shen2025xsched,chen2025ktransformers,coppock2025lithos} can use semantic adapters and coordinate participating tenants~\cite{xiao2018gandiva,yu2020fine}. Ordinary application APIs cannot install arbitrary UVM fault handlers or PMM reorders. Instrumentation and cooperating kernels add controls with integration requirements. Thus missing control boundaries, not process boundaries alone, distinguish these systems.

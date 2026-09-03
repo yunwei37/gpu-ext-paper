@@ -61,13 +61,20 @@ Concrete rejection/control pairs use the public verifier entry point: an eight-b
 
 The prototype rejects failed programs at attachment only when built with verification enabled and configured in strict mode. Its default warning mode may continue, and the device-policy performance runtime used in this revision has GPU verification disabled. Those performance measurements do not establish enforced SIMT safety. Host-uBPF algorithm ports are also separate from both Linux kernel verification and this device verifier.
 
+Two fresh-process strict-mode positive/negative pairs on RTX 5090 validate
+the real counter path: each admitted 13-instruction callback records exactly
+32,768 invocations across 4,096 threads. A 15-instruction lane-varying branch
+is rejected before its policy hook is created; subsequent full counter
+readback remains zero while the original CUDA target stays correct.
+These bounded controls do not verify POD's pointer/ticket ABI or establish
+general compiler/runtime soundness.
+
 % Source: bpftime-r5 commit 36610ee, gpu_verifier.cpp:267;
 % uniformity_analysis.cpp:760; simt_safety_check.cpp:174;
 % gpu_revision_safety_test.cpp:146; nv_attach_impl.cpp:228.
-% TODO(Q2): retain strict-mode rejection-before-launch and positive execution
-% controls in the actual device-policy runtime, then update the deployment
-% statement only if that evidence changes. Current build-cuda-pr503 has
-% ENABLE_EBPF_VERIFIER=OFF; CPU tests alone do not close this requirement.
+% Actual strict counter pairs: bpftime-r5 ea9907d; gpu_ext/workloads/
+% bpftime-device-smoke/raw/575-r5-strict-{02,03}. Performance build-cuda-pr503
+% remains ENABLE_EBPF_VERIFIER=OFF; these controls do not verify that runtime.
 
 \paragraph{Failure classes and TCB}
 We distinguish rejected programs, invalid resource requests, valid but ineffective policies, and failures outside policy verification. Stale statistics can cause thrashing or poor scheduling even when a transition is legal. Workload OOM, GPU faults, loader failures, and driver bugs require diagnosis at their own layer; absence of an OS kernel panic does not imply that none occurred. The TCB includes Linux's verifier/JIT, driver hooks and validators, native actuators and their locking/lifetime rules; for the verified device path it additionally includes PREVAIL, SIMT analysis, helper/map models, eBPF-to-PTX and GPU compilation, instrumentation, and the loader/map runtime. NVIDIA driver, firmware and hardware remain trusted. These checks do not provide per-tenant confidentiality, side-channel resistance, fairness, or a performance guarantee.
