@@ -12,11 +12,14 @@ POD have completed their scoped comparisons, including adverse results. Two
 actual strict-device counter positive/negative pairs pass. The
 [invalid-prefetch transition campaign](../../experiment/revision-safety/prefetch-invalid-575-02/result-review.md)
 now completes all three live controls and exact old-UVM restoration. The
-scheduler-init diagnostic is committed and CPU/build-reviewed, while its live
-paired observations remain open. LMCache disk is paused at the user's
+scheduler-init diagnostic and its 16-cell live transition matrix are complete;
+all cells passed and the original driver/services were restored. LMCache disk is paused at the user's
 request after a cross-arm correctness failure; its promised measurement is not
-complete. Expert Buffering has completed its matched-policy study, while RTX
-5090 Table 1 remains in progress. Original agent transcripts have not been
+complete. Expert Buffering has completed its matched-policy study. RTX 5090
+Table 1 has now run all seven correctness arms, with four valid and three
+fail-closed diagnostics but no timing cells, so it remains in progress. The
+new trampoline-scaling harness likewise has no valid attached timing yet.
+Original agent transcripts have not been
 recovered.
 The integrated draft was built and visually checked (16 pages, conclusion on
 page 14); the working page budget and unmeasured commitments remain open.
