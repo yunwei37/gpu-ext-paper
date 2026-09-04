@@ -39,9 +39,15 @@ The policy interface exposes two dimensions: \emph{selection} (choosing resource
 
 \input{tex/revision_safety}
 
-\subsubsection{Warp-level Execution Optimizations}
+\subsubsection{Warp-level Execution Opportunity}
 
-Scalar per-thread eBPF execution can duplicate policy work and map updates. Warp-level aggregated execution instead combines lane-local observations, executes a scalar handler in a warp leader, and broadcasts its decisions (\S\ref{sec:implementation}). This optimization is distinct from verifier enforcement: executing once per warp does not by itself establish that a program satisfies the SIMT checks.
+Scalar per-thread eBPF execution can duplicate policy work and map updates. A
+future warp-level path could combine lane-local observations, elect a leader,
+execute one handler, and broadcast its decisions. The retained implementation
+and device measurements instead use per-thread calls
+(\S\ref{sec:implementation}). Such aggregation would remain distinct from
+verifier enforcement: executing once per warp would not by itself establish
+that a program satisfies the SIMT checks.
 
 
 \subsubsection{Hierarchical Cross-layer Maps for State Coordination}
