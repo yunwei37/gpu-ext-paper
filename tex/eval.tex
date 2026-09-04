@@ -248,6 +248,10 @@ a PCIe-placement result; this microbenchmark does not establish application
 performance, warp aggregation, or warp/grid scaling. A separate strict
 admission check on the exact object accepts its no-op callback but rejects all
 six map callbacks: their lane-derived branches, keys, or shared-map values
-violate the current SIMT uniformity rules. Thus these placement numbers show a
-runtime capability, not a currently strict-admissible per-lane policy; testing
-strict map placement requires a distinct warp-uniform experiment.
+violate the current SIMT uniformity rules. In a distinct 12-block experiment
+using constant keys and values, all 60 attached cells pass strict admission
+and execute on the GPU. Its host/device ratios are 1.0008$\times$
+($[0.9891,1.0143]$) for update and 1.0778$\times$
+($[1.0644,1.0833]$) for lookup. Thus strict mode supports this uniform class,
+but not the earlier per-lane class, and the placement effect remains
+operation-dependent.
