@@ -133,11 +133,24 @@ scans; this is not full FP32 agreement. All 125,280 diagnostic BPF CTA choices
 have exactly-once logical coverage. BPF increases mean CUDA-event latency
 0.51--1.18\% versus the CUDA adapter in nine shapes and decreases it 0.44\%
 in Llama/192; host-wall directions agree. It beats two-stream FlashAttention
-in seven shapes, not all ten. BPF's complete ten-shape process takes a median
-295.63\,s versus 12.01--14.01\,s for controls, including initialization,
-correctness checks and measurements, not isolated startup. Fusion benefits
+in seven shapes, not all ten. A separate 15-cell (five-block)
+Llama-3-8B/batch-32 phase decomposition isolates BPF/CUDA-adapter operator
+cost at 1.78\% [1.64\%, 1.92\%] by CUDA event and 1.81\% [1.66\%, 1.96\%]
+by synchronized host wall. Its median pre-Python interval is 271.225\,s versus
+21.4\,ms for the adapter; this non-generic cold path bundles preload, agent,
+PTX, and JIT work and is not attach latency. Fusion benefits
 belong to POD; this explicit-ABI operator port is not its full serving system
 or a strictly verified device policy.
+
+\paragraph{Cross-layer raw state}
+A five-block, 15-cell RTX 5090 campaign tests a per-GPU-thread ring against
+independent CUDA truth and aggregate controls. Across the ten positive cells,
+the host recovered exactly 34,560 distinct bounded raw tuples; the five
+deliberate-overflow cells accounted for exactly 2,560 capacity drops and
+rejected every incomplete stream. This is bounded device-to-host raw-record
+expressibility and exact readback beyond reducible summaries, not a map
+latency/bandwidth, on-chip-shard, automatic-placement, strict-verifier, or
+arbitrary-data result.
 
 \paragraph{Boundaries}
 Existing-algorithm ports are not agent discoveries; agent generation alone
