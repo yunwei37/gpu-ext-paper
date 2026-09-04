@@ -3,7 +3,7 @@
 \label{sec:implementation}
 
 We implemented \sys on Linux 6.15. The audited NVIDIA 575.57.08 production delta spans 18 files (2,556 added and 49 deleted physical lines), including hooks, validation, diagnostics, and UVM/scheduler integration; this is not a semantic LOC metric. Our loader and JIT build on bpftime~\cite{bpftime}, with an LLVM backend translating restricted eBPF to PTX (\S\ref{sec:impl-gpu}).
-Although our implementation targets NVIDIA GPUs, the host-side design aligns with generic Linux abstractions (HMM/\texttt{migrate\_vma}~\cite{rocm-gpu-memory,linux-gpusvm-doc}, DRM scheduler~\cite{drm-gpu-sched,amdgpu-userq-doc}), and the device-side can be extended to generate vendor-neutral IR~\cite{spirv-ir-rfc} for future portability.
+Although our implementation targets NVIDIA GPUs, the host-side design aligns with generic Linux abstractions (HMM/\texttt{migrate\_vma}~\cite{rocm-gpu-memory,linux-gpusvm-doc}, DRM scheduler~\cite{drm-gpu-sched,amdgpu-userq-doc}), and the device-side can be extended to generate vendor-neutral IR~\cite{spirv-ir-rfc} for future portability. Host-side policies do not inspect application GPU code. Device hooks, however, currently require PTX: our artifact contains an independent SPIR-V code-generation demo and NVBit examples, but neither is an integrated \sys attach backend. We therefore do not claim support for SASS-only binaries or a measured non-NVIDIA port.
 
 \subsection{Host-side Integration}
 \label{sec:impl-host}

@@ -157,13 +157,6 @@ We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp
 
 \end{figure}
 
-\begin{figure*}[!t]
-\centering
-\includegraphics[width=\textwidth]{img/results-raw/runtime/microbench_comparison.pdf}
-\caption{Device-side overhead. (a) Naive per-thread injection vs \sys's SIMT-aware warp-aggregation prototype. (b) CPU map access latency via PCIe vs GPU-side operations.}
-\label{fig:microbench}
-\end{figure*}
-
 \input{tex/revision_comparisons}
 
 \subsection{RQ4: Overheads}
@@ -220,7 +213,10 @@ CI $[-0.0436,-0.0403]$), slightly favoring NVBit; for the exit-count histogram,
 it is $+6.2935$ points ($[6.1251,6.4708]$), favoring \sys. This task-specific
 mixed outcome is not a framework-wide ordering. GPU verification was disabled
 and timing excludes post-exit collector shutdown; we omit \texttt{launchlate}
-because its cross-clock comparison remains invalid.
+because its cross-clock comparison remains invalid. The submitted comparison
+used only the P40 because we had not yet ported and rerun these matched adapters
+on the newly installed RTX~5090; this was an evaluation omission, not a
+Blackwell limitation of NVBit.
 
 % \texttt{gpu\_sched\_trace}, \texttt{prefetch\_trace}, and \texttt{eviction\_trace} provide host-side observability for scheduling and memory management policies (\Cref{tab:obs-overhead}).
 \begin{table}[t]
@@ -238,6 +234,3 @@ Exit-count histogram (\texttt{threadhist}) & 4.007\% & 10.301\% \\
 Adapters retain native transports; histogram validation is aggregate.}
 \label{tab:obs-overhead}
 \end{table}
-
-\paragraph{Device-side Runtime Optimization}
-We evaluate device-side \sys mechanisms using a vector-add CUDA GPU kernel (32 elements, 10K iterations) from cuda-sample~\cite{nvidia_cuda_samples} on RTX 5090. \Cref{fig:microbench}(a) compares \sys's SIMT-aware warp-level execution against eGPU~\cite{egpu} that injects eBPF bytecode without SIMT-specific verification and optimizations. The baseline incurs overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead by 60--80\%. \Cref{fig:microbench}(b) shows CPU map access via PCIe is 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU. We do not compare policy-level performance against the prior workshop version or Neutrino because they are limited to read-only observability (\S\ref{sec:background}). %\arq{Do we need this experimentation?  I guess you're wanting to show that this current version of the system is better than the workshop version, but I wonder if that is entirely surprising.}
