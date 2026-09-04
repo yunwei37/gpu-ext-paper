@@ -234,3 +234,15 @@ Exit-count histogram (\texttt{threadhist}) & 4.007\% & 10.301\% \\
 Adapters retain native transports; histogram validation is aggregate.}
 \label{tab:obs-overhead}
 \end{table}
+
+\paragraph{Device-map Placement}
+We isolate map placement with operation-matched 32-entry arrays on RTX~5090.
+Across 16 balanced randomized blocks (128 fresh processes), the paired median
+host/device latency ratio is 9.4307$\times$ for updates (97.5\%
+paired-bootstrap CI $[9.3789,9.4896]$) and 1.0904$\times$ for lookups
+($[1.0797,1.1113]$), making the placement effect strongly
+operation-dependent. The experiment uses one 32-thread block, scalar
+per-thread callbacks, and a verification-disabled runtime. Serialized
+standard-array RPC measurements diagnose that prototype protocol and are not
+a PCIe-placement result; this microbenchmark does not establish application
+performance, warp aggregation, or warp/grid scaling.

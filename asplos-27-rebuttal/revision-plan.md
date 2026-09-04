@@ -81,7 +81,16 @@ is complete and measures about 1.8% same-path operator cost while exposing a
 large, explicitly non-generic fresh-process cold path. A new cross-layer map
 campaign also completes 15/15 cells, recovering 34,560 bounded raw tuples and
 detecting all 2,560 deliberate overflow drops; it is expressibility evidence,
-not a map-performance or strict-verifier result. The synthetic RTX 5090
+not a map-performance or strict-verifier result. Separately, the
+operation-matched RTX 5090 device-map placement campaign completed all 128
+fresh processes in 16 balanced blocks. The paired median host/device latency
+ratio is 9.4307x for updates (97.5% CI [9.3789, 9.4896]) and 1.0904x for
+lookups ([1.0797, 1.1113]). This single-block,
+32-thread result uses scalar per-thread callbacks with verification disabled.
+Serialized standard-array RPC numbers diagnose that protocol rather than PCIe
+placement, and the measurements do not establish application, warp, or grid
+behavior. This operation-matched result replaces the old undifferentiated
+Fig. 15 ``6000x CPU-map'' and warp-aggregation wording. The synthetic RTX 5090
 trampoline-scaling study is complete at its scoped measurement boundary. Its
 fixed-work follow-up replayed all 30 arms and 150 timings successfully; across
 five organizations the absolute no-op increment spans 0.272--1.840 us and the

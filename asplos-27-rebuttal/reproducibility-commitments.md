@@ -40,6 +40,17 @@ supports only a CPU-side, one-time `verify_gpu_program` program-shape boundary;
 it does not establish verifier soundness, device overhead, the cause of the
 crossover, or generally linear scaling.
 
+The operation-matched RTX 5090 device-map placement campaign completed all 128
+fresh processes in 16 balanced randomized blocks. The paired median
+host/device latency ratio is 9.4307x for updates (97.5% paired-bootstrap CI
+[9.3789, 9.4896]) and 1.0904x for lookups ([1.0797, 1.1113]). This is a
+single-block, 32-thread, scalar-per-thread result from the
+verification-disabled runtime. Serialized standard-array RPC values diagnose
+that prototype protocol, not PCIe placement, and these data do not establish
+application performance, warp aggregation, or warp/grid scaling. This result
+supersedes the old undifferentiated Fig. 15 ``6000x CPU-map'' and
+warp-aggregation wording.
+
 ---
 
 ## 0. Commitment tiers (read this first)
