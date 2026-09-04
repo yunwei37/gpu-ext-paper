@@ -3,6 +3,28 @@
 This is a checked draft checkpoint, **not a submission-ready or fully completed
 revision**. It preserves the pre-existing paper revision `d1ab623`.
 
+## RTX 5090 device-result integration — 2026-09-04
+
+The build after paper commit `db78bb8` succeeds with system pdfLaTeX, BibTeX,
+and two final pdfLaTeX passes: **16 pages**, with the conclusion and references
+starting on page 14. There are no undefined references or citations. The
+pre-existing 43.843-pt horizontal overflow in the loader-safety paragraph, one
+small vertical overflow, image-description warnings, and bibliography metadata
+warnings remain; none is introduced by the device table.
+
+Rendered pages 13, 14, and 16 were inspected. The two-row RTX 5090 table fits
+the column, the mixed result and confidence intervals are legible, the invalid
+`launchlate` row is absent, and the final bibliography entry remains on page
+16. Strict read-only OpenCode review with the local Qwen model returned `PASS`
+in session `ses_f9400d950ffeOcJXkiwLVLUGk3`; it verified the values, column
+ordering, native-transport and aggregate-histogram limits, verifier-disabled
+runtime, and absence of a framework-wide superiority claim.
+
+This closes paper integration for the valid two-tool device subset, not the
+original three-tool campaign. The cross-clock launch-latency row, original
+agent-transcript recovery, and final whole-revision publication audit remain
+open.
+
 ## Latest integrated build — 12:05 UTC
 
 The fresh `/tmp/gpubpf-paper-integrated-cC8g5i` build uses this tree's source
