@@ -245,4 +245,9 @@ operation-dependent. The experiment uses one 32-thread block, scalar
 per-thread callbacks, and a verification-disabled runtime. Serialized
 standard-array RPC measurements diagnose that prototype protocol and are not
 a PCIe-placement result; this microbenchmark does not establish application
-performance, warp aggregation, or warp/grid scaling.
+performance, warp aggregation, or warp/grid scaling. A separate strict
+admission check on the exact object accepts its no-op callback but rejects all
+six map callbacks: their lane-derived branches, keys, or shared-map values
+violate the current SIMT uniformity rules. Thus these placement numbers show a
+runtime capability, not a currently strict-admissible per-lane policy; testing
+strict map placement requires a distinct warp-uniform experiment.
