@@ -17,8 +17,14 @@ all cells passed and the original driver/services were restored. LMCache disk is
 request after a cross-arm correctness failure; its promised measurement is not
 complete. Expert Buffering has completed its matched-policy study. RTX 5090
 Table 1 correctness now reaches the expected event counts, but its launch
-latency arms still fail the frozen cross-clock calibration gates; no timing
-cells have started, so it remains in progress. The synthetic RTX 5090
+latency comparison still fails the frozen cross-clock gates: repaired NVBit
+calibration passes, while gpubpf leaves 200/220 intervals uncertain; no timing
+cells have started, so it remains in progress. POD's separate phase campaign
+is complete and measures about 1.8% same-path operator cost while exposing a
+large, explicitly non-generic fresh-process cold path. A new cross-layer map
+campaign also completes 15/15 cells, recovering 34,560 bounded raw tuples and
+detecting all 2,560 deliberate overflow drops; it is expressibility evidence,
+not a map-performance or strict-verifier result. The synthetic RTX 5090
 trampoline-scaling study is complete: no-op cost remains in the
 0.0012--0.0022 ms range at 4,096 blocks, while a counter callback grows from
 0.0204 to 0.5417 ms as active warps grow from 2,048 to 32,768. This is a
