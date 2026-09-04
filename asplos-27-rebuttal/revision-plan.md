@@ -16,8 +16,11 @@ baseline -> native-policy -> BPF result without classifying any surveyed whole
 system as fully expressible. Two
 original strict-device counter positive/negative pairs pass, and two fresh
 pairs also pass on the verifier-enabled Table 1 runtime. Actual
-`kernelretsnoop`/`threadhist` strict admission and paired verifier-cost timing
-remain open. The
+`kernelretsnoop`/`threadhist` A0 strict admission is now complete: an
+independent analyzer accepts all five correctness cells and the complete pp32
+preflight block, with every gpubpf cell bound to one target-PID admission and
+its exact expected map. A1 admission-cost and S0 STRICT/NO_VERIFY steady-state
+pairing remain open. The
 [invalid-prefetch transition campaign](../../experiment/revision-safety/prefetch-invalid-575-02/result-review.md)
 now completes all three live controls and exact old-UVM restoration. The
 scheduler-init diagnostic and its 16-cell live transition matrix are complete;
