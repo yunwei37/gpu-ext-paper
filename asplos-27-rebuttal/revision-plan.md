@@ -29,9 +29,19 @@ the mean of 141.147--141.398 ms; the corresponding 13-instruction `threadhist`
 values are 11.767/11.762 ms, 11.740--11.832 ms and 11.753--11.785 ms. The
 matched NO_VERIFY processes prove the bypass only: each records one explicit
 skip and no timing value. The retained `a1-575-01` stale-runtime failure
-contributes no sample. The S0 harness passed an independent read-only audit
-(12 tests plus nine failure injections), and its live run is in progress; it
-has no completed or analyzed STRICT/NO_VERIFY steady-state result yet. The
+contributes no sample. The subsequent
+[S0 campaign](../../../workloads/llama.cpp/observability_overhead/revision-rq4/device-verifier-s0/results-s0-575-02-20260904.md)
+passes all 6 pp32 correctness cells and all 60 pp512 timing cells; its
+independent analyzer reopened all 66 raw directories without error. Across ten
+randomized complete blocks per tool, STRICT versus NO_VERIFY throughput has
+mean/median effects of -0.0746%/-0.0376% for `kernelretsnoop` (95% mean CI
+[-0.7845%, +0.6086%]) and +0.0037%/-0.1374% for `threadhist`
+([-0.4233%, +0.4390%]). Neither tool shows a detected directional difference.
+Because S0 preregistered no equivalence margin, this is not evidence of
+equivalence or zero verifier overhead. Relative to uninstrumented controls,
+STRICT throughput is 99.6631% lower for the full exit-record stream and
+4.0729% lower for the histogram, so S0 also does not make device callbacks
+free. The retained `s0-575-01` parser-gate failure contributes no sample. The
 [CPU-only aggregate verifier matrix](../../experiment/revision-safety/rejection-matrix-cpu-575-01/results.md)
 is complemented by bpftime commit `aae1f22`: six unsafe/control pairs pass for
 memory bounds, termination and four SIMT rules. That aggregate explicitly
@@ -51,8 +61,10 @@ while exit-count-histogram overhead is 4.007% and 10.301% (gpubpf is 6.29351
 points lower). This is a mixed result, not a general gpubpf-over-NVBit win.
 It completes only the non-cross-clock `kernelretsnoop` and `threadhist` rows;
 the `launchlate` comparison remains invalid, and the verification-disabled
-performance runtime does not establish verifier-on steady-state overhead. A1
-instead measures only the one-time `verify_gpu_program` call described above.
+Table 1 performance runtime is not relabelled verifier-on. A1 measures only
+the one-time `verify_gpu_program` call described above; the separate S0
+campaign supplies the scoped steady-state STRICT-versus-NO_VERIFY result and
+limitations above.
 The frozen plan named llama.cpp build 7101, while every accepted preflight and
 full-run arm consistently used build 7102; this creates no cross-arm mismatch
 but is a disclosed deviation.

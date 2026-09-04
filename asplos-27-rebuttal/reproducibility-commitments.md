@@ -14,6 +14,21 @@ non-cross-clock rows. `launchlate` remains invalid, and the performance runtime
 had GPU verification disabled. The submitted P40-only result was an evaluation
 gap, not evidence that NVBit lacked Blackwell support.
 
+The separate
+[S0 verifier-mode campaign](../../../workloads/llama.cpp/observability_overhead/revision-rq4/device-verifier-s0/results-s0-575-02-20260904.md)
+passes 6/6 pp32 correctness cells and 60/60 pp512 timing cells, with an
+independent replay of all 66 raw directories. In ten randomized complete blocks
+per tool, STRICT versus NO_VERIFY has mean/median throughput effects of
+-0.0746%/-0.0376% for `kernelretsnoop` (95% mean CI [-0.7845%, +0.6086%]) and
++0.0037%/-0.1374% for `threadhist` ([-0.4233%, +0.4390%]). Both intervals span
+zero, so no directional difference is detected; because no equivalence margin
+was preregistered, the result proves neither equivalence nor zero verifier
+overhead. Relative to uninstrumented controls, STRICT throughput is 99.6631%
+lower for the full exit-record stream and 4.0729% lower for the histogram, so
+the callbacks themselves are not free. This separate result does not relabel
+the earlier Table 1 runtime as verifier-enabled. The retained `s0-575-01`
+parser-gate failure contributes no sample.
+
 ---
 
 ## 0. Commitment tiers (read this first)
