@@ -19,8 +19,24 @@ pairs also pass on the verifier-enabled Table 1 runtime. Actual
 `kernelretsnoop`/`threadhist` A0 strict admission is now complete: an
 independent analyzer accepts all five correctness cells and the complete pp32
 preflight block, with every gpubpf cell bound to one target-PID admission and
-its exact expected map. A1 admission-cost and S0 STRICT/NO_VERIFY steady-state
-pairing remain open. The
+its exact expected map. The subsequent
+[A1 campaign](../../../workloads/llama.cpp/observability_overhead/revision-rq4/device-verifier-a1/results-a1-575-02-20260904.md)
+completed its baseline, two A0 cells and all 40 randomized A1 cells, and an
+independent raw audit accepted every cell. For ten STRICT admissions per
+object, the 60-instruction `kernelretsnoop` verifier call has mean/median
+141.266/141.191 ms, range 140.960--141.633 ms and a 95% bootstrap interval for
+the mean of 141.147--141.398 ms; the corresponding 13-instruction `threadhist`
+values are 11.767/11.762 ms, 11.740--11.832 ms and 11.753--11.785 ms. The
+matched NO_VERIFY processes prove the bypass only: each records one explicit
+skip and no timing value. The retained `a1-575-01` stale-runtime failure
+contributes no sample. The S0 harness passed an independent read-only audit
+(12 tests plus nine failure injections), and its live run is in progress; it
+has no completed or analyzed STRICT/NO_VERIFY steady-state result yet. The
+[CPU-only aggregate verifier matrix](../../experiment/revision-safety/rejection-matrix-cpu-575-01/results.md)
+is complemented by bpftime commit `aae1f22`: six unsafe/control pairs pass for
+memory bounds, termination and four SIMT rules. That aggregate explicitly
+reports the host Linux-verifier and driver transition-validator layers as
+`NOT_RUN`, so it is not evidence that those external layers ran. The
 [invalid-prefetch transition campaign](../../experiment/revision-safety/prefetch-invalid-575-02/result-review.md)
 now completes all three live controls and exact old-UVM restoration. The
 scheduler-init diagnostic and its 16-cell live transition matrix are complete;
@@ -35,19 +51,23 @@ while exit-count-histogram overhead is 4.007% and 10.301% (gpubpf is 6.29351
 points lower). This is a mixed result, not a general gpubpf-over-NVBit win.
 It completes only the non-cross-clock `kernelretsnoop` and `threadhist` rows;
 the `launchlate` comparison remains invalid, and the verification-disabled
-runtime does not establish verifier overhead. The frozen plan named llama.cpp
-build 7101, while every accepted preflight and full-run arm consistently used
-build 7102; this creates no cross-arm mismatch but is a disclosed deviation.
+performance runtime does not establish verifier-on steady-state overhead. A1
+instead measures only the one-time `verify_gpu_program` call described above.
+The frozen plan named llama.cpp build 7101, while every accepted preflight and
+full-run arm consistently used build 7102; this creates no cross-arm mismatch
+but is a disclosed deviation.
 POD's separate phase campaign
 is complete and measures about 1.8% same-path operator cost while exposing a
 large, explicitly non-generic fresh-process cold path. A new cross-layer map
 campaign also completes 15/15 cells, recovering 34,560 bounded raw tuples and
 detecting all 2,560 deliberate overflow drops; it is expressibility evidence,
 not a map-performance or strict-verifier result. The synthetic RTX 5090
-trampoline-scaling study is complete: no-op cost remains in the
-0.0012--0.0022 ms range at 4,096 blocks, while a counter callback grows from
-0.0204 to 0.5417 ms as active warps grow from 2,048 to 32,768. This is a
-controlled hook-cost result, not an application-level performance claim.
+trampoline-scaling study is complete at its scoped measurement boundary. Its
+fixed-work follow-up replayed all 30 arms and 150 timings successfully; across
+five organizations the absolute no-op increment spans 0.272--1.840 us and the
+counter increment spans 558.8--587.7 us. Both the endpoint and all-five
+statistical guards are inconclusive, however, so these data do not establish
+block-organization independence or warp-leader execution.
 The [GPreempt load report](../../../workloads/gpreempt/results-load-study-575-20260903.md)
 and [LC-knee report](../../../workloads/gpreempt/results-lc-knee-575-20260903.md)
 retain the foreground/background tradeoff and conditional overload boundary.
