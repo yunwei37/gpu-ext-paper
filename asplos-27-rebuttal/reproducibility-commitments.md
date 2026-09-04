@@ -5,6 +5,15 @@
 **Inventory revision:** 2026-08-03 (full re-audit; supersedes earlier draft of same date)  
 **Audience:** authors drafting HotCRP revision plan / author response.
 
+**Execution update, 2026-09-04:** The RTX 5090 Table~1 rerun now has a valid
+two-tool, ten-block comparison for matched exit records and exit-count
+histograms. The outcome is mixed: NVBit is 0.04185 percentage points
+lower-overhead for the full record stream, while gpubpf is 6.29351 points
+lower-overhead for the final histogram. This completes only the two
+non-cross-clock rows. `launchlate` remains invalid, and the performance runtime
+had GPU verification disabled. The submitted P40-only result was an evaluation
+gap, not evidence that NVBit lacked Blackwell support.
+
 ---
 
 ## 0. Commitment tiers (read this first)

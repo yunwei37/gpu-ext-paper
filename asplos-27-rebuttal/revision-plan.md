@@ -1,6 +1,6 @@
 # ASPLOS'27 #1797 Revision Plan
 
-## Current execution record — 2026-09-03
+## Current execution record — 2026-09-04
 
 This file retains the historical proposal below, not a completion report.
 The [review archive](README.md) preserves all seven reviews, the original
@@ -20,14 +20,18 @@ now completes all three live controls and exact old-UVM restoration. The
 scheduler-init diagnostic and its 16-cell live transition matrix are complete;
 all cells passed and the original driver/services were restored. LMCache disk is paused at the user's
 request after a cross-arm correctness failure; its promised measurement is not
-complete. Expert Buffering has completed its matched-policy study. RTX 5090
-Table 1 correctness now reaches the expected event counts, but its launch
-latency comparison still fails the frozen cross-clock gates: repaired NVBit
-calibration passes, while gpubpf leaves 200/220 intervals uncertain. The first
-two-tool non-cross-clock preflight also remains failed because its gpubpf
-kernel-return cell captured 991,232/1,441,792 events and reported all 450,560
-capacity drops. A phase-specific capacity repair clean-builds, but no repaired
-real preflight or formal timing block exists, so Table 1 remains incomplete.
+complete. Expert Buffering has completed its matched-policy study. The RTX 5090
+device-side comparison now has a valid, independently analyzed two-tool subset:
+all five correctness configurations and all 10 randomized pp=512 blocks passed,
+with no rejected or retried cell. Exit-record overhead is 99.663% for gpubpf
+and 99.621% for matched NVBit (gpubpf is 0.04185 percentage points slower),
+while exit-count-histogram overhead is 4.007% and 10.301% (gpubpf is 6.29351
+points lower). This is a mixed result, not a general gpubpf-over-NVBit win.
+It completes only the non-cross-clock `kernelretsnoop` and `threadhist` rows;
+the `launchlate` comparison remains invalid, and the verification-disabled
+runtime does not establish verifier overhead. The frozen plan named llama.cpp
+build 7101, while every accepted preflight and full-run arm consistently used
+build 7102; this creates no cross-arm mismatch but is a disclosed deviation.
 POD's separate phase campaign
 is complete and measures about 1.8% same-path operator cost while exposing a
 large, explicitly non-generic fresh-process cold path. A new cross-layer map
@@ -67,7 +71,7 @@ Supporting inventory and safety limits: `reproducibility-commitments.md`.
 ## R0. Author checklist (do not paste)
 
 - [ ] R1 names MoE-Infinity and XSched from `sota-baseline-feasibility.md`, neither of which has been built on this host yet. The short version commits to at least one runnable baseline per axis and names these two as the ones being brought up, so a single failed build is survivable, but both failing is not. Smoke-test them early; `sota-feas-moe.md` lists DeepSpeed ZeRO-Inference and PowerInfer as fallbacks for the MoE axis, and `sota-feas-sched.md` lists Orion for the scheduling axis.
-- [ ] R6: NVBit added SM_120 support in v1.7.4, released 2025-02-11, so the old "NVBit lacks Blackwell support" line cannot be reused. The only defensible reason the submitted table used the P40 is that those runs predate that release. A 5090 re-run is feasible; `sota-feas-sched.md` recommends v1.7.5 for a driver-575 header match.
+- [x] R6: NVBit added SM_120 support in v1.7.4, released 2025-02-11, so the old "NVBit lacks Blackwell support" line cannot be reused. The submitted P40-only comparison reflected a gap in the original evaluation, not a lack of Blackwell support in NVBit. The valid 5090 two-tool result above closes those two rows; `launchlate` remains invalid.
 - [ ] R1: XSched's public implementation gives Level-1 inter-kernel preemption on sm_120 (`arch.cpp` falls through to `CudaQueueLv1`; Level-2 and Level-3 return `nullptr`). Label the numbers accordingly, or a reviewer who knows the artifact will read them as paper-level preemption.
 - [ ] Fix the LOC errors found in `loc-reconciliation.md` before the revised paper goes out. The 925 (`gpu_preempt_ctrl`) and 408 (`gpu_sched_set_timeslices`) figures check out and are separate entries, but the sequential prefetch claim of 375 should be 573, which shifts the two composite totals at `eval.tex:64` and `eval.tex:92`, and the two-tenant total of 926 at `eval.tex:136` omits the 408 timeslice component it names, so it should be 1334.
 - [ ] Confirm the agent safety-event breakdown in R5 matches the numbers in `eval.tex`.
