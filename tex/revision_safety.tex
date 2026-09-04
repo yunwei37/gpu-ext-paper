@@ -61,6 +61,8 @@ Concrete rejection/control pairs use the public verifier entry point: an eight-b
 
 The prototype rejects failed programs at attachment only when built with verification enabled and configured in strict mode. Its default warning mode may continue, and the device-policy performance runtime used in this revision has GPU verification disabled. Those performance measurements do not establish enforced SIMT safety. Host-uBPF algorithm ports are also separate from both Linux kernel verification and this device verifier.
 
+A 15-cell CPU loader matrix exercises \texttt{LD\_PRELOAD}$\rightarrow$\texttt{BPF\_PROG\_LOAD}. In three repetitions, strict mode rejects an out-of-stack write without consuming a program ID; warning, no-verification, and default modes admit it. This validates loader configuration, not GPU or driver safety.
+
 Two fresh-process strict-mode positive/negative pairs on RTX 5090 validate
 the real counter path: each admitted 13-instruction callback records exactly
 32,768 invocations across 4,096 threads. A 15-instruction lane-varying branch

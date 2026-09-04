@@ -207,7 +207,7 @@ LatencyBudget (CLC) & Scheduling Block & Device & 19 \\
 % \paragraph{Device Verification.} Across 18 GPU programs, the SIMT-aware verifier accepts 13 and correctly rejects 5 unsafe cases (lane-varying branches, non-uniform atomics, varying map-update keys).  
 
 \paragraph{Device-side Overhead}
-We evaluate device-side observability tools built on \sys (\Cref{tab:obs-overhead}) on NVIDIA P40 GPU using llama.cpp prefill (Llama 1B, sequence-mixed). Tools include \texttt{kernel\-ret\-snoop} (per-block finish timestamps), \texttt{thread\-hist} (load imbalance detection), and \texttt{launch\-late} (GPU kernel launch latency). Overhead is measured as token/s degradation during prefill. \sys achieves 3--14\% overhead versus NVBit's 85--93\%~\cite{villa2019nvbit}, due to the warp-uniform execution model. Attaching to a running process takes 273\,ms on average from \texttt{bpftime trace} startup to first GPU kernel detection, without application restart.
+We evaluate device-side observability tools built on \sys (\Cref{tab:obs-overhead}) on NVIDIA P40 GPU using llama.cpp prefill (Llama 1B, sequence-mixed). Tools include \texttt{kernel\-ret\-snoop} (per-block finish timestamps), \texttt{thread\-hist} (load imbalance detection), and \texttt{launch\-late} (GPU kernel launch latency). Overhead is measured as token/s degradation during prefill. \sys achieves 3--14\% overhead versus NVBit's 85--93\%~\cite{villa2019nvbit} in this prototype configuration. We omit attach latency because no supporting per-run records were retained.
 
 % \texttt{gpu\_sched\_trace}, \texttt{prefetch\_trace}, and \texttt{eviction\_trace} provide host-side observability for scheduling and memory management policies (\Cref{tab:obs-overhead}).
 \begin{table}[t]

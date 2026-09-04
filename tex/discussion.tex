@@ -40,14 +40,13 @@ reduce future driver coupling, but would not remove those implementation and
 verification obligations.
 
 \paragraph{Trampoline scaling}
-Warp aggregation reduces duplicated policy work per hook; it does not make
-total overhead independent of grid size. Instrumented warp-event counts grow
-with executed blocks and hook frequency, while register pressure, occupancy,
-map traffic and contention can change elapsed overhead. The workload results
-therefore do not establish constant total cost for arbitrarily large kernels.
-One-time attachment cost is separate from recurring per-event execution.
-% TODO: Integrate grid-scaling measurements and the complete matching RTX 5090
-% observability comparison before closing those measurement promises.
+Where enabled, warp aggregation reduces duplicated policy work per hook; it
+does not make total overhead independent of active work. The general runtime
+used by our RTX 5090 scaling study executes per-thread calls. At 4,096 blocks,
+its no-op increment is 0.0012--0.0022\,ms as active warps grow from 2,048 to
+32,768; a counter increment grows from 0.0204 to 0.5417\,ms. Fixed-active-work
+time does not increase over 256--4,096 launched blocks. This synthetic test
+does not establish constant cost for arbitrary handlers.
 
 \paragraph{Artifact scope}
 The release includes benchmark harnesses, policy source, compatibility patches
