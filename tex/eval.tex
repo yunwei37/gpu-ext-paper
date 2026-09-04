@@ -160,7 +160,7 @@ We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp
 \begin{figure*}[!t]
 \centering
 \includegraphics[width=\textwidth]{img/results-raw/runtime/microbench_comparison.pdf}
-\caption{Device-side overhead. (a) Naive per-thread injection vs \sys's SIMT-aware execution. (b) CPU map access latency via PCIe vs GPU-side operations.}
+\caption{Device-side overhead. (a) Naive per-thread injection vs \sys's SIMT-aware warp-aggregation prototype. (b) CPU map access latency via PCIe vs GPU-side operations.}
 \label{fig:microbench}
 \end{figure*}
 
@@ -206,28 +206,36 @@ LatencyBudget (CLC) & Scheduling Block & Device & 19 \\
 
 % \paragraph{Device Verification.} Across 18 GPU programs, the SIMT-aware verifier accepts 13 and correctly rejects 5 unsafe cases (lane-varying branches, non-uniform atomics, varying map-update keys).  
 
-\paragraph{Device-side Overhead}
-We evaluate device-side observability tools built on \sys (\Cref{tab:obs-overhead}) on NVIDIA P40 GPU using llama.cpp prefill (Llama 1B, sequence-mixed). Tools include \texttt{kernel\-ret\-snoop} (per-block finish timestamps), \texttt{thread\-hist} (load imbalance detection), and \texttt{launch\-late} (GPU kernel launch latency). Overhead is measured as token/s degradation during prefill. \sys achieves 3--14\% overhead versus NVBit's 85--93\%~\cite{villa2019nvbit} in this prototype configuration. We omit attach latency because no supporting per-run records were retained.
+\paragraph{Device-side Observability Overhead}
+On RTX~5090 (driver 575.57.08), ten randomized blocks use TinyLlama-1.1B
+\texttt{Q4\_K\_M}, llama.cpp build 7102, \texttt{pp=512}, and \texttt{tg=0}.
+Custom NVBit v1.8 adapters~\cite{villa2019nvbit} and \sys target the same
+\texttt{rope\_norm} task using native transports. All gates pass: both exit
+arms retain 23{,}068{,}672 records; histogram aggregates match, but only \sys
+retains the full vector.
+
+\Cref{tab:obs-overhead} reports mean overhead relative to paired controls. For
+exit records, NVBit-minus-\sys is $-0.0419$ percentage points (95\% bootstrap
+CI $[-0.0436,-0.0403]$), slightly favoring NVBit; for the exit-count histogram,
+it is $+6.2935$ points ($[6.1251,6.4708]$), favoring \sys. This task-specific
+mixed outcome is not a framework-wide ordering. GPU verification was disabled
+and timing excludes post-exit collector shutdown; we omit \texttt{launchlate}
+because its cross-clock comparison remains invalid.
 
 % \texttt{gpu\_sched\_trace}, \texttt{prefetch\_trace}, and \texttt{eviction\_trace} provide host-side observability for scheduling and memory management policies (\Cref{tab:obs-overhead}).
 \begin{table}[t]
 \centering
 \small
-\begin{tabularx}{\columnwidth}{@{} X l c c c @{}}
+\begin{tabularx}{\columnwidth}{@{} X r r @{}}
 \toprule
-\textbf{Tool} & \textbf{LOC} & \textbf{Domain} & \textbf{\sys} & \textbf{NVBit} \\
+\textbf{Observable} & \textbf{\sys} & \textbf{NVBit} \\
 \midrule
-kernelretsnoop & 153 & Device & 8\% & 85\% \\
-threadhist & 89 & Device & 3\% & 87\% \\
-launchlate & 347 & Host+Device & 14\% & 93\% \\
-% mem\_trace & 110 & Device & 5\% & --- \\
-% threadscheduling & 402 & Device & 7\% & --- \\
-% gpu\_sched\_trace & 586 & Host (kprobe) & <1\% & --- \\
-% prefetch\_trace & 430 & Host (kprobe) & <1\% & --- \\
-% eviction\_trace & 398 & Host (kprobe) & <1\% & --- \\
+Exit records (\texttt{kernelretsnoop}) & 99.663\% & 99.621\% \\
+Exit-count histogram (\texttt{threadhist}) & 4.007\% & 10.301\% \\
 \bottomrule
 \end{tabularx}
-\caption{\sys device-side observability tools and overhead comparison with NVBit.}
+\caption{Mean paired overhead on RTX~5090 (ten blocks; lower is better).
+Adapters retain native transports; histogram validation is aggregate.}
 \label{tab:obs-overhead}
 \end{table}
 
