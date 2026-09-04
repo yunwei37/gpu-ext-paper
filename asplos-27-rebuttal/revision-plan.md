@@ -7,8 +7,13 @@ The [review archive](README.md) preserves all seven reviews, the original
 Q1–Q15 author response, and the submitted revision/shepherd comments; the
 [live completion checklist](../../revision-completion-checklist.md) tracks
 experiments, paper integration and artifact publication separately.
-MoE-Infinity, XSched, the GPreempt contention study, FineMoE, Hummingbird and
-POD have completed their scoped comparisons, including adverse results. Two
+MoE-Infinity, XSched, the GPreempt contention and LC-knee studies, Expert
+Buffering, FineMoE, Hummingbird and POD have completed their scoped
+comparisons, including adverse results. The
+[reviewer-facing ledger](../../experiment/policy/reference/RELATED_POLICY_EXPRESSIBILITY.md)
+now covers 48 papers across seven policy families and links each measured
+baseline -> native-policy -> BPF result without classifying any surveyed whole
+system as fully expressible. Two
 actual strict-device counter positive/negative pairs pass. The
 [invalid-prefetch transition campaign](../../experiment/revision-safety/prefetch-invalid-575-02/result-review.md)
 now completes all three live controls and exact old-UVM restoration. The
@@ -18,8 +23,12 @@ request after a cross-arm correctness failure; its promised measurement is not
 complete. Expert Buffering has completed its matched-policy study. RTX 5090
 Table 1 correctness now reaches the expected event counts, but its launch
 latency comparison still fails the frozen cross-clock gates: repaired NVBit
-calibration passes, while gpubpf leaves 200/220 intervals uncertain; no timing
-cells have started, so it remains in progress. POD's separate phase campaign
+calibration passes, while gpubpf leaves 200/220 intervals uncertain. The first
+two-tool non-cross-clock preflight also remains failed because its gpubpf
+kernel-return cell captured 991,232/1,441,792 events and reported all 450,560
+capacity drops. A phase-specific capacity repair clean-builds, but no repaired
+real preflight or formal timing block exists, so Table 1 remains incomplete.
+POD's separate phase campaign
 is complete and measures about 1.8% same-path operator cost while exposing a
 large, explicitly non-generic fresh-process cold path. A new cross-layer map
 campaign also completes 15/15 cells, recovering 34,560 bounded raw tuples and
@@ -29,8 +38,10 @@ trampoline-scaling study is complete: no-op cost remains in the
 0.0012--0.0022 ms range at 4,096 blocks, while a counter callback grows from
 0.0204 to 0.5417 ms as active warps grow from 2,048 to 32,768. This is a
 controlled hook-cost result, not an application-level performance claim.
-Original agent transcripts have not been
-recovered.
+The [GPreempt load report](../../../workloads/gpreempt/results-load-study-575-20260903.md)
+and [LC-knee report](../../../workloads/gpreempt/results-lc-knee-575-20260903.md)
+retain the foreground/background tradeoff and conditional overload boundary.
+Original agent transcripts have not been recovered.
 The integrated draft was built and visually checked (16 pages, conclusion on
 page 14); the working page budget and unmeasured commitments remain open.
 Deployment and loader audits are also complete at their stated CPU-only
