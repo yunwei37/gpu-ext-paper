@@ -16,13 +16,21 @@ scheduler-init diagnostic and its 16-cell live transition matrix are complete;
 all cells passed and the original driver/services were restored. LMCache disk is paused at the user's
 request after a cross-arm correctness failure; its promised measurement is not
 complete. Expert Buffering has completed its matched-policy study. RTX 5090
-Table 1 has now run all seven correctness arms, with four valid and three
-fail-closed diagnostics but no timing cells, so it remains in progress. The
-new trampoline-scaling harness likewise has no valid attached timing yet.
+Table 1 correctness now reaches the expected event counts, but its launch
+latency arms still fail the frozen cross-clock calibration gates; no timing
+cells have started, so it remains in progress. The synthetic RTX 5090
+trampoline-scaling study is complete: no-op cost remains in the
+0.0012--0.0022 ms range at 4,096 blocks, while a counter callback grows from
+0.0204 to 0.5417 ms as active warps grow from 2,048 to 32,768. This is a
+controlled hook-cost result, not an application-level performance claim.
 Original agent transcripts have not been
 recovered.
 The integrated draft was built and visually checked (16 pages, conclusion on
 page 14); the working page budget and unmeasured commitments remain open.
+Deployment and loader audits are also complete at their stated CPU-only
+boundaries: both startup and running-process lifecycle paths completed 5/5
+times, and strict verification rejected all three invalid-program trials
+without consuming a program ID, whereas warning/default modes admitted them.
 
 Several assertions in the old proposal were corrected by source/raw-data audit:
 the old 96% launch-latency metric was not host-to-kernel-entry latency; historical
