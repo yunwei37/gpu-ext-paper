@@ -29,6 +29,17 @@ the callbacks themselves are not free. This separate result does not relabel
 the earlier Table 1 runtime as verifier-enabled. The retained `s0-575-01`
 parser-gate failure contributes no sample.
 
+The separate
+[CPU-only device-verifier scaling campaign](../../../workloads/llama.cpp/observability_overhead/revision-rq4/device-verifier-scaling/results-verifier-scaling-575-01-20260904.md)
+completed 200/200 accepted calls in 20 randomized blocks, with no timeout,
+retry, major fault, or noise veto. Its preregistered approximately-linear
+hypothesis is **contradicted**: the linear-family Theil--Sen exponent is 1.3841
+[1.3813, 1.3898], although uniform diamonds measure 1.0255 [1.0215, 1.0315].
+At 4,096 instructions the medians are 1,899.0 and 572.0 ms, respectively. This
+supports only a CPU-side, one-time `verify_gpu_program` program-shape boundary;
+it does not establish verifier soundness, device overhead, the cause of the
+crossover, or generally linear scaling.
+
 ---
 
 ## 0. Commitment tiers (read this first)

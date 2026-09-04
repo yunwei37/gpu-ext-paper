@@ -42,6 +42,14 @@ equivalence or zero verifier overhead. Relative to uninstrumented controls,
 STRICT throughput is 99.6631% lower for the full exit-record stream and
 4.0729% lower for the histogram, so S0 also does not make device callbacks
 free. The retained `s0-575-01` parser-gate failure contributes no sample. The
+[CPU-only device-verifier scaling campaign](../../../workloads/llama.cpp/observability_overhead/revision-rq4/device-verifier-scaling/results-verifier-scaling-575-01-20260904.md)
+accepted all 200 safe synthetic programs in 20 randomized blocks without a
+timeout or retry. Its frozen approximately-linear expectation is contradicted:
+the linear-family exponent is 1.3841 [1.3813, 1.3898], while uniform diamonds
+measure 1.0255 [1.0215, 1.0315]; at 4,096 instructions their medians are
+1,899.0 and 572.0 ms. This is a program-shape and one-time admission-cost
+boundary, not evidence about soundness, GPU execution, per-pass causality, or
+general linear scaling. The
 [CPU-only aggregate verifier matrix](../../experiment/revision-safety/rejection-matrix-cpu-575-01/results.md)
 is complemented by bpftime commit `aae1f22`: six unsafe/control pairs pass for
 memory bounds, termination and four SIMT rules. That aggregate explicitly
