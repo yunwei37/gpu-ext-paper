@@ -63,19 +63,20 @@ The prototype rejects failed programs at attachment only when built with verific
 
 A 15-cell CPU loader matrix exercises \texttt{LD\_PRELOAD}$\rightarrow$\texttt{BPF\_PROG\_LOAD}. In three repetitions, strict mode rejects an out-of-stack write without consuming a program ID; warning, no-verification, and default modes admit it. This validates loader configuration, not GPU or driver safety.
 
-Two fresh-process strict-mode positive/negative pairs on RTX 5090 validate
-the real counter path: each admitted 13-instruction callback records exactly
-32,768 invocations across 4,096 threads. A 15-instruction lane-varying branch
-is rejected before its policy hook is created; subsequent full counter
-readback remains zero while the original CUDA target stays correct.
+Two fresh-process strict-mode pairs on RTX 5090 and the verifier-enabled Table~1
+runtime validate the real counter path: each admitted 13-instruction callback
+records 32,768 invocations across 4,096 threads. A 15-instruction lane-varying
+branch is rejected before policy-entry insertion and bootstrap; full readback
+remains zero while the CUDA target stays correct. Generic interception predates
+admission.
 These bounded controls do not verify POD's pointer/ticket ABI or establish
 general compiler/runtime soundness.
 
 % Source: bpftime-r5 commit 36610ee, gpu_verifier.cpp:267;
 % uniformity_analysis.cpp:760; simt_safety_check.cpp:174;
 % gpu_revision_safety_test.cpp:146; nv_attach_impl.cpp:228.
-% Actual strict counter pairs: bpftime-r5 ea9907d; gpu_ext/workloads/
-% bpftime-device-smoke/raw/575-r5-strict-{02,03}. Performance build-cuda-pr503
+% Actual strict counter pairs: bpftime-table1-575 b266cf2; gpu_ext/workloads/
+% bpftime-device-smoke/raw/575-table1-port-strict-{01,02}. Performance build-cuda-pr503
 % remains ENABLE_EBPF_VERIFIER=OFF; these controls do not verify that runtime.
 
 \paragraph{Failure classes and TCB}

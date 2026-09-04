@@ -14,7 +14,10 @@ comparisons, including adverse results. The
 now covers 48 papers across seven policy families and links each measured
 baseline -> native-policy -> BPF result without classifying any surveyed whole
 system as fully expressible. Two
-actual strict-device counter positive/negative pairs pass. The
+original strict-device counter positive/negative pairs pass, and two fresh
+pairs also pass on the verifier-enabled Table 1 runtime. Actual
+`kernelretsnoop`/`threadhist` strict admission and paired verifier-cost timing
+remain open. The
 [invalid-prefetch transition campaign](../../experiment/revision-safety/prefetch-invalid-575-02/result-review.md)
 now completes all three live controls and exact old-UVM restoration. The
 scheduler-init diagnostic and its 16-cell live transition matrix are complete;
