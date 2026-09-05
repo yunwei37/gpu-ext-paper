@@ -126,16 +126,22 @@ boundaries: both startup and running-process lifecycle paths completed 5/5
 times, and strict verification rejected all three invalid-program trials
 without consuming a program ID, whereas warning/default modes admitted them.
 
-The [2026-09-04 eBPF-to-SASS AOT readiness note](../../experiment/revision-sass-aot-readiness-20260904.md)
-records a committed artifact-feasibility prototype on bpftime branch
-`revision/sass-backend` at `bf048fa`: a real BPF ELF section passes through the
-existing strict GPU verifier and PTX compiler, CUDA 12.9 `ptxas` assembles it
-for `sm_120`, and `cuobjdump` confirms SASS plus the expected entry symbol. The
-invalid warp-rule case is rejected before compiler/assembler artifacts. The
-documented build and CTest run passed (1/1 tests, 0 failures). This is not yet
-a live PTX-free application insertion or overhead campaign, so it does not fully
-validate the historical rebuttal claim of a working SASS-level patching
-prototype.
+The [2026-09-05 eBPF-to-SASS AOT readiness note](../../experiment/revision-sass-aot-readiness-20260904.md)
+records verified standalone live cubin execution on bpftime branch
+`revision/sass-backend` at `fd976ea`: a real clang-built BPF ELF section
+(`cuda__/sass_aot` writing 42) passes through strict GPU verification
+(explicit 8-byte PREVAIL context plus SIMT verification), eBPF-to-NVPTX
+compilation, CUDA 12.9 `ptxas` assembly for `sm_120`, and CUDA Driver API
+module load, entry-point lookup, 1x1x1 launch, synchronize, and DtoH
+readback. The live command exited zero and printed the verified SASS result:
+42; post-run driver 575.57.08, 15 MiB, zero percent GPU utilization. The
+invalid lane-varying SIMT case is rejected before PTX, cubin, or ptxas.
+CPU build targets and CTest verifier/AOT suites all passed; the focused
+explicit-context verifier test passed 3 assertions. The boundary is standalone
+generated cubin only; no instrumentation or injection into arbitrary
+PTX-free existing-application SASS/fatbin, no application hook or
+helper/map semantics, and not performance evidence or full historical NVBit
+claim validation.
 
 Several assertions in the old proposal were corrected by source/raw-data audit:
 the old 96% launch-latency metric was not host-to-kernel-entry latency; historical
