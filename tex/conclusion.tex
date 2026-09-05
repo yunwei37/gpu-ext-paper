@@ -1,3 +1,7 @@
 \section{Conclusion}
+% 结论。
 \label{sec:conclusion}
-We presented \sys, a policy runtime that models each GPU resource as an asynchronous state machine whose state transitions are directed by verified eBPF programs across the host-device boundary. Across four workloads, \sys improves throughput by up to $1.76\times$ over application-tuned baselines and reduces tail latency by up to $2\times$, demonstrating that OS kernel extensibility extends effectively to GPU management.
+We presented \sys, a policy runtime that models each GPU resource as an asynchronous state machine whose state transitions are directed by verified eBPF programs across the host-device boundary.
+% 我们提出了 \sys,一个策略运行时,它将每个 GPU 资源建模为异步状态机,其状态迁移由跨越主机-设备边界的经验证的 eBPF 程序驱动。
+Across four workloads, \sys improves throughput by up to $1.76\times$ over application-tuned baselines and reduces tail latency by up to $2\times$, demonstrating that OS kernel extensibility extends effectively to GPU management.
+% 在四类工作负载上,\sys 相比应用调优的基线将吞吐量最高提升 $1.76\times$、将尾延迟最高降低 $2\times$,表明 OS 内核可扩展性可以有效延伸到 GPU 管理。

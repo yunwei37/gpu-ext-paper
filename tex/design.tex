@@ -1,13 +1,25 @@
 \section{\sys Design}
+% \sys{} 设计。
 
 % \arq{Introduce \sys following the intro discussion}
 
-This section presents the design of \sys{}, a programmable OS subsystem for safe, dynamic, full-stack GPU resource management. We describe the system workflow (\S\ref{sec:workflow}), resource state machines (\S\ref{sec:design-interfaces}), GPU-specific eBPF challenges (\S\ref{sec:motivation-challenges}), and our asynchronous execution model (\S\ref{sec:exec-model}).
+This section presents the design of \sys{}, a programmable OS subsystem for safe, dynamic, full-stack GPU resource management.
+% 本节介绍 \sys{} 的设计：它是一个可编程的 OS 子系统，用于安全、动态、全栈式的 GPU 资源管理。
+We describe the system workflow (\S\ref{sec:workflow}), resource state machines (\S\ref{sec:design-interfaces}), GPU-specific eBPF challenges (\S\ref{sec:motivation-challenges}), and our asynchronous execution model (\S\ref{sec:exec-model}).
+% 我们介绍系统工作流（\S\ref{sec:workflow}）、资源状态机（\S\ref{sec:design-interfaces}）、GPU 特有的 eBPF 挑战（\S\ref{sec:motivation-challenges}），以及我们的异步执行模型（\S\ref{sec:exec-model}）。
 
 \subsection{\sys{} Workflow}
+% \sys{} 工作流
 \label{sec:workflow}
 
-\sys{} extends eBPF (extended Berkeley Packet Filter) to GPU resource management. eBPF programs are callbacks attached to hooks such as \texttt{struct\_ops}, \texttt{kprobe}, and \texttt{uprobe}, enabling safe execution within the OS kernel via load-time verification and JIT compilation. The verifier ensures termination, memory safety, type correctness, and restricts calls to approved helpers and kfuncs (OS kernel functions). As shown in Figure~\ref{fig:system-design}, \sys{} extends this pipeline to GPUs: policies build and load with standard eBPF tools, contain both host and device components, run across the host driver and GPU, are verified with SIMT-aware checks (\S\ref{sec:verification}), JIT-compiled to CPU or GPU code (e.g., PTX), use cross-layer maps, and are dynamically installed via OS kernel hooks and DBI without application or driver restarts.
+\sys{} extends eBPF (extended Berkeley Packet Filter) to GPU resource management.
+% \sys{} 将 eBPF（扩展伯克利包过滤器，extended Berkeley Packet Filter）扩展到 GPU 资源管理。
+eBPF programs are callbacks attached to hooks such as \texttt{struct\_ops}, \texttt{kprobe}, and \texttt{uprobe}, enabling safe execution within the OS kernel via load-time verification and JIT compilation.
+% eBPF 程序是附加在 \texttt{struct\_ops}、\texttt{kprobe} 和 \texttt{uprobe} 等钩子上的回调，通过加载时验证和 JIT 编译在 OS 内核中安全执行。
+The verifier ensures termination, memory safety, type correctness, and restricts calls to approved helpers and kfuncs (OS kernel functions).
+% 验证器保证终止性、内存安全和类型正确性，并限制只能调用经过批准的 helper 和 kfunc（OS 内核函数）。
+As shown in Figure~\ref{fig:system-design}, \sys{} extends this pipeline to GPUs: policies build and load with standard eBPF tools, contain both host and device components, run across the host driver and GPU, are verified with SIMT-aware checks (\S\ref{sec:verification}), JIT-compiled to CPU or GPU code (e.g., PTX), use cross-layer maps, and are dynamically installed via OS kernel hooks and DBI without application or driver restarts.
+% 如 Figure~\ref{fig:system-design} 所示，\sys{} 将此流程扩展到 GPU：策略使用标准 eBPF 工具构建和加载，同时包含主机端和设备端组件，跨主机驱动和 GPU 运行，经 SIMT 感知检查验证（\S\ref{sec:verification}），JIT 编译为 CPU 或 GPU 代码（如 PTX），使用跨层 map，并通过 OS 内核钩子和 DBI 动态安装，无需重启应用或驱动。
 
 \begin{figure}
 \centering
@@ -19,58 +31,148 @@ This section presents the design of \sys{}, a programmable OS subsystem for safe
 % \arq{I think it makes sense to have a \sys{} workflow section that essentially describes how the system goes from eBPF input program to all of the steps for a running policy.  This can (basically) introduce all of the eBPF-based stuff that the reader needs to understand.}
 
 \subsection{Resource State Machines}
+% 资源状态机
 \label{sec:design-interfaces}
 
-\sys{} defines three resource domains. Memory chunks move between host and device memory via eviction and prefetching. GPU kernels (launched tasks) and GPU thread-blocks (parallel execution units within kernels) transition among ready, running, and finished states through scheduling and preemption operations.
+\sys{} defines three resource domains.
+% \sys{} 定义三个资源域。
+Memory chunks move between host and device memory via eviction and prefetching.
+% 内存块通过逐出和预取在主机内存和设备内存之间移动。
+GPU kernels (launched tasks) and GPU thread-blocks (parallel execution units within kernels) transition among ready, running, and finished states through scheduling and preemption operations.
+% GPU 内核（已启动的任务）和 GPU 线程块（内核内的并行执行单元）通过调度和抢占操作在就绪、运行和完成状态之间转换。
 
 \subsection{GPU-Specific Challenges for eBPF Extensibility}
+% eBPF 可扩展性的 GPU 特有挑战
 \label{sec:motivation-challenges}
 % \arq{If we're tight on space, I think this can become a paragraph in 3.0 instead of being a subsection.}
 
-CPU eBPF does not directly transfer to GPUs. CPU eBPF callbacks make synchronous decisions at fixed transition points, immediately affecting local resources, and subsystems are extended independently. In contrast, GPUs are discrete processors: host policy decisions affect resources asynchronously on a separate device. Thus, three architectural mismatches introduce key challenges:
+CPU eBPF does not directly transfer to GPUs.
+% CPU eBPF 不能直接照搬到 GPU。
+CPU eBPF callbacks make synchronous decisions at fixed transition points, immediately affecting local resources, and subsystems are extended independently.
+% CPU eBPF 回调在固定的转换点同步做出决策，立即影响本地资源，且各子系统相互独立地扩展。
+In contrast, GPUs are discrete processors: host policy decisions affect resources asynchronously on a separate device.
+% 相比之下，GPU 是独立的处理器：主机端的策略决策在另一台设备上异步影响资源。
+Thus, three architectural mismatches introduce key challenges:
+% 因此，三处架构错配带来了关键挑战：
 
-\textbf{Cross-device latency.} CPU eBPF callbacks execute synchronously, but GPU operations (e.g., page migration across PCIe) take milliseconds (\S\ref{sec:arch-gpu}). GPU policies must proactively initiate asynchronous actions instead of reacting only at faults.
+\textbf{Cross-device latency.}
+% \textbf{跨设备延迟。}
+CPU eBPF callbacks execute synchronously, but GPU operations (e.g., page migration across PCIe) take milliseconds (\S\ref{sec:arch-gpu}).
+% CPU eBPF 回调同步执行，而 GPU 操作（如跨 PCIe 的页面迁移）需要毫秒级时间（\S\ref{sec:arch-gpu}）。
+GPU policies must proactively initiate asynchronous actions instead of reacting only at faults.
+% GPU 策略必须主动发起异步动作，而不是仅在缺页时被动响应。
 
-\textbf{Memory-scheduling coupling.} CPU extensibility treats scheduling and memory independently, but GPU page faults simultaneously trigger memory events and scheduling stalls due to limited device memory. GPU policies must jointly coordinate these domains.
+\textbf{Memory-scheduling coupling.}
+% \textbf{内存与调度耦合。}
+CPU extensibility treats scheduling and memory independently, but GPU page faults simultaneously trigger memory events and scheduling stalls due to limited device memory.
+% CPU 可扩展性将调度和内存独立对待，但由于设备内存有限，GPU 页面缺页会同时触发内存事件和调度停顿。
+GPU policies must jointly coordinate these domains.
+% GPU 策略必须联合协调这两个领域。
 
-\textbf{OS kernel bypass.} GPU runtimes bypass the OS kernel (e.g., user-space command buffers, doorbells), revealing only coarse-grained resource events to drivers, not fine-grained GPU kernel launches or application phases. GPU policies must attach to user-space application functions, yet standard eBPF prohibits these callbacks from modifying OS state required for resource management. Exposing GPU driver controls without addressing these mismatches risks resource leaks, hardware hangs, or OS kernel panics.
+\textbf{OS kernel bypass.}
+% \textbf{绕过 OS 内核。}
+GPU runtimes bypass the OS kernel (e.g., user-space command buffers, doorbells), revealing only coarse-grained resource events to drivers, not fine-grained GPU kernel launches or application phases.
+% GPU 运行时绕过 OS 内核（如用户态命令缓冲区、doorbell），只向驱动暴露粗粒度的资源事件，而非细粒度的 GPU 内核启动或应用阶段。
+GPU policies must attach to user-space application functions, yet standard eBPF prohibits these callbacks from modifying OS state required for resource management.
+% GPU 策略必须附加到用户态应用函数上，但标准 eBPF 禁止这些回调修改资源管理所需的 OS 状态。
+Exposing GPU driver controls without addressing these mismatches risks resource leaks, hardware hangs, or OS kernel panics.
+% 在不解决这些错配的情况下暴露 GPU 驱动控制接口，可能导致资源泄漏、硬件挂起或 OS 内核崩溃。
 % \arq{Split into subsection on the state machine model and a separate subsection on the \sys{} execution model.  The example also needs to go... somewhere different?}
 
 \subsection{Asynchronous Execution Model}
+% 异步执行模型
 \label{sec:exec-model}
 
-To address these challenges, \sys{} separates callback triggers from their effects (\Cref{fig:exec-model}). Policies, as verified eBPF programs invoking OS kernel functions (\emph{kfuncs}), can attach to driver events, user-space uprobes, and device-side events. Each trigger asynchronously initiates multiple proactive or deferred state transitions across memory and scheduling domains without blocking, coordinated through eBPF workqueues. For example, a uprobe on \texttt{cudaLaunchKernel} concurrently initiates a 6.6\,ms DMA prefetch based on device observations and preempts another tenant to free GPU memory.
+To address these challenges, \sys{} separates callback triggers from their effects (\Cref{fig:exec-model}).
+% 为应对这些挑战，\sys{} 将回调触发与其效果解耦（\Cref{fig:exec-model}）。
+Policies, as verified eBPF programs invoking OS kernel functions (\emph{kfuncs}), can attach to driver events, user-space uprobes, and device-side events.
+% 策略是经过验证的 eBPF 程序，可调用 OS 内核函数（\emph{kfunc}），附加到驱动事件、用户态 uprobe 和设备端事件上。
+Each trigger asynchronously initiates multiple proactive or deferred state transitions across memory and scheduling domains without blocking, coordinated through eBPF workqueues.
+% 每个触发通过 eBPF 工作队列协调，异步地跨内存和调度领域发起多个主动或被延迟的状态转换，且不阻塞。
+For example, a uprobe on \texttt{cudaLaunchKernel} concurrently initiates a 6.6\,ms DMA prefetch based on device observations and preempts another tenant to free GPU memory.
+% 例如，\texttt{cudaLaunchKernel} 上的 uprobe 并发地基于设备观测发起一次 6.6\,ms 的 DMA 预取，并抢占另一租户以释放 GPU 内存。
 
 \input{tex/fig_exec_model}
 
-To ensure OS kernel safety, verified kfuncs restrict policy actions to two dimensions: \emph{selection} (choosing resources, e.g., eviction order, tenant preemption priority) and \emph{timing} (when to act, e.g., proactive prefetch). The driver always controls underlying state machines; policies only select ordering and timing of driver-managed operations, cannot allocate memory or remove tasks, and revert to FIFO defaults under resource pressure or misconfiguration. Currently, a single policy program is loaded system-wide but may internally differentiate tenant treatment for priorities, similar to sched\_ext; per-tenant isolation is future work.
+To ensure OS kernel safety, verified kfuncs restrict policy actions to two dimensions: \emph{selection} (choosing resources, e.g., eviction order, tenant preemption priority) and \emph{timing} (when to act, e.g., proactive prefetch).
+% 为保证 OS 内核安全，经验证的 kfunc 将策略动作限制在两个维度：\emph{选择}（选择资源，如逐出顺序、租户抢占优先级）和\emph{时机}（何时行动，如主动预取）。
+The driver always controls underlying state machines; policies only select ordering and timing of driver-managed operations, cannot allocate memory or remove tasks, and revert to FIFO defaults under resource pressure or misconfiguration.
+% 驱动始终掌控底层状态机；策略只能选择驱动管理的操作的顺序和时机，不能分配内存或移除任务，并在资源压力或配置错误时回退到 FIFO 默认行为。
+Currently, a single policy program is loaded system-wide but may internally differentiate tenant treatment for priorities, similar to sched\_ext; per-tenant isolation is future work.
+% 目前，单个策略程序系统级加载，但可在内部按优先级区分对待租户，类似 sched\_ext；按租户隔离是未来工作。
 
 \subsection{Runtime Verification and Optimizations}
+% 运行时验证与优化
 \label{sec:verification}
 
-\sys{}'s threat model mirrors standard eBPF: administrators are trusted, but policy code may be buggy or misconfigured. The trusted computing base (TCB) includes the OS kernel, \sys driver module, GPU compiler backend, and GPU driver/firmware. Host-side verification directly reuses the Linux eBPF verifier (\S\ref{sec:implementation}).
+\sys{}'s threat model mirrors standard eBPF: administrators are trusted, but policy code may be buggy or misconfigured.
+% \sys{} 的威胁模型与标准 eBPF 相同：管理员可信，但策略代码可能有 bug 或配置错误。
+The trusted computing base (TCB) includes the OS kernel, \sys driver module, GPU compiler backend, and GPU driver/firmware.
+% 可信计算基（TCB）包括 OS 内核、\sys 驱动模块、GPU 编译器后端以及 GPU 驱动/固件。
+Host-side verification directly reuses the Linux eBPF verifier (\S\ref{sec:implementation}).
+% 主机端验证直接复用 Linux eBPF 验证器（\S\ref{sec:implementation}）。
 
 \subsubsection{SIMT-aware Verification}
+% SIMT 感知验证
 
-Because GPUs execute in SIMT (Single Instruction, Multiple Threads) mode, device-side eBPF programs must maintain warp-level execution semantics within eBPF’s scalar model. \sys{} enforces warp-uniformity via SIMT-aware verification: it distinguishes \emph{warp-uniform} (identical across warp threads, e.g., region IDs) from \emph{lane-varying} (thread-local state) values. Lane-varying values cannot affect control flow or external side effects. Branch conditions, loop bounds, and map-update keys must be warp-uniform or warp-aggregated. Additionally, \sys{} forbids GPU-wide barriers, global synchronization, non-uniform atomics, and it bounds resource usage per policy hook.
+Because GPUs execute in SIMT (Single Instruction, Multiple Threads) mode, device-side eBPF programs must maintain warp-level execution semantics within eBPF’s scalar model.
+% 由于 GPU 以 SIMT（单指令多线程）模式执行，设备端 eBPF 程序必须在 eBPF 的标量模型内保持 warp 级执行语义。
+\sys{} enforces warp-uniformity via SIMT-aware verification: it distinguishes \emph{warp-uniform} (identical across warp threads, e.g., region IDs) from \emph{lane-varying} (thread-local state) values.
+% \sys{} 通过 SIMT 感知验证强制 warp 一致性：区分\emph{warp 一致}（各 warp 线程取值相同，如区域 ID）和\emph{lane 可变}（线程局部状态）的值。
+Lane-varying values cannot affect control flow or external side effects.
+% lane 可变的值不能影响控制流或外部副作用。
+Branch conditions, loop bounds, and map-update keys must be warp-uniform or warp-aggregated.
+% 分支条件、循环边界和 map 更新键必须是 warp 一致的或经 warp 聚合的。
+Additionally, \sys{} forbids GPU-wide barriers, global synchronization, non-uniform atomics, and it bounds resource usage per policy hook.
+% 此外，\sys{} 禁止 GPU 级屏障、全局同步和非一致原子操作，并限制每个策略钩子的资源用量。
 
 \subsubsection{Warp-level Execution Optimizations}
+% warp 级执行优化
 
-Even after SIMT verification, scalar per-thread eBPF execution incurs overhead (\eg duplicate map updates). To resolve this, \sys{} introduces warp-level aggregated execution: lanes compute local results without affecting control flow or shared state; these results are aggregated warp-wide, and a warp leader executes the policy once, broadcasting decisions back (\S\ref{sec:implementation}).
+Even after SIMT verification, scalar per-thread eBPF execution incurs overhead (\eg duplicate map updates).
+% 即使通过 SIMT 验证，逐线程标量执行 eBPF 仍有开销（\eg 重复的 map 更新）。
+To resolve this, \sys{} introduces warp-level aggregated execution: lanes compute local results without affecting control flow or shared state; these results are aggregated warp-wide, and a warp leader executes the policy once, broadcasting decisions back (\S\ref{sec:implementation}).
+% 为解决此问题，\sys{} 引入 warp 级聚合执行：各 lane 计算局部结果而不影响控制流或共享状态；结果被 warp 级聚合，由 warp leader 执行一次策略，并将决策广播回去（\S\ref{sec:implementation}）。
 
 
 \subsubsection{Hierarchical Cross-layer Maps for State Coordination}
+% 用于状态协调的分层跨层 map
 \label{sec:cross-layer-maps}
 
-To share state across CPU and GPU contexts, \sys{} introduces cross-layer maps: logically unified key-value stores accessible by host driver hooks, GPU-side policies, and user-space control planes, verified through standard eBPF. Physically, maps are hierarchical shards dynamically placed by the runtime based on access patterns, latency, and capacity constraints (\S\ref{sec:implementation}). Following eBPF's philosophy, \sys{} maps use eventual consistency: periodically merging device-local shards into canonical snapshots at GPU kernel completions. This model suffices as policies rely on approximate statistics; occasional staleness may affect optimality but cannot violate correctness invariants like memory integrity.
+To share state across CPU and GPU contexts, \sys{} introduces cross-layer maps: logically unified key-value stores accessible by host driver hooks, GPU-side policies, and user-space control planes, verified through standard eBPF.
+% 为在 CPU 和 GPU 上下文之间共享状态，\sys{} 引入跨层 map：逻辑上统一的键值存储，可被主机驱动钩子、GPU 侧策略和用户态控制面访问，并通过标准 eBPF 验证。
+Physically, maps are hierarchical shards dynamically placed by the runtime based on access patterns, latency, and capacity constraints (\S\ref{sec:implementation}).
+% 物理上，map 是由运行时根据访问模式、延迟和容量约束动态放置的分层分片（\S\ref{sec:implementation}）。
+Following eBPF's philosophy, \sys{} maps use eventual consistency: periodically merging device-local shards into canonical snapshots at GPU kernel completions.
+% 遵循 eBPF 的理念，\sys{} 的 map 采用最终一致性：在 GPU 内核完成时周期性地将设备本地分片合并为权威快照。
+This model suffices as policies rely on approximate statistics; occasional staleness may affect optimality but cannot violate correctness invariants like memory integrity.
+% 该模型足够用，因为策略依赖近似统计；偶尔的过期可能影响最优性，但不会违反内存完整性等正确性不变量。
 
 \subsection{Example: MoE Expert Offloading}
+% 示例：MoE 专家卸载
 
 % \arq{I think this would be a good final subsection that "summarizes" most of what we just read}
-We illustrate this model using Mixture-of-Experts (MoE) offloading, where models exceed GPU memory capacity. Since all experts do not fit and activate concurrently, the GPU driver continuously evicts and migrates pages. The default driver's LRU eviction and prefetching are unaware of expert activations, causing costly PCIe DMA stalls.
+We illustrate this model using Mixture-of-Experts (MoE) offloading, where models exceed GPU memory capacity.
+% 我们以混合专家（MoE）卸载为例说明该模型，其中模型大小超出 GPU 内存容量。
+Since all experts do not fit and activate concurrently, the GPU driver continuously evicts and migrates pages.
+% 由于所有专家无法同时驻留并激活，GPU 驱动不断逐出和迁移页面。
+The default driver's LRU eviction and prefetching are unaware of expert activations, causing costly PCIe DMA stalls.
+% 默认驱动的 LRU 逐出和预取感知不到专家激活，造成代价高昂的 PCIe DMA 停顿。
 
-A \sys{} policy uses three cooperating eBPF programs at different layers (\Cref{fig:moe-listing}), coordinating via a shared cross-layer map. First, during GPU kernel execution, a device-side eBPF handler inserted at warp entry tracks warp-level accesses to expert pages, recording per-page access counts for each warp in a hierarchical cross-layer map. Second, a uprobe eBPF program attached to \texttt{cuda\-Launch\-Kernel} proactively reads these counts to predict upcoming expert activations and asynchronously initiates cross-device prefetches (\texttt{bpf\_gpu\_\allowbreak{}prefetch\_async}), overlapping the millisecond-scale memory migration with computation to avoid expensive stalls (\emph{timing}). If memory pressure arises, this same program coordinates across memory and scheduling by preempting lower-priority GPU tasks via \texttt{gdrv\_sched\_\allowbreak{}preempt} (\emph{selection}). Finally, upon memory eviction (\emph{evict\_prepare}), a driver-side eBPF handler leverages the same expert access counts to evict cold pages first (LFU ordering), protecting hot experts (\emph{selection}). Unlike framework-level offloading that often migrates experts as atomic units, \sys{} operates at page granularity, enabling finer-grained compute-transfer overlap.
+A \sys{} policy uses three cooperating eBPF programs at different layers (\Cref{fig:moe-listing}), coordinating via a shared cross-layer map.
+% 一个 \sys{} 策略使用三个在不同层协作的 eBPF 程序（\Cref{fig:moe-listing}），通过共享的跨层 map 协调。
+First, during GPU kernel execution, a device-side eBPF handler inserted at warp entry tracks warp-level accesses to expert pages, recording per-page access counts for each warp in a hierarchical cross-layer map.
+% 首先，在 GPU 内核执行期间，插入在 warp 入口的设备端 eBPF 处理器跟踪对专家页面的 warp 级访问，将每页的访问次数按 warp 记录到分层跨层 map 中。
+Second, a uprobe eBPF program attached to \texttt{cuda\-Launch\-Kernel} proactively reads these counts to predict upcoming expert activations and asynchronously initiates cross-device prefetches (\texttt{bpf\_gpu\_\allowbreak{}prefetch\_async}), overlapping the millisecond-scale memory migration with computation to avoid expensive stalls (\emph{timing}).
+% 其次，附加到 \texttt{cuda\-Launch\-Kernel} 的 uprobe eBPF 程序主动读取这些计数，预测即将到来的专家激活，并异步发起跨设备预取（\texttt{bpf\_gpu\_\allowbreak{}prefetch\_async}），将毫秒级的内存迁移与计算重叠以避免昂贵的停顿（\emph{时机}）。
+If memory pressure arises, this same program coordinates across memory and scheduling by preempting lower-priority GPU tasks via \texttt{gdrv\_sched\_\allowbreak{}preempt} (\emph{selection}).
+% 如果出现内存压力，同一程序通过 \texttt{gdrv\_sched\_\allowbreak{}preempt} 抢占低优先级 GPU 任务，跨内存和调度领域进行协调（\emph{选择}）。
+Finally, upon memory eviction (\emph{evict\_prepare}), a driver-side eBPF handler leverages the same expert access counts to evict cold pages first (LFU ordering), protecting hot experts (\emph{selection}).
+% 最后，在内存逐出（\emph{evict\_prepare}）时，驱动端 eBPF 处理器利用同样的专家访问计数先逐出冷页面（LFU 顺序），保护热点专家（\emph{选择}）。
+Unlike framework-level offloading that often migrates experts as atomic units, \sys{} operates at page granularity, enabling finer-grained compute-transfer overlap.
+% 与通常以专家为原子单位迁移的框架级卸载不同，\sys{} 以页面粒度操作，实现更细粒度的计算-传输重叠。
 Each eBPF program captures partial state at different layers; cross-layer maps unify this fragmented visibility to orchestrate state transitions across host and GPU.
+% 每个 eBPF 程序在不同层捕获部分状态；跨层 map 统一这些碎片化的可见性，以编排跨主机和 GPU 的状态转换。
 
 
 \begin{figure}[t]

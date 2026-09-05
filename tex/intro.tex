@@ -1,40 +1,121 @@
 \section{Introduction}
+% 引言。
 
-GPU resource management policies critically influence application performance. These policies include memory placement, migration, and GPU task scheduling.  Recent research shows their substantial impact on Unified Virtual Memory (UVM) placement~\cite{wang2024suv,lin2025forest,kim2025dream,park2025helm} and GPU scheduling strategies~\cite{wang2024gcaps,fan2025gpreempt,shen2025xsched}. For instance, optimal eviction and prefetch policies can improve performance by up to 73\% under memory oversubscription~\cite{park2025helm,kehne2019etc,ganguly2019interplay}.
+GPU resource management policies critically influence application performance.
+% GPU 资源管理策略对应用性能有至关重要的影响。
+These policies include memory placement, migration, and GPU task scheduling.
+% 这些策略包括内存放置、迁移和 GPU 任务调度。
+Recent research shows their substantial impact on Unified Virtual Memory (UVM) placement~\cite{wang2024suv,lin2025forest,kim2025dream,park2025helm} and GPU scheduling strategies~\cite{wang2024gcaps,fan2025gpreempt,shen2025xsched}.
+% 近期研究表明，它们对统一虚拟内存 (UVM) 的放置和 GPU 调度策略有显著影响。
+For instance, optimal eviction and prefetch policies can improve performance by up to 73\% under memory oversubscription~\cite{park2025helm,kehne2019etc,ganguly2019interplay}.
+% 例如，在内存超配下，最优的逐出与预取策略可将性能提升多达 73\%。
 
-Unfortunately, finding an optimal GPU resource management policy is challenging. The optimal memory and scheduling policies vary significantly across workloads, hardware, and deployment contexts~\cite{kwon2023efficient,agrawal2024taming,lin2024towards,wang2016gunrock,shoeybi2019megatron,rasley2020deepspeed,pan2024survey,cao2023gpu}, with no one policy dominating the others.  For example, aggressive memory prefetching improves latency for LLM MoE inference by reducing memory stalls~\cite{park2025helm,ganguly2019interplay}, but increases the latency of graph analytics queries because it over-saturates memory bandwidth~\cite{ganguly2019interplay}.  Additionally, throughput-oriented scheduling improves average latency of vector search but degrades tail latency for interactive inference~\cite{agrawal2024taming,fan2025gpreempt}.
+Unfortunately, finding an optimal GPU resource management policy is challenging.
+% 遗憾的是，寻找最优的 GPU 资源管理策略颇具挑战。
+The optimal memory and scheduling policies vary significantly across workloads, hardware, and deployment contexts~\cite{kwon2023efficient,agrawal2024taming,lin2024towards,wang2016gunrock,shoeybi2019megatron,rasley2020deepspeed,pan2024survey,cao2023gpu}, with no one policy dominating the others.
+% 最优的内存与调度策略随负载、硬件和部署环境的不同而差异显著，不存在一个策略在所有场景下都占优。
+For example, aggressive memory prefetching improves latency for LLM MoE inference by reducing memory stalls~\cite{park2025helm,ganguly2019interplay}, but increases the latency of graph analytics queries because it over-saturates memory bandwidth~\cite{ganguly2019interplay}.
+% 例如，激进的内存预取通过减少内存停顿改善了 LLM MoE 推理的延迟，但会因内存带宽过饱和而增加图分析查询的延迟。
+Additionally, throughput-oriented scheduling improves average latency of vector search but degrades tail latency for interactive inference~\cite{agrawal2024taming,fan2025gpreempt}.
+% 此外，面向吞吐量的调度改善了向量搜索的平均延迟，却恶化了交互式推理的尾延迟。
 
 %\arq{I don't love this sentence structure.}
-We argue that the community should employ AI agents to automatically optimize programmable GPU resource management policies.  AI-driven exploration can handle the vast, workload-specific policy space that makes manual tuning challenging.
+We argue that the community should employ AI agents to automatically optimize programmable GPU resource management policies.
+% 我们认为，社区应当利用 AI 智能体来自动优化可编程的 GPU 资源管理策略。
+AI-driven exploration can handle the vast, workload-specific policy space that makes manual tuning challenging.
+% AI 驱动的探索能够应对庞大且随负载而异的策略空间，而这正是手动调优的难点。
 % Vast, workload-specific policy space make manual tuning costly but suitable for AI-driven exploration. 
-Agents can now generate complex code and optimize policies in domains such as compiler heuristics~\cite{alphaevolve2025}, datacenter scheduling, LLM serving~\cite{hamadanian2025glia,cheng2025barbarians}, training strategies~\cite{ding2025asap}, and CPU scheduling~\cite{dwivedula2025policysmith,zheng2025schedcp}.  In these use-cases, agents are generating fully fledged policy programs rather than simply tuning configuration parameters.
+Agents can now generate complex code and optimize policies in domains such as compiler heuristics~\cite{alphaevolve2025}, datacenter scheduling, LLM serving~\cite{hamadanian2025glia,cheng2025barbarians}, training strategies~\cite{ding2025asap}, and CPU scheduling~\cite{dwivedula2025policysmith,zheng2025schedcp}.
+% 如今，智能体已能生成复杂代码，并在编译器启发式、数据中心调度、LLM 服务、训练策略和 CPU 调度等领域优化策略。
+In these use-cases, agents are generating fully fledged policy programs rather than simply tuning configuration parameters.
+% 在这些场景中，智能体生成的是完整的策略程序，而非简单地调节配置参数。
 
-We derive three properties that systems should provide to enable AI agents to optimize programmable GPU resource management policies effectively without sacrificing system health.  Namely, a system should support programmable policy interfaces that are safe, dynamic, and full-stack.  A policy interface is safe if it ensures that new policies cannot cause the system to crash; dynamic if it supports policy updates without requiring the system and applications to be restarted; and full-stack if it supports cross-application and device-internal visibility, as well as low-level hardware control.
+We derive three properties that systems should provide to enable AI agents to optimize programmable GPU resource management policies effectively without sacrificing system health.
+% 我们提炼出系统应提供的三项特性，使 AI 智能体能够在不损害系统健康的前提下有效优化可编程的 GPU 资源管理策略。
+Namely, a system should support programmable policy interfaces that are safe, dynamic, and full-stack.
+% 具体而言，系统应支持安全、动态且全栈的可编程策略接口。
+A policy interface is safe if it ensures that new policies cannot cause the system to crash; dynamic if it supports policy updates without requiring the system and applications to be restarted; and full-stack if it supports cross-application and device-internal visibility, as well as low-level hardware control.
+% 所谓安全，是指保证新策略不会导致系统崩溃；所谓动态，是指支持策略更新而无需重启系统和应用；所谓全栈，是指既支持跨应用和设备内部的可见性，又支持底层硬件控制。
 
-Existing programmable GPU resource management techniques fail to simultaneously meet these requirements. User-space frameworks~\cite{ng2023paella,shen2025xsched,gim2025pie,chen2025ktransformers} are safe and dynamic but are not full-stack since policies lack cross-application visibility and hardware control.  Other approaches modify the OS kernel driver~\cite{kato2011timegraph,kato2012gdev,kernelintercept,fan2025gpreempt,wang2024gcaps}, which fails to meet all three of the requirements.  %full-stack at the host level but neither safe nor dynamic, and still lacks GPU-internal observability.
+Existing programmable GPU resource management techniques fail to simultaneously meet these requirements.
+% 现有的可编程 GPU 资源管理技术无法同时满足这些要求。
+User-space frameworks~\cite{ng2023paella,shen2025xsched,gim2025pie,chen2025ktransformers} are safe and dynamic but are not full-stack since policies lack cross-application visibility and hardware control.
+% 用户态框架安全且动态，但并非全栈，因为策略缺乏跨应用可见性和硬件控制能力。
+Other approaches modify the OS kernel driver~\cite{kato2011timegraph,kato2012gdev,kernelintercept,fan2025gpreempt,wang2024gcaps}, which fails to meet all three of the requirements.
+% 另一些方案修改 OS 内核驱动，也无法同时满足这三项要求。
+%full-stack at the host level but neither safe nor dynamic, and still lacks GPU-internal observability.
 
-In this paper, we propose \sys, a new system that provides an OS interface for GPU resource management policy that is safe, dynamic, and full-stack.  Similar to prior work on resource management~\cite{schedext-docs, zussman2025cache_ext, bachl2021flow}, \sys{} supports eBPF-based policies.  Users write callback functions that manage system resources and are called on user-defined events (e.g., when the system reaches a specific code location, or periodically).  \sys{}'s use of eBPF ensures safety, since the system uses an eBPF-style verifier before running new policies, and dynamism, since it can replace policies without service interruptions.  To provide a full-stack interface, \sys{} supports eBPF callbacks that execute within the OS kernel driver and GPU device. 
+In this paper, we propose \sys, a new system that provides an OS interface for GPU resource management policy that is safe, dynamic, and full-stack.
+% 本文提出 \sys，一个提供安全、动态且全栈的 GPU 资源管理策略 OS 接口的新系统。
+Similar to prior work on resource management~\cite{schedext-docs, zussman2025cache_ext, bachl2021flow}, \sys{} supports eBPF-based policies.
+% 与以往的资源管理工作类似，\sys 支持基于 eBPF 的策略。
+Users write callback functions that manage system resources and are called on user-defined events (e.g., when the system reaches a specific code location, or periodically).
+% 用户编写管理系统资源的回调函数，它们由用户自定义的事件触发（例如系统到达特定代码位置时，或周期性地触发）。
+\sys{}'s use of eBPF ensures safety, since the system uses an eBPF-style verifier before running new policies, and dynamism, since it can replace policies without service interruptions.
+% \sys 对 eBPF 的使用保证了安全性——系统在运行新策略前会进行 eBPF 风格的验证——以及动态性——它可以在不中断服务的情况下替换策略。
+To provide a full-stack interface, \sys{} supports eBPF callbacks that execute within the OS kernel driver and GPU device.
+% 为提供全栈接口，\sys 支持在 OS 内核驱动和 GPU 设备内执行的 eBPF 回调。
 
-\sys models GPU resource management as transitions on resource state machines (\S\ref{sec:design-interfaces}).  State machines define valid states and transitions: GPU memory chunks transition between host memory and device memory through eviction and prefetching; compute contexts transition through states such as running, ready, and finished via scheduling and preemption operations.  eBPF policies specify the transitions that the system should take on its GPU resources.
+\sys models GPU resource management as transitions on resource state machines (\S\ref{sec:design-interfaces}).
+% \sys 将 GPU 资源管理建模为资源状态机上的状态转移。
+State machines define valid states and transitions: GPU memory chunks transition between host memory and device memory through eviction and prefetching; compute contexts transition through states such as running, ready, and finished via scheduling and preemption operations.
+% 状态机定义合法的状态与转移：GPU 内存块通过逐出和预取在主机内存与设备内存之间转移；计算上下文通过调度与抢占操作在运行、就绪、完成等状态之间转移。
+eBPF policies specify the transitions that the system should take on its GPU resources.
+% eBPF 策略指定系统应在其 GPU 资源上执行哪些转移。
 
 
 
 %, with a SIMT-aware verifier and device JIT runtime. Bring these up in the implementation paragraph.
 
-Alas, applying the CPU eBPF programming model to GPU resource management is not straightforward. The GPU is a discrete processor with its own execution model and resources, and policy decisions made in the host take effect on a separate device. In particular, we identify three challenges: first, cross-device operations like migrating data or dispatching commands take milliseconds, too slow for synchronous callbacks and too costly for purely reactive decisions. Second, unlike independent subsystems on the CPU, limited device memory and bandwidth further couple memory and scheduling, as decisions about data placement directly affect which workloads can execute. Third, GPU applications employ OS kernel bypass, which requires \sys{} to support eBPF callbacks from events in user-space applications. Traditional eBPF does not allow such callbacks to modify OS state required to implement resource management policies because of safety concerns.
+Alas, applying the CPU eBPF programming model to GPU resource management is not straightforward.
+% 遗憾的是，将 CPU 上的 eBPF 编程模型直接套用于 GPU 资源管理并非易事。
+The GPU is a discrete processor with its own execution model and resources, and policy decisions made in the host take effect on a separate device.
+% GPU 是拥有自身执行模型和资源的独立处理器，主机上做出的策略决策要在另一台独立设备上生效。
+In particular, we identify three challenges: first, cross-device operations like migrating data or dispatching commands take milliseconds, too slow for synchronous callbacks and too costly for purely reactive decisions.
+% 具体而言，我们识别出三项挑战：第一，迁移数据或派发命令等跨设备操作需要毫秒级时间，对同步回调而言太慢，对纯粹被动响应式决策而言代价过高。
+Second, unlike independent subsystems on the CPU, limited device memory and bandwidth further couple memory and scheduling, as decisions about data placement directly affect which workloads can execute.
+% 第二，与 CPU 上相互独立的子系统不同，有限的设备内存和带宽进一步耦合了内存与调度，因为数据放置的决策直接决定哪些负载可以执行。
+Third, GPU applications employ OS kernel bypass, which requires \sys{} to support eBPF callbacks from events in user-space applications.
+% 第三，GPU 应用采用 OS 内核旁路，这要求 \sys 支持来自用户态应用事件的 eBPF 回调。
+Traditional eBPF does not allow such callbacks to modify OS state required to implement resource management policies because of safety concerns.
+% 出于安全考虑，传统 eBPF 不允许这类回调修改实现资源管理策略所需的 OS 状态。
 
-\sys{} addresses these challenges through a novel execution model for eBPF-based resource management that separates the effect of a callback from its triggering event. Unlike prior eBPF-based systems (e.g., sched\_ext~\cite{schedext-docs}, cache\_ext~\cite{zussman2025cache_ext}, and XDP~\cite{bachl2021flow}), where each callback makes a single synchronous decision at a fixed event, \sys{} allows callbacks that asynchronously transition resources at user-defined events.  In particular, \sys callbacks invoke transitions when a given event occurs, and the system asynchronously transitions the resource between states.  \sys{} callbacks can initiate multiple state transitions within a single event.  Finally, \sys{} supports user-defined events that can execute policy code from anywhere in the GPU stack (application, OS kernel driver, or GPU device).  Critically, to enable safety with user-defined events, \sys{} policies only initiate predefined transitions; they cannot create invalid transitions that could corrupt resources.
+\sys{} addresses these challenges through a novel execution model for eBPF-based resource management that separates the effect of a callback from its triggering event.
+% \sys 通过一种面向基于 eBPF 的资源管理的新型执行模型来应对这些挑战，将回调的效果与其触发事件解耦。
+Unlike prior eBPF-based systems (e.g., sched\_ext~\cite{schedext-docs}, cache\_ext~\cite{zussman2025cache_ext}, and XDP~\cite{bachl2021flow}), where each callback makes a single synchronous decision at a fixed event, \sys{} allows callbacks that asynchronously transition resources at user-defined events.
+% 不同于以往的 eBPF 系统（如 sched\_ext、cache\_ext 和 XDP），它们的每个回调在固定事件处做出单一的同步决策，\sys 允许回调在用户自定义事件处异步地转移资源。
+In particular, \sys callbacks invoke transitions when a given event occurs, and the system asynchronously transitions the resource between states.
+% 具体而言，\sys 回调在给定事件发生时被触发，系统随后异步地在状态之间转移资源。
+\sys{} callbacks can initiate multiple state transitions within a single event.
+% \sys 回调可以在单个事件中发起多次状态转移。
+Finally, \sys{} supports user-defined events that can execute policy code from anywhere in the GPU stack (application, OS kernel driver, or GPU device).
+% 最后，\sys 支持用户自定义事件，可在 GPU 栈的任意位置（应用、OS 内核驱动或 GPU 设备）执行策略代码。
+Critically, to enable safety with user-defined events, \sys{} policies only initiate predefined transitions; they cannot create invalid transitions that could corrupt resources.
+% 关键在于，为了在使用用户自定义事件时仍保证安全，\sys 策略只能发起预定义的转移，无法创建可能破坏资源的非法转移。
 
 % To ensure safety, policies only influence which transitions occur and when, but cannot create invalid transitions.
 
 
-We implement \sys{} on Linux by extending the NVIDIA open GPU OS kernel modules~\cite{nvidia-open-gpu} and providing an eBPF SIMT verifier and JIT runtime for GPU devices.  We evaluate \sys{} across LLM inference, GNN training, vector search, and multi-tenant scenarios. \sys-based policies improve throughput by up to $4.8\times$ over framework offloading and $1.76\times$ over application-tuned baselines, and reduce tail latency by up to $2\times$, with low overhead and no application modifications or restarts.
-We show that \sys{} enforces safety by using AI agents to generate all of the 59 evaluated eBPF policies, including eviction ordering, prefetch strategies, scheduling logic, and device-side work-stealing.  \sys{} ensured that there were zero OS kernel panics throughout this process.  In summary, our contributions are:
+We implement \sys{} on Linux by extending the NVIDIA open GPU OS kernel modules~\cite{nvidia-open-gpu} and providing an eBPF SIMT verifier and JIT runtime for GPU devices.
+% 我们在 Linux 上实现 \sys，扩展 NVIDIA 开源 GPU OS 内核模块，并为 GPU 设备提供 eBPF SIMT 验证器和 JIT 运行时。
+We evaluate \sys{} across LLM inference, GNN training, vector search, and multi-tenant scenarios.
+% 我们在 LLM 推理、GNN 训练、向量搜索和多租户场景下评估 \sys。
+\sys-based policies improve throughput by up to $4.8\times$ over framework offloading and $1.76\times$ over application-tuned baselines, and reduce tail latency by up to $2\times$, with low overhead and no application modifications or restarts.
+% 基于 \sys 的策略相比框架卸载最高提升 $4.8\times$ 吞吐量，相比应用调优的基线最高提升 $1.76\times$，并将尾延迟最多降低 $2\times$，同时开销很低，且无需修改或重启应用。
+We show that \sys{} enforces safety by using AI agents to generate all of the 59 evaluated eBPF policies, including eviction ordering, prefetch strategies, scheduling logic, and device-side work-stealing.
+% 我们通过让 AI 智能体生成全部 59 个受测 eBPF 策略（包括逐出顺序、预取策略、调度逻辑和设备端工作窃取）来证明 \sys 的安全性。
+\sys{} ensured that there were zero OS kernel panics throughout this process.
+% 在整个过程中，\sys 保证了零次 OS 内核恐慌。
+In summary, our contributions are:
+% 总而言之，我们的贡献如下：
 
 \begin{itemize}[leftmargin=*,itemsep=0pt]
   \item an execution model for eBPF-based resource management that separates the effect of a callback from its triggering event.
+  % 一项面向基于 eBPF 的资源管理的执行模型，将回调的效果与其触发事件解耦。
   %We design a GPU-specific OS policy interface that models GPU resources as state machines whose asynchronous state transitions are directed by verified eBPF programs across the host-device boundary.
-  \item \sys, a system that provides a programmable GPU resource management policy interface that is safe, dynamic, and full-stack. 
+  \item \sys, a system that provides a programmable GPU resource management policy interface that is safe, dynamic, and full-stack.
+  % \sys：一个提供安全、动态且全栈的可编程 GPU 资源管理策略接口的系统。
   %We implement \sys, an eBPF runtime spanning host driver and GPU device, with a SIMT-aware verifier for device-side eBPF execution.
   \item an evaluation of \sys across four GPU workloads, achieving up to $4.8\times$ throughput improvement and $2\times$ tail latency reduction, with all 59 policies generated by AI agents and no OS kernel panics.
+  % 在四类 GPU 负载上对 \sys 的评估：吞吐量最高提升 $4.8\times$，尾延迟最多降低 $2\times$，全部 59 个策略由 AI 智能体生成，且无 OS 内核恐慌。
 \end{itemize}
