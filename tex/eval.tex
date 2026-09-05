@@ -13,13 +13,10 @@ Our evaluation addresses the following research questions:
 
 \subsection{Methodology and Setup}
 
-We evaluate \sys on two machines: Server~A with Intel Core Ultra~9 285K (24 cores), 128~GB DDR5 RAM, and NVIDIA RTX~5090 GPU; Server~B with dual Intel Gold 6138 (80 cores), 256~GB RAM, and NVIDIA P40 GPU. Unless otherwise specified, the original case studies run on Server~A and report geometric means of 10 trials; the historical single-round comparison and new paired studies state their different sampling and aggregation explicitly. We compare \sys{} against three classes of baselines: (1) driver defaults (UVM LRU/FIFO eviction, native GPU scheduler), (2) application-level hints (\texttt{cudaMemAdvise}), and (3) framework-managed policies (e.g., llama.cpp \texttt{ncmoe}, vLLM CPU offload, LMCache) where applicable. The original application case studies use PyTorch (version 2.9.0) and vLLM (version 0.11.0) with custom allocators, llama.cpp (version 7101), and Faiss (version 1.13.0) with UVM build config. Their driver policies do not require application-source changes beyond the stated UVM setup; the matched component ports in \S\ref{sec:policy-mechanism} use explicit framework and compatibility adapters.
+We evaluate \sys on two machines: Server~A with Intel Core Ultra~9 285K (24 cores), 128~GB DDR5 RAM, and NVIDIA RTX~5090 GPU; Server~B with dual Intel Gold 6138 (80 cores), 256~GB RAM, and NVIDIA P40 GPU. Unless otherwise specified, experiments run on Server~A, averaging 10 trials using geometric mean. We compare \sys{} against three classes of baselines: (1) driver defaults (UVM LRU/FIFO eviction, native GPU scheduler), (2) application-level hints (\texttt{cudaMemAdvise}), and (3) framework-managed policies (e.g., llama.cpp \texttt{ncmoe}, vLLM CPU offload, LMCache) where applicable. We use PyTorch (version 2.9.0) and vLLM (version 0.11.0) with custom allocators, llama.cpp (version 7101), and Faiss (version 1.13.0) with UVM build config. All tests with \sys policies require no application modifications.
 
 
-Historical host-policy LOC counts include each BPF program and its loader,
-excluding shared headers, at retained artifact revision \texttt{aab36b8}.
-Device-policy LOC estimates count the policy body, not the benchmark harness.
-These counts are separate from the later compatibility/runtime changes.
+% \arq{Add lines of code throughout each of the experiments}
 
 \begin{figure}
 \centering
@@ -31,22 +28,22 @@ These counts are separate from the later compatibility/runtime changes.
 
 \subsection{RQ1: Single-Tenant Memory and Scheduling Policies on GPU kernels}
 
-\paragraph{Memory Prefetch Policies}
-We evaluate host-device prefetch coordination using a vector-add GPU kernel~\cite{nvidia_cuda_samples} with stride access pattern and 40GB working set (1.25$\times$ oversubscription). Device-side L2 prefetch instructions (\texttt{prefetch.\allowbreak{}global.\allowbreak{}L2}) trigger non-blocking page faults, while host-side callbacks extend prefetching to additional pages. As shown in \Cref{fig:clc-policies}a, device-only prefetch (45~LOC) at thread entry achieves 1.34$\times$ speedup while combined host-device stride-based eBPF prefetch (472~LOC host + 45~LOC device) achieves 1.77$\times$. However, sequential prefetch (573~LOC) degrades performance by 8\% due to pattern mismatch.
+\paragraph{Memory Prefetch Policies.}
+We evaluate host-device prefetch coordination using a vector-add GPU kernel~\cite{nvidia_cuda_samples} with stride access pattern and 40GB working set (1.25$\times$ oversubscription). Device-side L2 prefetch instructions (\texttt{prefetch.\allowbreak{}global.\allowbreak{}L2}) trigger non-blocking page faults, while host-side callbacks extend prefetching to additional pages. As shown in \Cref{fig:clc-policies}a, device-only prefetch (45~LOC) at thread entry achieves 1.34$\times$ speedup while combined host-device stride-based eBPF prefetch (472~LOC host + 45~LOC device) achieves 1.77$\times$. However, sequential prefetch (375~LOC) degrades performance by 8\% due to pattern mismatch.
 
-\paragraph{Single-Tenant Block Scheduler}
+\paragraph{Single-Tenant Block Scheduler.}
 We apply a \sys-based thread block scheduler to workloads with load imbalance. Using cluster-style launch where persistent worker blocks pull work units via \texttt{should\_\allowbreak{}try\_steal}, we evaluate three policies: FixedWork (static block assignment, no scheduler), Greedy (always-steal, 16~LOC), and LatencyBudget (workload-aware with per-block time limits, 19~LOC).
 \Cref{fig:clc-policies}b compares these policies across two GEMM workloads. Under moderate imbalance, both Greedy and LatencyBudget reduce latency by $\sim$11\%. Under heavy-tail workloads where 10\% of blocks perform 100--200$\times$ more work, Greedy increases latency by 20\% due to contention on heavy blocks. LatencyBudget, which caps per-block stealing time, matches fixed-work baseline. This highlights \sys's programmability: different workloads require different scheduling strategies.
 
 \subsection{RQ2: Agent-Driven Policy Exploration Case Studies}
 
-We provided an AI coding agent (Claude Code with Opus 4.5) with \sys{}'s eBPF interfaces; humans authored the initial framework and benchmark harness. Retained study summaries report 59 generated policies, 974 benchmark runs and 244 code edits over 20 days, consuming 5.5M tokens (\$388 API cost); approximately 75\% of explored policies yielded negative results. Original interaction logs are not fully available, so these summaries are not independently replayable transcript evidence. The retained 50-event taxonomy contains 24 logic bugs, 18 performance regressions, 2 verifier rejections, 2 GPU Xid faults, 2 system hangs, one build failure and one driver bug. Repository-source reconciliation supports 46 entries fully and four partially. No OS kernel panic or data corruption is documented, but the records include system OOM requiring hard reboots: absence of a recorded kernel panic is not proof of fault-free execution or recovery without restarts. GPU faults are not verifier rejections. We next describe four performance case studies; verification and transition-validation boundaries are given in \S\ref{sec:verification}.
+We provided an AI coding agent (Claude Code with Opus 4.5) with \sys{}'s eBPF interfaces; the agent autonomously generated all policy logic without human review or guidance, while humans authored only the initial framework and benchmark harness. All 59 policies evaluated were produced via a fully automated generate-test-iterate loop. Over 20 days, the agent performed 974 benchmark runs and 244 code edits, exploring 59 distinct policies and consuming 5.5M tokens (\$388 API cost); approximately 75\% of explored policies yielded negative results before being iteratively corrected. We documented 50 safety events (24 logic bugs, 18 performance regressions, 2 verifier rejections, 2 GPU verifier-caught overflows, 4 others), all recovered without OS panics or data corruption, typically within minutes and without application restarts. Equivalent bugs in modified GPU drivers risk kernel panics, requiring recompilation and service interruptions rather than instant policy detachment. We conclude with four case studies showing performance gains and the exploration process.
 
-\paragraph{Expert Offloading (llama.cpp GPT-OSS-120B)}
+\paragraph{Expert Offloading (llama.cpp GPT-OSS-120B).}
 We evaluate \sys on GPT-OSS-120B MXFP4 MoE (59~GB) in llama.cpp on RTX 5090 (32~GB), requiring 1.84$\times$ oversubscription. We compare five configurations: framework-managed CPU offloading (\texttt{ncmoe=\allowbreak{}32/64}), default UVM, UVM with application-level hints (\texttt{cuda\-Mem\-Advise}), and \sys with eBPF-based host-device prefetching (\S\ref{sec:design-interfaces}).
-\Cref{fig:llama-expert-offload} shows prefill and decode throughput. For decode (memory-bound), \sys achieves \textbf{1.76$\times$ speedup} over application-tuned UVM hints (\texttt{cuda\-Mem\-Advise}) and 4.8$\times$ over framework offloading (\texttt{ncmoe=64}). These hints improve decode over default UVM but require application modification and degrade prefill by 40\%; \sys outperforms hints on decode while preserving prefill within 4\% of default UVM, without further application changes beyond the UVM setup. For prefill (compute-bound), framework offloading (\texttt{ncmoe=32}) achieves 13\% higher prefill throughput than \sys{}, but decode dominates end-to-end latency, so the decode improvement outweighs the prefill gap.%\arq{I don't understand the final data point. what has 13\% higher throughput? The graphed performance of UVM eBPF looks like it has worse performance compared to the alternatives. BTW---its very weird that none of the bars in Figure 8 are labeled "\sys"--I think that UVM eBPF is supposed to be that configuration but it does not make a lot of sense.}
+\Cref{fig:llama-expert-offload} shows prefill and decode throughput. For decode (memory-bound), \sys achieves \textbf{1.76$\times$ speedup} over application-tuned UVM hints (\texttt{cuda\-Mem\-Advise}) and 4.8$\times$ over framework offloading (\texttt{ncmoe=64}). These hints improve decode over default UVM but require application modification and degrade prefill by 40\%; \sys outperforms hints on decode while preserving prefill within 4\% of default UVM, without application changes. For prefill (compute-bound), framework offloading (\texttt{ncmoe=32}) achieves 13\% higher prefill throughput than \sys{}, but decode dominates end-to-end latency, so the decode improvement outweighs the prefill gap.%\arq{I don't understand the final data point. what has 13\% higher throughput? The graphed performance of UVM eBPF looks like it has worse performance compared to the alternatives. BTW---its very weird that none of the bars in Figure 8 are labeled "\sys"--I think that UVM eBPF is supposed to be that configuration but it does not make a lot of sense.}
 
-Per-warp tracing exposed expert strides and hot shared layers. Sequential prefetch failed; after testing FIFO, the agent selected stride prefetch plus LFU. The policy combines 45~LOC device observation, 472~LOC host prefetch and 304~LOC eviction ($\sim$820 total; \S\ref{sec:design-interfaces}).
+The agent arrived at the final policy through iterative exploration: sequential prefetch degraded decode throughput due to mismatch with MoE stride patterns (consistent with the 8\% degradation in \Cref{fig:clc-policies}a), leading to stride-based prefetch aligned with regular weight layout within each expert layer. Device-side eBPF tracing of per-warp memory accesses revealed that expert activations follow predictable stride sequences and identified frequently-accessed shared layers. For eviction, the agent tested FIFO ordering before converging on LFU, which retains frequently-accessed shared layers while evicting cold expert pages. The final policy combines device-side access observation (45~LOC), host-side stride prefetch (472~LOC), and LFU eviction (304~LOC), totaling $\sim$820~LOC (\S\ref{sec:design-interfaces}).
 
 
 % \xiangyu{Are those hints easy to find in many scenarios? Maybe we should clarify it. Otherwise, it seems that \sys{} uses some tricks to win the competition.}
@@ -60,11 +57,11 @@ Per-warp tracing exposed expert strides and hot shared layers. Sequential prefet
 
 \end{figure}
 
-\paragraph{KV-cache Offloading (vLLM Qwen-30B MoE)}
+\paragraph{KV-cache Offloading (vLLM Qwen-30B MoE).}
 We evaluate \sys on the Qwen-30B FP8 MoE model ($\approx$30GB) on RTX 5090 (32GB). The model nearly fills GPU VRAM, so the default no-offload configuration OOMs under load. We stress KV-cache growth by sending 100 concurrent requests from ShareGPT~\cite{sharegpt} (single-round, no prefix caching), resulting in 36--40GB total footprint ($\approx$60K tokens KV-cache). Existing solutions offload KV-cache or experts but not both; UVM attempts on-demand migration of both, leading to thrashing.
 We compare vLLM's CPU-offload mode (\texttt{--cpu-offload-gb 8}) against \sys with UVM and a sequential prefetch policy. \sys improves mean and p99 time-to-first-token by 1.7--2$\times$ and decoding throughput by 1.3$\times$ over vLLM's default framework-managed offload (\Cref{fig:vllm-kv-offload}), matching LMCache~\cite{lmcache}, a state-of-the-art KV-cache offloading framework. Notably, UVM without \sys policies performs worse than vLLM's offload, while \sys performs similarly to the best framework offloading, with better tail latency, dynamically and transparently.
 
-Uniform sequential prefetch thrashed KV-cache and weight pages. Device tracing led to region-specific prefetch---sequential for temporally/per-request-local KV state and stride for weights---with PCIe-guided aggressiveness (573~LOC) and LFU eviction (304~LOC; $\sim$880 total), retaining hot pages and avoiding the uniform policy's thrashing.
+Under memory pressure, the main challenge is managing two competing data types: KV-cache, exhibiting temporal locality (recent tokens accessed frequently during attention) and per-request spatial locality, and model weights with stride patterns in matrix operations. A uniform sequential prefetch initially caused mutual thrashing between KV-cache and weight pages. Using device-side tracing, the agent explored region-differentiated prefetch strategies, converging on adaptive aggressiveness guided by PCIe utilization and region type (stride for weights, sequential for KV-cache, 375~LOC), coupled with LFU eviction (304~LOC) retaining frequently accessed pages. The resulting policy (totaling $\sim$680~LOC) effectively prevents thrashing seen with default LRU.
 
 \begin{figure}
 \centering
@@ -75,12 +72,12 @@ Uniform sequential prefetch thrashed KV-cache and weight pages. Device tracing l
 
 \end{figure}
 
-\paragraph{Graph Neural Networks (GNN Training)}
+\paragraph{Graph Neural Networks (GNN Training).}
 We evaluate \sys on PyTorch-based GCN training with random graphs of varying sizes (1M--15M nodes, 10 edges/node). \Cref{fig:gnn-epoch} shows epoch time across five configurations: native GPU allocation (no UVM), UVM with and without user-space prefetching (\texttt{cudaMemPrefetchAsync}), and each UVM configuration with \sys eBPF-based optimization.
 With UVM enabled via a custom allocator, each epoch allocates memory on CPU and migrates to GPU on demand, incurring overhead. Developers can pre-migrate pages via \texttt{cudaMemPrefetchAsync}, achieving 5.5$\times$ speedup at moderate oversubscription, but this requires application modification. Without user hints, eBPF optimizes page fault handling via aggressive prefetching, achieving 2.65$\times$ speedup transparently. With both user-expressed prefetching and \sys, it achieves 1.44$\times$ additional speedup by prefetching larger regions and reducing blocking faults.
-Native GPU allocation (no UVM) achieves the highest performance when data fits in memory (1.89~s at 5M nodes) but fails with OOM beyond $\sim$8M nodes. UVM with \sys prefetching enables training at 15M nodes (2.17$\times$ oversubscription) with near-native performance and no further application-source changes beyond the stated custom allocator.
+Native GPU allocation (no UVM) achieves the highest performance when data fits in memory (1.89~s at 5M nodes) but fails with OOM beyond $\sim$8M nodes. UVM with \sys prefetching enables training at 15M nodes (2.17$\times$ oversubscription) with near-native performance and no application modification.
 
-Allocation uprobes and device history drive 573~LOC sequential prefetch. K=1 cut epoch time 21\%; K=2/3 lost 16\%, and adaptive K up to 6 lost 46\%. The agent identified PCIe saturation, rather than lock contention, as the bottleneck.
+\sys uses sequential prefetch (375~LOC) with a uprobe tracing PyTorch allocations, determining prefetch ranges via device-traced history. The agent tested deeper lookahead after single-block-ahead prefetch (K=1) improved epoch time by 21\%, but found K=2 and K=3 degraded by 16\%, and adaptive K (up to 6) by 46\%. Suspecting lock contention initially, the agent identified PCIe bandwidth saturation as the true bottleneck, confirming one-block lookahead as optimal.
 
 \begin{figure}
 \centering
@@ -90,11 +87,11 @@ Allocation uprobes and device history drive 573~LOC sequential prefetch. K=1 cut
 \label{fig:gnn-epoch}
 \end{figure}
 
-\paragraph{Faiss Vector Search}
+\paragraph{Faiss Vector Search.}
 We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4096,Flat index, scaling from 20M (9.5GB) to 50M (24GB) and 100M (48GB, exceeding GPU memory). IVF indexes have a two-level structure: frequently-accessed centroids and larger posting lists, and Faiss operations have two distinct phases: BUILD performs sequential scans while SEARCH issues random accesses.
-\sys reduces build time by 21--29\% on 50M, scaling to 27--40\% on 100M as memory pressure grows. For search workloads, \sys reduces latency by 10--16\% across different \texttt{nprobe} settings despite the random access patterns inherent in ANN search. As shown in \Cref{fig:faiss-perf}, the converged policy ($\sim$1090~LOC: sequential prefetch 573~LOC + stride prefetch 472~LOC + device-side 45~LOC) prefetches posting lists sequentially for oversubscribed datasets and uses stride prediction for K-means iterations during index construction; device-side eBPF programs also trigger prefetching of corresponding posting lists.
+\sys reduces build time by 21--29\% on 50M, scaling to 27--40\% on 100M as memory pressure grows. For search workloads, \sys reduces latency by 10--16\% across different \texttt{nprobe} settings despite the random access patterns inherent in ANN search. As shown in \Cref{fig:faiss-perf}, the converged policy ($\sim$890~LOC: sequential prefetch 375~LOC + stride prefetch 472~LOC + device-side 45~LOC) prefetches posting lists sequentially for oversubscribed datasets and uses stride prediction for K-means iterations during index construction; device-side eBPF programs also trigger prefetching of corresponding posting lists.
 
-Only 2/8 policies across five iterations improved performance. Phase detection with cycle eviction helped BUILD but hurt SEARCH; forward-drifting queries confused the classifier. Correcting it favored default eviction. Version three converged; a later fast-path bug froze SEARCH and was fixed in one iteration.
+The agent tested 8 policies over 5 iterations. Initially, a momentum-based phase detector with cycle eviction improved BUILD but degraded SEARCH, as forward drift in search queries confused the detector. Fixing the classifier revealed eviction policy rather than phase detection controlled performance. Version three, pairing the corrected detector with default eviction, converged. A subsequent fast-path optimization introduced a state-machine bug (policy stuck in SEARCH mode), detected and fixed in one iteration. Only 2 of 8 policies yielded positive results.
 
 \begin{figure}
 \centering
@@ -110,43 +107,33 @@ Only 2/8 policies across five iterations improved performance. Phase detection w
 
 We evaluate \sys on multi-tenant GPU workloads, comparing per-tenant policies against global and framework-managed approaches.
 
-\paragraph{Compute-bound Scheduler (LC + BE)}
-\Cref{fig:scheduler-latency} compares foreground protection and background progress: XSched submission-to-first-CTA p99 versus GPreempt arrival-to-verified-response p99, with BE metrics and matched setups in \S\ref{sec:policy-mechanism}. These replace the earlier event-to-event proxy, which did not measure host-to-kernel-entry latency and cannot support the 96\% claim. Original records remain retained.
+\paragraph{Compute-bound Scheduler (LC + BE).}
+We evaluate \sys's eBPF struct\_ops scheduling policies on \emph{compute-bound} (SM-limited) multi-tenant workloads, without memory oversubscription. 2 latency-critical (LC) processes and 4 best-effort (BE) processes run concurrently, each with 4 CUDA streams submitting 50 compute kernels. We compare the native scheduler against \sys with differentiated timeslices (LC: 1s, BE: 200$\mu$s) using a preemption policy equivalent to GPREEMPT's~\cite{fan2025gpreempt} priority-based timeslice scheduling, implemented as a \sys eBPF program (925~LOC) without unsafe modification to the driver source. \Cref{fig:scheduler-latency} shows that \sys reduces LC P99 launch latency by 96\% (1188$\mu$s $\to$ 53$\mu$s). BE throughput remains unchanged.
 
-\begin{figure*}[t]
+\begin{figure}
 \centering
-\includegraphics[width=\textwidth]{img/results-raw/revision/scheduling-comparison-2x2.pdf}
-\caption{Matched scheduling policies on RTX 5090. Left: XSched workload, two LC
-and four BE processes, four streams/process and 50 kernels/stream; ten blocks
-per displayed arm. (a) LC queue-entry p99 (seconds); (c) BE kernels/s. Right:
-VGG19 LC at 100 requests/s against three ResNet152 BE loads; five 60-second
-blocks per arm/load. (b) Arrival-to-verified response p99 (milliseconds);
-(d) in-window BE goodput. Points show every cell; horizontal bars show medians,
-not confidence intervals. BPF-HPF retains XSched's Level-1 executor;
-BPF-GPreempt and original C share mapped-host flags. The results show
-foreground/background tradeoffs and same-policy implementation costs, not
-cross-workload rankings or statistical equivalence.}
+\includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/scheduler_latency_throughput.pdf}
+
+\caption{Multi-tenant GPU scheduling with \sys{} (LC: latency-critical, BE: best-effort).}
 \label{fig:scheduler-latency}
-\label{fig:matched-scheduling}
-\end{figure*}
+% \vspace{-1.5em}
+\end{figure}
 
-\paragraph{Memory-bound Priority Differentiation}
-The historical memory-priority comparison uses HotSpot~\cite{che2009rodinia}, GEMM from PolyBench~\cite{grauer2012auto}, and K-Means~\cite{gu2020uvmbench}, with two concurrent processes under UVM oversubscription. Labels use priority values 0--100 (lower = higher priority): \texttt{Prefetch(lo,hi)} selects prefetch recipients (454~LOC), and \texttt{Evict(lo,hi)} selects eviction treatment (472~LOC). References are no-policy execution, isolated single-process time, and twice that time as a sequential reference, not a theoretical lower bound.
+\paragraph{Memory-bound Priority Differentiation.}
+We evaluate \sys's memory policies for priority differentiation on \emph{memory-bound} workloads under UVM oversubscription using HotSpot~\cite{che2009rodinia} (spatial locality), GEMM from PolyBench~\cite{grauer2012auto} (compute-intensive, memory-bound under UVM oversubscription), and K-Means~\cite{gu2020uvmbench} (sparse access). Each experiment runs two concurrent processes competing for GPU memory. Policy labels use priority values 0--100 (lower = higher priority): \texttt{Prefetch(lo,hi)} prefetches pages for processes in that range (454~LOC), while \texttt{Evict(lo,hi)} selects eviction victims accordingly (472~LOC). We compare against: (1)~no-policy execution, (2)~single-process runtime (Single~1$\times$), and (3)~theoretical optimum (2$\times$Single~1$\times$).
 
-\Cref{fig:all-kernels-priority} retains the complete single-round observations: selected memory policies reduce the recorded pair-completion proxy by 55--92\% relative to their memory-file baselines. These are not repeated estimates. The separate scheduler runs did not retain successful attachment or policy-hit evidence, and their initialization-only policy was started after the workloads. Their small observed differences therefore cannot establish that an engaged scheduling policy is ineffective. Sequential process waits also prevent recovery of independent per-tenant finish times from those rows. This comparison motivates, but does not isolate, the choice of memory versus scheduling policy; the same-policy UVM cost experiment and new scheduling comparisons answer narrower controlled questions in \S\ref{sec:policy-mechanism}.
-% TODO(R4): repeat this full memory/scheduling matrix with pre-workload attach,
-% actual engagement, independent completion timestamps and complete paired blocks.
+\Cref{fig:all-kernels-priority} shows that without policies, both processes degrade severely due to memory thrashing. With \sys memory priority policies, total completion time improves by 55--92\%, and high-priority processes complete 6--19\% faster. Critically, for these \emph{memory-bound} workloads, GPREEMPT-style~\cite{fan2025gpreempt} scheduler timeslice policies are \emph{ineffective} (<1\% improvement) because the bottleneck is UVM page faults and PCIe bandwidth, not GPU compute time. This contrasts with the compute-bound case above where the same GPREEMPT-equivalent scheduling policy is effective, showing that effective management requires selecting the right policy layer per workload.
 
-\begin{figure*}[t]
+\begin{figure}
 \centering
-\includegraphics[width=\textwidth]{img/results-raw/multi-tenant/all_kernels_stacked.pdf}
+\includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/all_kernels_stacked.pdf}
 
-\caption{Historical single-round memory-priority observations. Single 1$\times$ is isolated time; 2$\times$Single is a sequential reference, not a lower bound. Stacks show recorded-duration minima and differences, not validated overlap phases. Scheduler engagement was not established; these points do not prove scheduler ineffectiveness.}
+\caption{Multi-tenant memory priority differentiation. Single 1$\times$: single-process time; 2$\times$Single 1$\times$: theoretical lower bound.}
 \label{fig:all-kernels-priority}
-\end{figure*}
+\end{figure}
 
-\paragraph{Two-Tenant: High-Priority LLM Inference + Background Training}
-We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp} inference service (LC workload) serving 100 ShareGPT prompts at 0.2 RPS, and T2 is a background PyTorch GNN training job (BE workload) with 8M nodes requiring 36GB peak memory (oversubscribed). We compare default UVM (driver FIFO/LRU) against \sys per-tenant memory and scheduler policies (1334~LOC, combining Quota LRU, Tree-based Prefetch, and Dynamic Timeslice). \Cref{fig:two-tenant} shows mutual improvement: LC TPOT drops by 40--45\% and TTFT by 14--20\%, while GNN training simultaneously improves by 28\%, approaching the ideal fair share baseline. This shows \sys reduces contention for both workloads rather than favoring one over the other.
+\paragraph{Two-Tenant: High-Priority LLM Inference + Background Training.}
+We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp} inference service (LC workload) serving 100 ShareGPT prompts at 0.2 RPS, and T2 is a background PyTorch GNN training job (BE workload) with 8M nodes requiring 36GB peak memory (oversubscribed). We compare default UVM (driver FIFO/LRU) against \sys per-tenant memory and scheduler policies ($\sim$926~LOC, combining Quota LRU, Tree-based Prefetch, and Dynamic Timeslice). \Cref{fig:two-tenant} shows mutual improvement: LC TPOT drops by 40--45\% and TTFT by 14--20\%, while GNN training simultaneously improves by 28\%, approaching the ideal fair share baseline. This shows \sys reduces contention for both workloads rather than favoring one over the other.
 
 \begin{figure}
 \centering
@@ -157,7 +144,12 @@ We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp
 
 \end{figure}
 
-\input{tex/revision_comparisons}
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{img/results-raw/runtime/microbench_comparison.pdf}
+\caption{Device-side overhead. (a) Naive per-thread injection vs \sys's SIMT-aware execution. (b) CPU map access latency via PCIe vs GPU-side operations.}
+\label{fig:microbench}
+\end{figure*}
 
 \subsection{RQ4: Overheads}
 
@@ -179,7 +171,7 @@ We quantify \sys's mechanism and observability overhead.
 Global FIFO Eviction & Memory Eviction & Host & 145 \\
 Global LFU Eviction & Memory Eviction & Host & 304 \\
 Multi-tenant Quota LRU & Memory Multi-tenant & Host & 472 \\
-Adaptive Seq. Prefetch & Memory Prefetch & Host & 573 \\
+Adaptive Seq. Prefetch & Memory Prefetch & Host & 375 \\
 Stride Prefetch & Memory Prefetch & Host & 472 \\
 GPU L2 Stride Prefetch & Memory Prefetch & Device & 45 \\
 Tree-based Prefetch & Memory Multi-tenant & Host & 454 \\
@@ -195,63 +187,34 @@ LatencyBudget (CLC) & Scheduling Block & Device & 19 \\
 \end{table}
 \end{comment}
 
-\paragraph{Host Runtime Overhead} We quantify the overhead of the \sys driver runtime independent of policy logic using GEMM from PolyBench~\cite{grauer2012auto} and HotSpot~\cite{che2009rodinia} (1.1$\times$ oversubscription, 35~GB working set) on RTX 5090. With hooks enabled but no policy attached, the overhead is less than 0.2\%.
+\paragraph{Host Runtime Overhead.} We quantify the overhead of the \sys driver runtime independent of policy logic using GEMM from PolyBench~\cite{grauer2012auto} and HotSpot~\cite{che2009rodinia} (1.1$\times$ oversubscription, 35~GB working set) on RTX 5090. With hooks enabled but no policy attached, the overhead is less than 0.2\%.
 
 % \paragraph{Device Verification.} Across 18 GPU programs, the SIMT-aware verifier accepts 13 and correctly rejects 5 unsafe cases (lane-varying branches, non-uniform atomics, varying map-update keys).  
 
-\paragraph{Device-side Observability Overhead}
-On RTX~5090 (driver 575.57.08), ten randomized blocks use TinyLlama-1.1B
-\texttt{Q4\_K\_M}, llama.cpp build 7102, \texttt{pp=512}, and \texttt{tg=0}.
-Custom NVBit v1.8 adapters~\cite{villa2019nvbit} and \sys target the same
-\texttt{rope\_norm} task using native transports. All gates pass: both exit
-arms retain 23{,}068{,}672 records; histogram aggregates match, but only \sys
-retains the full vector.
-
-\Cref{tab:obs-overhead} reports mean overhead relative to paired controls. For
-exit records, NVBit-minus-\sys is $-0.0419$ percentage points (95\% bootstrap
-CI $[-0.0436,-0.0403]$), slightly favoring NVBit; for the exit-count histogram,
-it is $+6.2935$ points ($[6.1251,6.4708]$), favoring \sys. This task-specific
-mixed outcome is not a framework-wide ordering. GPU verification was disabled
-and timing excludes post-exit collector shutdown; we omit \texttt{launchlate}
-because its cross-clock comparison remains invalid. The submitted comparison
-used only the P40 because we had not yet ported and rerun these matched adapters
-on the newly installed RTX~5090; this was an evaluation omission, not a
-Blackwell limitation of NVBit.
+\paragraph{Device-side Overhead.}
+We evaluate device-side observability tools built on \sys (\Cref{tab:obs-overhead}) on NVIDIA P40 GPU using llama.cpp prefill (Llama 1B, sequence-mixed). Tools include \texttt{kernel\-ret\-snoop} (per-block finish timestamps), \texttt{thread\-hist} (load imbalance detection), and \texttt{launch\-late} (GPU kernel launch latency). Overhead is measured as token/s degradation during prefill. \sys achieves 3--14\% overhead versus NVBit's 85--93\%~\cite{villa2019nvbit}, due to the warp-uniform execution model. Attaching to a running process takes 273\,ms on average from \texttt{bpftime trace} startup to first GPU kernel detection, without application restart.
 
 % \texttt{gpu\_sched\_trace}, \texttt{prefetch\_trace}, and \texttt{eviction\_trace} provide host-side observability for scheduling and memory management policies (\Cref{tab:obs-overhead}).
 \begin{table}[t]
 \centering
 \small
-\begin{tabularx}{\columnwidth}{@{} X r r @{}}
+\begin{tabularx}{\columnwidth}{@{} X l c c c @{}}
 \toprule
-\textbf{Observable} & \textbf{\sys} & \textbf{NVBit} \\
+\textbf{Tool} & \textbf{LOC} & \textbf{Domain} & \textbf{\sys} & \textbf{NVBit} \\
 \midrule
-Exit records (\texttt{kernelretsnoop}) & 99.663\% & 99.621\% \\
-Exit-count histogram (\texttt{threadhist}) & 4.007\% & 10.301\% \\
+kernelretsnoop & 153 & Device & 8\% & 85\% \\
+threadhist & 89 & Device & 3\% & 87\% \\
+launchlate & 347 & Host+Device & 14\% & 93\% \\
+% mem\_trace & 110 & Device & 5\% & --- \\
+% threadscheduling & 402 & Device & 7\% & --- \\
+% gpu\_sched\_trace & 586 & Host (kprobe) & <1\% & --- \\
+% prefetch\_trace & 430 & Host (kprobe) & <1\% & --- \\
+% eviction\_trace & 398 & Host (kprobe) & <1\% & --- \\
 \bottomrule
 \end{tabularx}
-\caption{Mean paired overhead on RTX~5090 (ten blocks; lower is better).
-Adapters retain native transports; histogram validation is aggregate.}
+\caption{\sys device-side observability tools and overhead comparison with NVBit.}
 \label{tab:obs-overhead}
 \end{table}
 
-\paragraph{Device-map Placement}
-We isolate map placement with operation-matched 32-entry arrays on RTX~5090.
-Across 16 balanced randomized blocks (128 fresh processes), the paired median
-host/device latency ratio is 9.4307$\times$ for updates (97.5\%
-paired-bootstrap CI $[9.3789,9.4896]$) and 1.0904$\times$ for lookups
-($[1.0797,1.1113]$), making the placement effect strongly
-operation-dependent. The experiment uses one 32-thread block, scalar
-per-thread callbacks, and a verification-disabled runtime. Serialized
-standard-array RPC measurements diagnose that prototype protocol and are not
-a PCIe-placement result; this microbenchmark does not establish application
-performance, warp aggregation, or warp/grid scaling. A separate strict
-admission check on the exact object accepts its no-op callback but rejects all
-six map callbacks: their lane-derived branches, keys, or shared-map values
-violate the current SIMT uniformity rules. In a distinct 12-block experiment
-using constant keys and values, all 60 attached cells pass strict admission
-and execute on the GPU. Its host/device ratios are 1.0008$\times$
-($[0.9891,1.0143]$) for update and 1.0778$\times$
-($[1.0644,1.0833]$) for lookup. Thus strict mode supports this uniform class,
-but not the earlier per-lane class, and the placement effect remains
-operation-dependent.
+\paragraph{Device-side Runtime Optimization.}
+We evaluate device-side \sys mechanisms using a vector-add CUDA GPU kernel (32 elements, 10K iterations) from cuda-sample~\cite{nvidia_cuda_samples} on RTX 5090. \Cref{fig:microbench}(a) compares \sys's SIMT-aware warp-level execution against eGPU~\cite{egpu} that injects eBPF bytecode without SIMT-specific verification and optimizations. The baseline incurs overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead by 60--80\%. \Cref{fig:microbench}(b) shows CPU map access via PCIe is 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU. We do not compare policy-level performance against the prior workshop version or Neutrino because they are limited to read-only observability (\S\ref{sec:background}). %\arq{Do we need this experimentation?  I guess you're wanting to show that this current version of the system is better than the workshop version, but I wonder if that is entirely surprising.}

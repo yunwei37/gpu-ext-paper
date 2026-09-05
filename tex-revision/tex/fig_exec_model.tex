@@ -1,0 +1,72 @@
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[scale=0.97, every node/.append style={scale=0.97},
+  node distance=0.35cm and 0.6cm,
+  box/.style={draw, rounded corners, minimum height=0.6cm, minimum width=1.3cm, font=\small},
+  trigger/.style={box, fill=blue!10},
+  bpf/.style={box, fill=green!10},
+  transition/.style={box, fill=orange!10},
+  label/.style={font=\small\itshape, text=gray},
+  arrow/.style={->, >=stealth, semithick},
+  dasharrow/.style={->, >=stealth, semithick, dashed},
+  every node/.style={font=\small},
+]
+
+% === sched_ext (top) ===
+\node[font=\small\bfseries] (sched_title) at (0, 0) {sched\_ext / cache\_ext / XDP (1:1, sync, same processor):};
+
+\node[trigger] (s_trans) at (-2.3, -0.7) {event};
+\node[bpf]     (s_bpf)   at (0, -0.7)    {eBPF};
+\node[transition]  (s_eff)   at (2.5, -0.7)   {immediate transition};
+
+\draw[arrow] (s_trans) -- (s_bpf);
+\draw[arrow] (s_bpf)   -- (s_eff);
+
+% === gpu_ext (bottom) ===
+\node[font=\small\bfseries] (gpu_title) at (0, -1.5) {\sys{} (many:many, async, cross-device):};
+
+% Host triggers
+\node[trigger] (t_a) at (-2.9, -2.2) {driver hook};
+\node[trigger] (t_b) at (-2.9, -2.9) {uprobe};
+
+% Left eBPF (event side)
+\node[bpf, minimum height=0.6cm, minimum width=1.0cm] (g_bpf_l) at (-1.0, -2.55) {eBPF};
+
+% Right eBPF (transition side)
+\node[bpf, minimum height=0.6cm, minimum width=1.0cm] (g_bpf_r) at (0.8, -2.55) {eBPF};
+
+% Curved double arrows between the two eBPF boxes, labeled workqueue
+\draw[arrow] (g_bpf_l.20) to[bend left=35] node[above, font=\scriptsize] {workqueue} (g_bpf_r.160);
+\draw[arrow] (g_bpf_r.200) to[bend left=35] (g_bpf_l.340);
+
+% Device boundary (L-shape: horizontal in middle, vertical between eBPF and transitions)
+\draw[thick, dashed, gray]
+  (-3.8, -3.2) -- (1.7, -3.2) -- (1.7, -1.8);
+\node[font=\small\itshape, text=gray] at (0.0, -3.45) {device boundary};
+
+% Device trigger (below boundary)
+\node[trigger, fill=purple!10] (t_d) at (-2.9, -3.8) {device event};
+
+% Effects (state transitions) -- spread out on device side
+\node[transition] (e_x) at (2.8, -2.2) {prefetch};
+\node[transition] (e_y) at (2.8, -2.9) {evict};
+\node[transition] (e_z) at (2.8, -3.6) {preempt};
+
+% Arrows from triggers to left eBPF
+\draw[arrow] (t_a) -- (g_bpf_l);
+\draw[arrow] (t_b) -- (g_bpf_l);
+\draw[dasharrow] (t_d) -- (g_bpf_l);
+
+% Arrows from right eBPF to transitions (cross boundary)
+\draw[dasharrow] (g_bpf_r) -- (e_x);
+\draw[dasharrow] (g_bpf_r) -- (e_y);
+\draw[dasharrow] (g_bpf_r) -- (e_z);
+
+
+
+\end{tikzpicture}
+\caption{Policy execution model: cpu policies vs \sys{}.}
+% \arq{This figure does not make a lot of sense to me, and I don't think that it is adequently explained.  It also uses different words than the rest of the paper, which makes it very confusing.}
+% \yusheng{Resolved: unified terminology---effect→transition, lifecycle→state transitions, labels now match prose dimensions (selection, timing).}
+\label{fig:exec-model}
+\end{figure}

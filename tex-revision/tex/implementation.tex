@@ -1,0 +1,29 @@
+
+\section{Implementation}
+\label{sec:implementation}
+
+We implemented \sys on Linux 6.15. The audited NVIDIA 575.57.08 production delta spans 18 files (2,556 added and 49 deleted physical lines), including hooks, validation, diagnostics, and UVM/scheduler integration; this is not a semantic LOC metric. Our loader and JIT build on bpftime~\cite{bpftime}, with an LLVM backend translating restricted eBPF to PTX (\S\ref{sec:impl-gpu}).
+Although our implementation targets NVIDIA GPUs, the host-side design aligns with generic Linux abstractions (HMM/\texttt{migrate\_vma}~\cite{rocm-gpu-memory,linux-gpusvm-doc}, DRM scheduler~\cite{drm-gpu-sched,amdgpu-userq-doc}), and the device-side can be extended to generate vendor-neutral IR~\cite{spirv-ir-rfc} for future portability. Host-side policies do not inspect application GPU code. Device hooks, however, currently require PTX: our artifact contains an independent SPIR-V code-generation demo and NVBit examples, but neither is an integrated \sys attach backend. We therefore do not claim support for SASS-only binaries or a measured non-NVIDIA port.
+
+\subsection{Host-side Integration}
+\label{sec:impl-host}
+\paragraph{Memory State-Transition Hooks}
+\sys extends the NVIDIA Open GPU OS Kernel Modules~\cite{nvidia-open-gpu}, instrumenting UVM at \emph{activate}, \emph{access}, \emph{evict\_prepare}, and \emph{prefetch} hooks. The driver constructs the callback context and retains resource ownership and eviction authority. Root-chunk reordering operates at 2MB granularity; prefetch requests select page-granularity regions within the validated VA-block bounds. In the revised interface, \texttt{bpf\_gpu\_set\_prefetch\_region} records wide endpoints and \texttt{bpf\_gpu\_request\_reorder} records a destination and position. Neither setter directly changes a list or starts a migration. Driver code checks the recorded decision before applying the native operation (\S\ref{sec:verification}); direct writes to protected BTF context state are denied. The unsafe raw VA-space migration helper is no longer exposed by this validated interface.
+
+\paragraph{Scheduling Hooks}
+Time-Slice Group (TSG) hooks cover initialization and teardown. Initialization exposes immutable inputs; \texttt{bpf\_\allowbreak{}nv\_\allowbreak{}gpu\_\allowbreak{}set\_\allowbreak{}timeslice} and \texttt{bpf\_\allowbreak{}nv\_\allowbreak{}gpu\_\allowbreak{}set\_\allowbreak{}interleave} record requests in driver-private state for validation before native setters. The 575 implementation also validates persistent timeslice decisions inside the existing authorized RM control path. Preemption requests use \texttt{bpf\_\allowbreak{}nv\_\allowbreak{}gpu\_\allowbreak{}preempt\_\allowbreak{}tsg} from a sleepable BPF context, including a workqueue callback. These paths preserve native actuation rather than allowing arbitrary scheduler-state writes.
+
+\subsection{GPU Runtime}
+\label{sec:impl-gpu}
+
+\paragraph{Verification and JIT Compilation}
+Kernel-loaded host programs use Linux's eBPF verifier. The GPU safety prototype instead runs PREVAIL, uniformity analysis, and SIMT checks (\S\ref{sec:verification}) before the loader forwards device bytecode to the PTX backend. Helper and map descriptions determine their modeled effects; these are not inferred solely from BTF annotations. Attachment rejection requires \texttt{ENABLE\_EBPF\_VERIFIER} and strict mode; the current revision's performance runtime does not enable that check. JIT compilation can inline helpers and map accesses. The retained runtime executes callbacks per thread; warp-level aggregation remains a possible optimization, not an evaluated feature.
+
+\paragraph{Device-Side State-Transition Hooks}
+\sys intercepts CUDA APIs, transforms PTX, inserts trampolines, and reloads instrumented kernels. Running-process injection delegates to Frida; our CPU diagnostic observed ptrace only after explicit Yama opt-in. \texttt{LD\_PRELOAD} supports process-start initialization, but neither check establishes GPU-hook correctness or attach latency. Trampolines preserve SIMT registers. The retained general observability and scaling paths emit ordinary per-thread calls; the artifact does not currently provide a claim-matched warp-leader callback with result broadcast. Block policies use persistent kernels and, on Blackwell, cluster launch control~\cite{cuda-clc}. Memory hooks record accesses and publish hints through cross-layer maps.
+
+\paragraph{Hierarchical Maps and Cross-Domain State}
+
+Cross-layer state (\S\ref{sec:cross-layer-maps}) uses GPU-accessible host memory, GPU global memory, and local aggregation according to the selected map and hook. Warp-local counters can reduce shared updates, but synchronization requirements depend on the map implementation and its readers. Publishing device observations to the host has a cost and may expose stale summaries; neither coherent snapshots without synchronization nor universal avoidance of GPU atomics follows from hierarchical placement.
+% TODO(Q2): reconcile every claimed map placement/publication mode with the
+% actual artifact path before making a stronger consistency or overhead claim.

@@ -2,15 +2,17 @@
 
 % \arq{Introduce \sys following the intro discussion}
 
+This section presents the design of \sys{}, a programmable OS subsystem for safe, dynamic, full-stack GPU resource management. We describe the system workflow (\S\ref{sec:workflow}), resource state machines (\S\ref{sec:design-interfaces}), GPU-specific eBPF challenges (\S\ref{sec:motivation-challenges}), and our asynchronous execution model (\S\ref{sec:exec-model}).
+
 \subsection{\sys{} Workflow}
 \label{sec:workflow}
 
-\sys{} attaches kernel policies at \texttt{struct\_ops}, \texttt{kprobe} and \texttt{uprobe}, using Linux verification and CPU JIT. Device components use PTX JIT and DBI; maps exchange cross-layer state (\Cref{fig:system-design}). The device-verifier prototype's distinct enforcement boundary is specified in \S\ref{sec:verification}.
+\sys{} extends eBPF (extended Berkeley Packet Filter) to GPU resource management. eBPF programs are callbacks attached to hooks such as \texttt{struct\_ops}, \texttt{kprobe}, and \texttt{uprobe}, enabling safe execution within the OS kernel via load-time verification and JIT compilation. The verifier ensures termination, memory safety, type correctness, and restricts calls to approved helpers and kfuncs (OS kernel functions). As shown in Figure~\ref{fig:system-design}, \sys{} extends this pipeline to GPUs: policies build and load with standard eBPF tools, contain both host and device components, run across the host driver and GPU, are verified with SIMT-aware checks (\S\ref{sec:verification}), JIT-compiled to CPU or GPU code (e.g., PTX), use cross-layer maps, and are dynamically installed via OS kernel hooks and DBI without application or driver restarts.
 
 \begin{figure}
 \centering
     \includegraphics[width=\columnwidth]{img/gpu-ebpf-arch.png}
-\caption{\sys architecture. (a) Linux verification and deployment to driver hooks; (b) proposed device-verification/PTX-JIT pipeline; (c) DBI trampoline injection. Device verification is disabled in the revision's performance runtime; prototype enforcement is scoped in \S\ref{sec:verification}.}
+\caption{\sys architecture. (a) eBPF syscall deploys policies to verifier and driver hooks; (b) GPU JIT after verification; (c) DBI injects trampolines into GPU kernels.}
 \label{fig:system-design}
 \end{figure}
 
@@ -25,39 +27,83 @@
 \label{sec:motivation-challenges}
 % \arq{If we're tight on space, I think this can become a paragraph in 3.0 instead of being a subsection.}
 
-Three GPU properties motivate separating policy events from actuation: bulk PCIe migration can take milliseconds; memory faults couple residency and scheduling; and user-space command buffers/doorbells bypass driver callbacks. Proactive asynchronous requests must therefore use driver-controlled actuators with appropriate execution contexts, rather than arbitrary state writes (\S\ref{sec:exec-model}).
+CPU eBPF does not directly transfer to GPUs. CPU eBPF callbacks make synchronous decisions at fixed transition points, immediately affecting local resources, and subsystems are extended independently. In contrast, GPUs are discrete processors: host policy decisions affect resources asynchronously on a separate device. Thus, three architectural mismatches introduce key challenges:
+
+\textbf{Cross-device latency.} CPU eBPF callbacks execute synchronously, but GPU operations (e.g., page migration across PCIe) take milliseconds (\S\ref{sec:arch-gpu}). GPU policies must proactively initiate asynchronous actions instead of reacting only at faults.
+
+\textbf{Memory-scheduling coupling.} CPU extensibility treats scheduling and memory independently, but GPU page faults simultaneously trigger memory events and scheduling stalls due to limited device memory. GPU policies must jointly coordinate these domains.
+
+\textbf{OS kernel bypass.} GPU runtimes bypass the OS kernel (e.g., user-space command buffers, doorbells), revealing only coarse-grained resource events to drivers, not fine-grained GPU kernel launches or application phases. GPU policies must attach to user-space application functions, yet standard eBPF prohibits these callbacks from modifying OS state required for resource management. Exposing GPU driver controls without addressing these mismatches risks resource leaks, hardware hangs, or OS kernel panics.
 % \arq{Split into subsection on the state machine model and a separate subsection on the \sys{} execution model.  The example also needs to go... somewhere different?}
 
 \subsection{Asynchronous Execution Model}
 \label{sec:exec-model}
 
-To address these challenges, \sys{} separates callback triggers from their effects (\Cref{fig:exec-model}). Driver hooks, user-space uprobes, and device-side observations supply policy events; eBPF workqueues can defer host-side handling to an appropriate execution context. A policy can coordinate memory and scheduling requests, but each request must use an actuator with the required locking and object-lifetime contract. Preempting a tenant changes execution order; it does not itself release that tenant's GPU memory. The validated interfaces and their current limits are described below.
+To address these challenges, \sys{} separates callback triggers from their effects (\Cref{fig:exec-model}). Policies, as verified eBPF programs invoking OS kernel functions (\emph{kfuncs}), can attach to driver events, user-space uprobes, and device-side events. Each trigger asynchronously initiates multiple proactive or deferred state transitions across memory and scheduling domains without blocking, coordinated through eBPF workqueues. For example, a uprobe on \texttt{cudaLaunchKernel} concurrently initiates a 6.6\,ms DMA prefetch based on device observations and preempts another tenant to free GPU memory.
 
 \input{tex/fig_exec_model}
 
-The policy interface exposes two dimensions: \emph{selection} (choosing resources, e.g., eviction order or tenant priority) and \emph{timing} (when to request an operation). The driver owns resource allocation, lifetime, and actuation. Typed requests are validated before the covered resource mutations; rejection either preserves the prior state, invokes native behavior, or returns an error according to that operation's contract (\S\ref{sec:verification}). Currently, a single policy program is loaded system-wide but may internally differentiate tenant treatment for priorities, similar to sched\_ext; per-tenant isolation is future work.
+To ensure OS kernel safety, verified kfuncs restrict policy actions to two dimensions: \emph{selection} (choosing resources, e.g., eviction order, tenant preemption priority) and \emph{timing} (when to act, e.g., proactive prefetch). The driver always controls underlying state machines; policies only select ordering and timing of driver-managed operations, cannot allocate memory or remove tasks, and revert to FIFO defaults under resource pressure or misconfiguration. Currently, a single policy program is loaded system-wide but may internally differentiate tenant treatment for priorities, similar to sched\_ext; per-tenant isolation is future work.
 
-\input{tex/revision_safety}
+\subsection{Runtime Verification and Optimizations}
+\label{sec:verification}
 
-\subsubsection{Warp-level Execution Opportunity}
+\sys{}'s threat model mirrors standard eBPF: administrators are trusted, but policy code may be buggy or misconfigured. The trusted computing base (TCB) includes the OS kernel, \sys driver module, GPU compiler backend, and GPU driver/firmware. Host-side verification directly reuses the Linux eBPF verifier (\S\ref{sec:implementation}).
 
-Scalar per-thread eBPF execution can duplicate policy work and map updates. A
-future warp-level path could combine lane-local observations, elect a leader,
-execute one handler, and broadcast its decisions. The retained implementation
-and device measurements instead use per-thread calls
-(\S\ref{sec:implementation}). Such aggregation would remain distinct from
-verifier enforcement: executing once per warp would not by itself establish
-that a program satisfies the SIMT checks.
+\subsubsection{SIMT-aware Verification}
+
+Because GPUs execute in SIMT (Single Instruction, Multiple Threads) mode, device-side eBPF programs must maintain warp-level execution semantics within eBPF’s scalar model. \sys{} enforces warp-uniformity via SIMT-aware verification: it distinguishes \emph{warp-uniform} (identical across warp threads, e.g., region IDs) from \emph{lane-varying} (thread-local state) values. Lane-varying values cannot affect control flow or external side effects. Branch conditions, loop bounds, and map-update keys must be warp-uniform or warp-aggregated. Additionally, \sys{} forbids GPU-wide barriers, global synchronization, non-uniform atomics, and it bounds resource usage per policy hook.
+
+\subsubsection{Warp-level Execution Optimizations}
+
+Even after SIMT verification, scalar per-thread eBPF execution incurs overhead (\eg duplicate map updates). To resolve this, \sys{} introduces warp-level aggregated execution: lanes compute local results without affecting control flow or shared state; these results are aggregated warp-wide, and a warp leader executes the policy once, broadcasting decisions back (\S\ref{sec:implementation}).
 
 
 \subsubsection{Hierarchical Cross-layer Maps for State Coordination}
 \label{sec:cross-layer-maps}
 
-Cross-layer maps exchange observations between host driver hooks, GPU-side policies, and user-space control planes. Device-local shards reduce access costs, while host-visible summaries support cross-domain decisions (\S\ref{sec:implementation}). Delayed publication makes these observations potentially stale. Approximate access statistics can guide a policy, but they do not replace driver-owned identity, membership, and range checks before a covered transition. Nor does eventual consistency guarantee freedom from thrashing or unfair decisions.
+To share state across CPU and GPU contexts, \sys{} introduces cross-layer maps: logically unified key-value stores accessible by host driver hooks, GPU-side policies, and user-space control planes, verified through standard eBPF. Physically, maps are hierarchical shards dynamically placed by the runtime based on access patterns, latency, and capacity constraints (\S\ref{sec:implementation}). Following eBPF's philosophy, \sys{} maps use eventual consistency: periodically merging device-local shards into canonical snapshots at GPU kernel completions. This model suffices as policies rely on approximate statistics; occasional staleness may affect optimality but cannot violate correctness invariants like memory integrity.
 
 \subsection{Example: MoE Expert Offloading}
 
 % \arq{I think this would be a good final subsection that "summarizes" most of what we just read}
-For oversubscribed MoE, a conceptual policy combines device access counts, application-triggered prefetch timing, and driver-controlled cold-page ordering through shared maps. Migration may overlap computation; scheduling changes execution order, not memory ownership. Page selection is not expert-atomic offloading. The current validated ABI uses typed reorder requests rather than raw list writes; arbitrary deferred migration still needs a lifetime-safe interface. This describes composition, not an executable example of the validated interface.
-% TODO(Q2): add an exercised lifetime-safe implementation before presenting
-% this composition as executable.
+We illustrate this model using Mixture-of-Experts (MoE) offloading, where models exceed GPU memory capacity. Since all experts do not fit and activate concurrently, the GPU driver continuously evicts and migrates pages. The default driver's LRU eviction and prefetching are unaware of expert activations, causing costly PCIe DMA stalls.
+
+A \sys{} policy uses three cooperating eBPF programs at different layers (\Cref{fig:moe-listing}), coordinating via a shared cross-layer map. First, during GPU kernel execution, a device-side eBPF handler inserted at warp entry tracks warp-level accesses to expert pages, recording per-page access counts for each warp in a hierarchical cross-layer map. Second, a uprobe eBPF program attached to \texttt{cuda\-Launch\-Kernel} proactively reads these counts to predict upcoming expert activations and asynchronously initiates cross-device prefetches (\texttt{bpf\_gpu\_\allowbreak{}prefetch\_async}), overlapping the millisecond-scale memory migration with computation to avoid expensive stalls (\emph{timing}). If memory pressure arises, this same program coordinates across memory and scheduling by preempting lower-priority GPU tasks via \texttt{gdrv\_sched\_\allowbreak{}preempt} (\emph{selection}). Finally, upon memory eviction (\emph{evict\_prepare}), a driver-side eBPF handler leverages the same expert access counts to evict cold pages first (LFU ordering), protecting hot experts (\emph{selection}). Unlike framework-level offloading that often migrates experts as atomic units, \sys{} operates at page granularity, enabling finer-grained compute-transfer overlap.
+Each eBPF program captures partial state at different layers; cross-layer maps unify this fragmented visibility to orchestrate state transitions across host and GPU.
+
+
+\begin{figure}[t]
+\begin{lstlisting}[xleftmargin=0pt,numbers=none]
+SEC("gpu_dev/warp_entry")
+int moe_observe(gdev_page_access_ctx_t *ctx){
+  u64 va = ctx->va & EXPERT_MASK;
+  u64 *freq = bpf_map_lookup_elem(
+                  &expert_freq, &va);
+  if (freq) fetch_and_add(freq, 1);
+  return 0;
+}
+SEC("uprobe/cudaLaunchKernel")
+int moe_prefetch(struct pt_regs *ctx) {
+  u64 next = predict_next_expert(ctx);
+  bpf_gpu_prefetch_async(
+                  next, EXPERT_SIZE);
+  if (bpf_gpu_mem_pressure() > THRESHOLD)
+    gdrv_sched_preempt(BE_CONTEXT);
+  return 0;
+}
+SEC("gpu_mem/evict_prepare")
+int moe_evict(gdrv_mem_remove_ctx_t *ctx){
+  gmem_region_t *r = ctx->region;
+  u64 *freq = bpf_map_lookup_elem(
+                  &expert_freq, &r->va);
+  if (freq && *freq > HOT_THRESHOLD)
+    bpf_gpu_move_tail(&ctx->evict_list, r);
+  else
+    bpf_gpu_move_head(&ctx->evict_list, r);
+  return 0;
+}
+\end{lstlisting}
+\caption{MoE expert offloading policy}
+\label{fig:moe-listing}
+\end{figure}

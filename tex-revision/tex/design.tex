@@ -1,0 +1,63 @@
+\section{\sys Design}
+
+% \arq{Introduce \sys following the intro discussion}
+
+\subsection{\sys{} Workflow}
+\label{sec:workflow}
+
+\sys{} attaches kernel policies at \texttt{struct\_ops}, \texttt{kprobe} and \texttt{uprobe}, using Linux verification and CPU JIT. Device components use PTX JIT and DBI; maps exchange cross-layer state (\Cref{fig:system-design}). The device-verifier prototype's distinct enforcement boundary is specified in \S\ref{sec:verification}.
+
+\begin{figure}
+\centering
+    \includegraphics[width=\columnwidth]{img/gpu-ebpf-arch.png}
+\caption{\sys architecture. (a) Linux verification and deployment to driver hooks; (b) proposed device-verification/PTX-JIT pipeline; (c) DBI trampoline injection. Device verification is disabled in the revision's performance runtime; prototype enforcement is scoped in \S\ref{sec:verification}.}
+\label{fig:system-design}
+\end{figure}
+
+% \arq{I think it makes sense to have a \sys{} workflow section that essentially describes how the system goes from eBPF input program to all of the steps for a running policy.  This can (basically) introduce all of the eBPF-based stuff that the reader needs to understand.}
+
+\subsection{Resource State Machines}
+\label{sec:design-interfaces}
+
+\sys{} defines three resource domains. Memory chunks move between host and device memory via eviction and prefetching. GPU kernels (launched tasks) and GPU thread-blocks (parallel execution units within kernels) transition among ready, running, and finished states through scheduling and preemption operations.
+
+\subsection{GPU-Specific Challenges for eBPF Extensibility}
+\label{sec:motivation-challenges}
+% \arq{If we're tight on space, I think this can become a paragraph in 3.0 instead of being a subsection.}
+
+Three GPU properties motivate separating policy events from actuation: bulk PCIe migration can take milliseconds; memory faults couple residency and scheduling; and user-space command buffers/doorbells bypass driver callbacks. Proactive asynchronous requests must therefore use driver-controlled actuators with appropriate execution contexts, rather than arbitrary state writes (\S\ref{sec:exec-model}).
+% \arq{Split into subsection on the state machine model and a separate subsection on the \sys{} execution model.  The example also needs to go... somewhere different?}
+
+\subsection{Asynchronous Execution Model}
+\label{sec:exec-model}
+
+To address these challenges, \sys{} separates callback triggers from their effects (\Cref{fig:exec-model}). Driver hooks, user-space uprobes, and device-side observations supply policy events; eBPF workqueues can defer host-side handling to an appropriate execution context. A policy can coordinate memory and scheduling requests, but each request must use an actuator with the required locking and object-lifetime contract. Preempting a tenant changes execution order; it does not itself release that tenant's GPU memory. The validated interfaces and their current limits are described below.
+
+\input{tex/fig_exec_model}
+
+The policy interface exposes two dimensions: \emph{selection} (choosing resources, e.g., eviction order or tenant priority) and \emph{timing} (when to request an operation). The driver owns resource allocation, lifetime, and actuation. Typed requests are validated before the covered resource mutations; rejection either preserves the prior state, invokes native behavior, or returns an error according to that operation's contract (\S\ref{sec:verification}). Currently, a single policy program is loaded system-wide but may internally differentiate tenant treatment for priorities, similar to sched\_ext; per-tenant isolation is future work.
+
+\input{tex/revision_safety}
+
+\subsubsection{Warp-level Execution Opportunity}
+
+Scalar per-thread eBPF execution can duplicate policy work and map updates. A
+future warp-level path could combine lane-local observations, elect a leader,
+execute one handler, and broadcast its decisions. The retained implementation
+and device measurements instead use per-thread calls
+(\S\ref{sec:implementation}). Such aggregation would remain distinct from
+verifier enforcement: executing once per warp would not by itself establish
+that a program satisfies the SIMT checks.
+
+
+\subsubsection{Hierarchical Cross-layer Maps for State Coordination}
+\label{sec:cross-layer-maps}
+
+Cross-layer maps exchange observations between host driver hooks, GPU-side policies, and user-space control planes. Device-local shards reduce access costs, while host-visible summaries support cross-domain decisions (\S\ref{sec:implementation}). Delayed publication makes these observations potentially stale. Approximate access statistics can guide a policy, but they do not replace driver-owned identity, membership, and range checks before a covered transition. Nor does eventual consistency guarantee freedom from thrashing or unfair decisions.
+
+\subsection{Example: MoE Expert Offloading}
+
+% \arq{I think this would be a good final subsection that "summarizes" most of what we just read}
+For oversubscribed MoE, a conceptual policy combines device access counts, application-triggered prefetch timing, and driver-controlled cold-page ordering through shared maps. Migration may overlap computation; scheduling changes execution order, not memory ownership. Page selection is not expert-atomic offloading. The current validated ABI uses typed reorder requests rather than raw list writes; arbitrary deferred migration still needs a lifetime-safe interface. This describes composition, not an executable example of the validated interface.
+% TODO(Q2): add an exercised lifetime-safe implementation before presenting
+% this composition as executable.

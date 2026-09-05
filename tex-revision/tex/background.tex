@@ -1,0 +1,42 @@
+\section{Background and Motivation}
+\label{sec:background}
+\subsection{GPU Systems and Workload Diversity}
+\label{sec:arch-gpu}
+
+GPU policies span framework placement/admission, driver memory/compute scheduling and device thread scheduling. Frameworks exploit application semantics~\cite{kwon2023efficient,yu2020fine,ravi2021pilot}; drivers control MMU/interrupts and UVM host-device migration. NVIDIA devices execute 32-thread warps on SMs, whose internal access patterns are not directly visible to host drivers.
+
+
+
+% \arq{I think this should be two paragraphs: one that talks about workload diversity and the second that then talks about the need for different policies.}
+GPU workloads exhibit diverse resource access patterns. Results from \sys{}'s eBPF-based tracing tools (\S\ref{sec:eval}) confirm this diversity: \Cref{fig:access_patterns} captures memory page-fault addresses over time under UVM, showing that LLM MoE inference exhibits periodic stride bursts from expert activations; GNN training shows irregular random access from pointer-chasing graph traversal; and vector search alternates between sequential scans (index build) and random probes (query)~\cite{pan2024survey,cao2023gpu}. \Cref{fig:thread_scheduling} reveals a 127$\times$ SM scheduling load imbalance in a vector-add GPU kernel, invisible to host-side drivers.
+
+These diverse patterns require workload-specific policies across all three domains. UVM eviction and prefetch policies alone can impact execution time by up to 73\%~\cite{ganguly2019interplay,park2025helm}: MoE inference favors specialized eviction over default LRU~\cite{sheng2023flexgen,kwon2023efficient}, while GNN training demands aggressive sequential prefetch~\cite{lin2024towards,wang2016gunrock}, but each can degrade other workloads. Compute scheduling requires adaptive priority and preemption policies as multi-tenant demands fluctuate~\cite{fan2025gpreempt,wang2024gcaps}, and SM load imbalance benefits from custom thread scheduling. Yet current drivers and firmware enforce a single fixed policy.
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\textwidth]{img/pattern/combined_patterns_1x5_v2.pdf}
+    \caption{Page-fault address traces over time across four workloads. Each pattern implies a different optimal prefetch/eviction strategy; no single policy fits all.}
+    \label{fig:access_patterns}
+\end{figure*}
+
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{img/pattern/vector_add/thread_scheduling_motivation.pdf}
+    \caption{GPU thread scheduling imbalance observed via eBPF tracing. (a) SM load distribution: 127$\times$ imbalance. (b) Warp activity heatmap across SMs.}
+    \label{fig:thread_scheduling}
+\end{figure}
+
+\subsection{Agent-Based Policy Exploration}
+\label{sec:motivation-agent}
+
+Agents generate policy logic rather than preset parameters~\cite{dwivedula2025policysmith,zheng2025schedcp}. Runtime iteration requires the safe, dynamic and full-stack properties defined above: checked resource use, updates without restarts, and cross-layer observations/control. Ordinary UVM hints do not expose arbitrary fault or eviction policies.
+
+\subsection{Limitations of Existing Approaches}
+\label{sec:motivation-limitations}
+
+% \arq{Make sure to critique these existing approaches by saying they are not safe, dynamic, or full-stack.}
+\paragraph{Driver-Level Policies}
+Driver extensions~\cite{kato2011timegraph,kato2012gdev,kernelintercept,fan2025gpreempt,wang2024gcaps} embed memory/scheduling control; LithOS~\cite{coppock2025lithos} redesigns the runtime. Their trust/update boundaries differ: modified drivers are not inherently unsafe. The relevant questions are whether policies update independently of trusted code and which observations/actuators are exposed (\Cref{tab:policy-expressibility}).
+
+\paragraph{Host User-Space Runtimes and Libraries}
+Frameworks~\cite{ng2023paella,gim2025pie,shen2025xsched,chen2025ktransformers,coppock2025lithos} can use semantic adapters and coordinate participating tenants~\cite{xiao2018gandiva,yu2020fine}. Ordinary application APIs cannot install arbitrary UVM fault handlers or PMM reorders. Instrumentation and cooperating kernels add controls with integration requirements. Thus missing control boundaries, not process boundaries alone, distinguish these systems.
