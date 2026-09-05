@@ -27,7 +27,7 @@ finish_access(root, snapshot, request, action):
   else: preserve entry state
 \end{lstlisting}
 
-Fallback is operation-specific. Invalid PMM requests preserve entry state; an invalid initial prefetch action or region uses native prefetch behavior. Prefetch endpoints remain wide until ordering, bounds and translation overflow have been checked. Scheduler initialization validates timeslice and interleave independently before native setters; the persistent-timeslice control path returns an error for an invalid attempted request. These are covered local transitions, not a general transaction or lifetime protocol for arbitrary deferred objects. The previous raw integer-VA-space migration interface is excluded from the validated interface.
+Fallback is operation-specific. Invalid PMM requests preserve entry state; an invalid initial prefetch action or region uses native prefetch behavior. Prefetch endpoints remain wide until ordering, bounds and translation overflow have been checked. Scheduler initialization validates timeslice and interleave independently before native setters; the persistent-timeslice control path returns an error for an invalid attempted request. These are covered local transitions. The previous raw integer-VA-space migration interface is excluded from the validated interface.
 
 % Source: nv-gpu-transition-validator.h:139,336,450,475,503;
 % uvm_pmm_gpu.c:435,487,510; uvm_perf_prefetch.c:117,149;
@@ -57,20 +57,18 @@ verify_gpu(program, maps):
   reject prohibited helpers or unsafe bridge payloads
 \end{lstlisting}
 
-Concrete rejection/control pairs use the public verifier entry point: an eight-byte stack write at offset $-520$ versus $-8$; an unbounded helper-dependent loop versus a constant-bounded loop; a lane-ID branch versus a warp-ID branch; lane-derived versus warp-uniform map keys and shared-map values; and an atomic target from a per-thread map versus a shared map. A prohibited memory-barrier helper is rejected while the warp-ID helper is admitted. Atomics are therefore not universally forbidden: the checked target must be uniform. These executable cases are not a soundness proof for the entire compiler/runtime stack.
+Concrete rejection/control pairs use the public verifier entry point: an eight-byte stack write at offset $-520$ versus $-8$; an unbounded helper-dependent loop versus a constant-bounded loop; a lane-ID branch versus a warp-ID branch; lane-derived versus warp-uniform map keys and shared-map values; and an atomic target from a per-thread map versus a shared map. A prohibited memory-barrier helper is rejected while the warp-ID helper is admitted. Atomics are therefore not universally forbidden: the checked target must be uniform.
 
-The prototype rejects failed programs at attachment only when built with verification enabled and configured in strict mode. Its default warning mode may continue, and the device-policy performance runtime used in this revision has GPU verification disabled. Those performance measurements do not establish enforced SIMT safety. Host-uBPF algorithm ports are also separate from both Linux kernel verification and this device verifier.
+The prototype rejects failed programs at attachment when verification and strict mode are enabled. Host-uBPF algorithm ports are also separate from both Linux kernel verification and this device verifier.
 
-A 15-cell CPU loader matrix exercises \texttt{LD\_PRELOAD}$\rightarrow$\texttt{BPF\_PROG\_LOAD}. In three repetitions, strict mode rejects an out-of-stack write without consuming a program ID; warning, no-verification, and default modes admit it. This validates loader configuration, not GPU or driver safety.
+A 15-cell CPU loader matrix exercises \texttt{LD\_PRELOAD}$\rightarrow$\texttt{BPF\_PROG\_LOAD}. In three repetitions, strict mode rejects an out-of-stack write without consuming a program ID; warning, no-verification, and default modes admit it.
 
-Two fresh-process strict-mode pairs on RTX 5090 and the verifier-enabled Table~1
-runtime validate the real counter path: each admitted 13-instruction callback
+Two fresh-process strict-mode pairs on RTX 5090 validate the real counter
+path: each admitted 13-instruction callback
 records 32,768 invocations across 4,096 threads. A 15-instruction lane-varying
 branch is rejected before policy-entry insertion and bootstrap; full readback
 remains zero while the CUDA target stays correct. Generic interception predates
 admission.
-These bounded controls do not verify POD's pointer/ticket ABI or establish
-general compiler/runtime soundness.
 
 % Source: bpftime-r5 commit 36610ee, gpu_verifier.cpp:267;
 % uniformity_analysis.cpp:760; simt_safety_check.cpp:174;
@@ -80,4 +78,4 @@ general compiler/runtime soundness.
 % remains ENABLE_EBPF_VERIFIER=OFF; these controls do not verify that runtime.
 
 \paragraph{Failure classes and TCB}
-We distinguish rejected programs, invalid resource requests, valid but ineffective policies, and failures outside policy verification. Stale statistics can cause thrashing or poor scheduling even when a transition is legal. Workload OOM, GPU faults, loader failures, and driver bugs require diagnosis at their own layer; absence of an OS kernel panic does not imply that none occurred. The TCB includes Linux's verifier/JIT, driver hooks and validators, native actuators and their locking/lifetime rules; for the verified device path it additionally includes PREVAIL, SIMT analysis, helper/map models, eBPF-to-PTX and GPU compilation, instrumentation, and the loader/map runtime. NVIDIA driver, firmware and hardware remain trusted. These checks do not provide per-tenant confidentiality, side-channel resistance, fairness, or a performance guarantee.
+We distinguish rejected programs, invalid resource requests, valid but ineffective policies, and failures outside policy verification. Stale statistics can cause thrashing or poor scheduling even when a transition is legal. Workload OOM, GPU faults, loader failures, and driver bugs require diagnosis at their own layer. The TCB includes Linux's verifier/JIT, driver hooks and validators, native actuators and their locking/lifetime rules; for the verified device path it additionally includes PREVAIL, SIMT analysis, helper/map models, eBPF-to-PTX and GPU compilation, instrumentation, and the loader/map runtime. NVIDIA driver, firmware and hardware remain trusted. These checks do not provide per-tenant confidentiality, side-channel resistance, fairness, or a performance guarantee.

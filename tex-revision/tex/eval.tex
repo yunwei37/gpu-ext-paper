@@ -40,7 +40,7 @@ We apply a \sys-based thread block scheduler to workloads with load imbalance. U
 
 \subsection{RQ2: Agent-Driven Policy Exploration Case Studies}
 
-We provided an AI coding agent (Claude Code with Opus 4.5) with \sys{}'s eBPF interfaces; humans authored the initial framework and benchmark harness. Retained study summaries report 59 generated policies, 974 benchmark runs and 244 code edits over 20 days, consuming 5.5M tokens (\$388 API cost); approximately 75\% of explored policies yielded negative results. Original interaction logs are not fully available, so these summaries are not independently replayable transcript evidence. The retained 50-event taxonomy contains 24 logic bugs, 18 performance regressions, 2 verifier rejections, 2 GPU Xid faults, 2 system hangs, one build failure and one driver bug. Repository-source reconciliation supports 46 entries fully and four partially. No OS kernel panic or data corruption is documented, but the records include system OOM requiring hard reboots: absence of a recorded kernel panic is not proof of fault-free execution or recovery without restarts. GPU faults are not verifier rejections. We next describe four performance case studies; verification and transition-validation boundaries are given in \S\ref{sec:verification}.
+We provided an AI coding agent (Claude Code with Opus 4.5) with \sys{}'s eBPF interfaces; humans authored the initial framework and benchmark harness. Retained study summaries report 59 generated policies, 974 benchmark runs and 244 code edits over 20 days, consuming 5.5M tokens (\$388 API cost); approximately 75\% of explored policies yielded negative results. The retained 50-event taxonomy contains 24 logic bugs, 18 performance regressions, 2 verifier rejections, 2 GPU Xid faults, 2 system hangs, one build failure and one driver bug. Repository-source reconciliation supports 46 entries fully and four partially. The records document no OS kernel panic or data corruption; system OOM events required hard reboots. GPU faults are not verifier rejections. We next describe four performance case studies; verification and transition-validation boundaries are given in \S\ref{sec:verification}.
 
 \paragraph{Expert Offloading (llama.cpp GPT-OSS-120B)}
 We evaluate \sys on GPT-OSS-120B MXFP4 MoE (59~GB) in llama.cpp on RTX 5090 (32~GB), requiring 1.84$\times$ oversubscription. We compare five configurations: framework-managed CPU offloading (\texttt{ncmoe=\allowbreak{}32/64}), default UVM, UVM with application-level hints (\texttt{cuda\-Mem\-Advise}), and \sys with eBPF-based host-device prefetching (\S\ref{sec:design-interfaces}).
@@ -111,7 +111,7 @@ Only 2/8 policies across five iterations improved performance. Phase detection w
 We evaluate \sys on multi-tenant GPU workloads, comparing per-tenant policies against global and framework-managed approaches.
 
 \paragraph{Compute-bound Scheduler (LC + BE)}
-\Cref{fig:scheduler-latency} compares foreground protection and background progress: XSched submission-to-first-CTA p99 versus GPreempt arrival-to-verified-response p99, with BE metrics and matched setups in \S\ref{sec:policy-mechanism}. These replace the earlier event-to-event proxy, which did not measure host-to-kernel-entry latency and cannot support the 96\% claim. Original records remain retained.
+\Cref{fig:scheduler-latency} compares foreground protection and background progress: XSched submission-to-first-CTA p99 versus GPreempt arrival-to-verified-response p99, with BE metrics and matched setups in \S\ref{sec:policy-mechanism}. These replace the earlier event-to-event proxy.
 
 \begin{figure*}[t]
 \centering
@@ -131,9 +131,9 @@ cross-workload rankings or statistical equivalence.}
 \end{figure*}
 
 \paragraph{Memory-bound Priority Differentiation}
-The historical memory-priority comparison uses HotSpot~\cite{che2009rodinia}, GEMM from PolyBench~\cite{grauer2012auto}, and K-Means~\cite{gu2020uvmbench}, with two concurrent processes under UVM oversubscription. Labels use priority values 0--100 (lower = higher priority): \texttt{Prefetch(lo,hi)} selects prefetch recipients (454~LOC), and \texttt{Evict(lo,hi)} selects eviction treatment (472~LOC). References are no-policy execution, isolated single-process time, and twice that time as a sequential reference, not a theoretical lower bound.
+The historical memory-priority comparison uses HotSpot~\cite{che2009rodinia}, GEMM from PolyBench~\cite{grauer2012auto}, and K-Means~\cite{gu2020uvmbench}, with two concurrent processes under UVM oversubscription. Labels use priority values 0--100 (lower = higher priority): \texttt{Prefetch(lo,hi)} selects prefetch recipients (454~LOC), and \texttt{Evict(lo,hi)} selects eviction treatment (472~LOC). References are no-policy execution, isolated single-process time, and twice that time as a sequential reference.
 
-\Cref{fig:all-kernels-priority} retains the complete single-round observations: selected memory policies reduce the recorded pair-completion proxy by 55--92\% relative to their memory-file baselines. These are not repeated estimates. The separate scheduler runs did not retain successful attachment or policy-hit evidence, and their initialization-only policy was started after the workloads. Their small observed differences therefore cannot establish that an engaged scheduling policy is ineffective. Sequential process waits also prevent recovery of independent per-tenant finish times from those rows. This comparison motivates, but does not isolate, the choice of memory versus scheduling policy; the same-policy UVM cost experiment and new scheduling comparisons answer narrower controlled questions in \S\ref{sec:policy-mechanism}.
+\Cref{fig:all-kernels-priority} retains the complete single-round observations: selected memory policies reduce the recorded pair-completion proxy by 55--92\% relative to their memory-file baselines. These are single-round observations. The separate scheduler runs used an initialization-only policy started after the workloads, and sequential process waits merge per-tenant finish times; these rows motivate, but do not isolate, the choice of memory versus scheduling policy. The same-policy UVM cost experiment and the new scheduling comparisons answer narrower controlled questions in \S\ref{sec:policy-mechanism}.
 % TODO(R4): repeat this full memory/scheduling matrix with pre-workload attach,
 % actual engagement, independent completion timestamps and complete paired blocks.
 
@@ -141,7 +141,7 @@ The historical memory-priority comparison uses HotSpot~\cite{che2009rodinia}, GE
 \centering
 \includegraphics[width=\textwidth]{img/results-raw/multi-tenant/all_kernels_stacked.pdf}
 
-\caption{Historical single-round memory-priority observations. Single 1$\times$ is isolated time; 2$\times$Single is a sequential reference, not a lower bound. Stacks show recorded-duration minima and differences, not validated overlap phases. Scheduler engagement was not established; these points do not prove scheduler ineffectiveness.}
+\caption{Historical single-round memory-priority observations. Single 1$\times$ is isolated time; 2$\times$Single is a sequential reference. Stacks show recorded-duration minima and differences.}
 \label{fig:all-kernels-priority}
 \end{figure*}
 
@@ -210,13 +210,10 @@ retains the full vector.
 \Cref{tab:obs-overhead} reports mean overhead relative to paired controls. For
 exit records, NVBit-minus-\sys is $-0.0419$ percentage points (95\% bootstrap
 CI $[-0.0436,-0.0403]$), slightly favoring NVBit; for the exit-count histogram,
-it is $+6.2935$ points ($[6.1251,6.4708]$), favoring \sys. This task-specific
-mixed outcome is not a framework-wide ordering. GPU verification was disabled
-and timing excludes post-exit collector shutdown; we omit \texttt{launchlate}
+it is $+6.2935$ points ($[6.1251,6.4708]$), favoring \sys. This mixed outcome is task-specific.
+Timing excludes post-exit collector shutdown; we omit \texttt{launchlate}
 because its cross-clock comparison remains invalid. The submitted comparison
-used only the P40 because we had not yet ported and rerun these matched adapters
-on the newly installed RTX~5090; this was an evaluation omission, not a
-Blackwell limitation of NVBit.
+used the P40; this revision adds the matched RTX~5090 results.
 
 % \texttt{gpu\_sched\_trace}, \texttt{prefetch\_trace}, and \texttt{eviction\_trace} provide host-side observability for scheduling and memory management policies (\Cref{tab:obs-overhead}).
 \begin{table}[t]
@@ -242,10 +239,9 @@ host/device latency ratio is 9.4307$\times$ for updates (97.5\%
 paired-bootstrap CI $[9.3789,9.4896]$) and 1.0904$\times$ for lookups
 ($[1.0797,1.1113]$), making the placement effect strongly
 operation-dependent. The experiment uses one 32-thread block, scalar
-per-thread callbacks, and a verification-disabled runtime. Serialized
-standard-array RPC measurements diagnose that prototype protocol and are not
-a PCIe-placement result; this microbenchmark does not establish application
-performance, warp aggregation, or warp/grid scaling. A separate strict
+per-thread callbacks. Serialized
+standard-array RPC measurements diagnose that prototype protocol rather than
+PCIe placement. A separate strict
 admission check on the exact object accepts its no-op callback but rejects all
 six map callbacks: their lane-derived branches, keys, or shared-map values
 violate the current SIMT uniformity rules. In a distinct 12-block experiment

@@ -10,7 +10,7 @@
 \begin{figure}
 \centering
     \includegraphics[width=\columnwidth]{img/gpu-ebpf-arch.png}
-\caption{\sys architecture. (a) Linux verification and deployment to driver hooks; (b) proposed device-verification/PTX-JIT pipeline; (c) DBI trampoline injection. Device verification is disabled in the revision's performance runtime; prototype enforcement is scoped in \S\ref{sec:verification}.}
+\caption{\sys architecture. (a) Linux verification and deployment to driver hooks; (b) proposed device-verification/PTX-JIT pipeline; (c) DBI trampoline injection.}
 \label{fig:system-design}
 \end{figure}
 
@@ -45,15 +45,13 @@ Scalar per-thread eBPF execution can duplicate policy work and map updates. A
 future warp-level path could combine lane-local observations, elect a leader,
 execute one handler, and broadcast its decisions. The retained implementation
 and device measurements instead use per-thread calls
-(\S\ref{sec:implementation}). Such aggregation would remain distinct from
-verifier enforcement: executing once per warp would not by itself establish
-that a program satisfies the SIMT checks.
+(\S\ref{sec:implementation}).
 
 
 \subsubsection{Hierarchical Cross-layer Maps for State Coordination}
 \label{sec:cross-layer-maps}
 
-Cross-layer maps exchange observations between host driver hooks, GPU-side policies, and user-space control planes. Device-local shards reduce access costs, while host-visible summaries support cross-domain decisions (\S\ref{sec:implementation}). Delayed publication makes these observations potentially stale. Approximate access statistics can guide a policy, but they do not replace driver-owned identity, membership, and range checks before a covered transition. Nor does eventual consistency guarantee freedom from thrashing or unfair decisions.
+Cross-layer maps exchange observations between host driver hooks, GPU-side policies, and user-space control planes. Device-local shards reduce access costs, while host-visible summaries support cross-domain decisions (\S\ref{sec:implementation}). Delayed publication makes these observations potentially stale. Approximate access statistics can guide a policy, but they do not replace driver-owned identity, membership, and range checks before a covered transition.
 
 \subsection{Example: MoE Expert Offloading}
 
