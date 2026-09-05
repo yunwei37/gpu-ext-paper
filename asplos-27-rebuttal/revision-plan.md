@@ -90,7 +90,25 @@ lookups ([1.0797, 1.1113]). This single-block,
 Serialized standard-array RPC numbers diagnose that protocol rather than PCIe
 placement, and the measurements do not establish application, warp, or grid
 behavior. This operation-matched result replaces the old undifferentiated
-Fig. 15 ``6000x CPU-map'' and warp-aggregation wording. The synthetic RTX 5090
+Fig. 15 ``6000x CPU-map'' and warp-aggregation wording. The strict-admitted
+map-granularity follow-up is now complete and **contradicted**: the
+[warp-map scaling campaign](../../../microbench/fig15-device/strict-warp-map-scaling/results-full-575-01-20260904.md)
+and its [independent audit](../../../microbench/fig15-device/strict-warp-map-scaling/independent-review.md)
+accept all 160 fresh processes with zero nonzero return codes and 120/120
+target-PID STRICT admissions, 160 correctness markers and 120 detach markers.
+Replacing one shared device-map key with one key per warp shows no detected
+cross-shape scaling advantage in single-block launches: the cross-shape factors
+from 1 to 32 warps per block are 1.0102 [0.9768, 1.0390] shared/noop, 1.0060
+[0.9915, 1.0604] warp/noop and 1.0062 [0.9878, 1.0257] warp/shared, all with
+intervals containing one, and the only per-shape interval excluding one in the
+predicted direction is the warp/shared contrast at a single warp, 0.9936
+[0.9848, 0.9971]. This negative result stays repository evidence and is not a
+paper-positive claim: the target still issues one scalar `call.uni` per thread,
+the helper reads the physical PTX `%warpid` rather than logical CTA warp IDs,
+and the final distinct key counts 4/4/8/16/32 by shape give no evidence of warp
+aggregation or once-per-warp dispatch. A valid execution-only preflight and five
+retained preflight attempts, the latest of which aborted before any BPF load on
+a syscall-server CUDA error 3, are recorded beside it. The synthetic RTX 5090
 trampoline-scaling study is complete at its scoped measurement boundary. Its
 fixed-work follow-up replayed all 30 arms and 150 timings successfully; across
 five organizations the absolute no-op increment spans 0.272--1.840 us and the
