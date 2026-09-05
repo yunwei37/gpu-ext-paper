@@ -126,6 +126,17 @@ boundaries: both startup and running-process lifecycle paths completed 5/5
 times, and strict verification rejected all three invalid-program trials
 without consuming a program ID, whereas warning/default modes admitted them.
 
+The [2026-09-04 eBPF-to-SASS AOT readiness note](../../experiment/revision-sass-aot-readiness-20260904.md)
+records a committed artifact-feasibility prototype on bpftime branch
+`revision/sass-backend` at `bf048fa`: a real BPF ELF section passes through the
+existing strict GPU verifier and PTX compiler, CUDA 12.9 `ptxas` assembles it
+for `sm_120`, and `cuobjdump` confirms SASS plus the expected entry symbol. The
+invalid warp-rule case is rejected before compiler/assembler artifacts. The
+documented build and CTest run passed (1/1 tests, 0 failures). This is not yet
+a live PTX-free application insertion or overhead campaign, so it does not fully
+validate the historical rebuttal claim of a working SASS-level patching
+prototype.
+
 Several assertions in the old proposal were corrected by source/raw-data audit:
 the old 96% launch-latency metric was not host-to-kernel-entry latency; historical
 Fig. 13 did not prove scheduler engagement; invalid transitions have
