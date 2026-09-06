@@ -270,6 +270,14 @@ We implement a preemption policy equivalent to GPREEMPT's~\cite{fan2025gpreempt}
 \label{fig:matched-scheduling}
 \end{figure*}
 
+% --- Submitted version's figure (superseded by the matched comparison above; retained for reference) ---
+% \begin{figure}
+% \centering
+% \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/scheduler_latency_throughput.pdf}
+% \caption{Multi-tenant GPU scheduling with \sys{} (LC: latency-critical, BE: best-effort).}
+% \label{fig:scheduler-latency}
+% \end{figure}
+
 \paragraph{Memory-bound Priority Differentiation.}
 % 内存密集型优先级区分。
 We evaluate \sys's memory policies for priority differentiation on \emph{memory-bound} workloads under UVM oversubscription using HotSpot~\cite{che2009rodinia} (spatial locality), GEMM from PolyBench~\cite{grauer2012auto} (compute-intensive, memory-bound under UVM oversubscription), and K-Means~\cite{gu2020uvmbench} (sparse access).
@@ -391,6 +399,23 @@ On the RTX~5090, which retains the complete per-exit record stream (23~M records
 % 在保留完整逐条退出记录流（2,300 万条记录）的 RTX~5090 上，gpubpf 的退出计数直方图开销为 4.0\%，而 NVBit 为 10.3\%；完整的逐条退出记录流对两种工具都受记录传输主导（99.66\% 对 99.62\%）。
 Attaching to a running process requires no application restart.
 % 附加到正在运行的进程无需重启应用。
+
+% --- Submitted version's P40-only table (merged into the table below; retained for reference) ---
+% \begin{table}[t]
+% \centering
+% \small
+% \begin{tabularx}{\columnwidth}{@{} X l c c c @{}}
+% \toprule
+% \textbf{Tool} & \textbf{LOC} & \textbf{Domain} & \textbf{\sys} & \textbf{NVBit} \\
+% \midrule
+% kernelretsnoop & 153 & Device & 8\% & 85\% \\
+% threadhist & 89 & Device & 3\% & 87\% \\
+% launchlate & 347 & Host+Device & 14\% & 93\% \\
+% \bottomrule
+% \end{tabularx}
+% \caption{\sys device-side observability tools and overhead comparison with NVBit.}
+% \label{tab:obs-overhead}
+% \end{table}
 
 \begin{table}[t]
 \centering
