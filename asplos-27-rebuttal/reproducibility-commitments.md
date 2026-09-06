@@ -5,14 +5,13 @@
 **Inventory revision:** 2026-08-03 (full re-audit; supersedes earlier draft of same date)  
 **Audience:** authors drafting HotCRP revision plan / author response.
 
-**Execution update, 2026-09-04:** The RTX 5090 Table~1 rerun now has a valid
-two-tool, ten-block comparison for matched exit records and exit-count
-histograms. The outcome is mixed: NVBit is 0.04185 percentage points
-lower-overhead for the full record stream, while gpubpf is 6.29351 points
-lower-overhead for the final histogram. This completes only the two
-non-cross-clock rows. `launchlate` remains invalid, and the performance runtime
-had GPU verification disabled. The submitted P40-only result was an evaluation
-gap, not evidence that NVBit lacked Blackwell support.
+**Execution update, 2026-09-06:** The RTX 5090 Table~1 rerun now has a complete
+three-tool, ten-block comparison with 70 numeric cells. Baseline throughput is
+37,586.3225 token/s. gpubpf/NVBit overhead is 90.7051%/99.6210% for
+`kernelretsnoop`, 2.9653%/10.3501% for `threadhist`, and 0.2208%/8.7959% for
+`launchlate`. This is the requested llama.cpp prefill-throughput comparison;
+the submitted P40 values remain in the paper. `kernelretsnoop` optimization is
+follow-on work because its complete record stream remains expensive.
 
 The separate
 [S0 verifier-mode campaign](../../../workloads/llama.cpp/observability_overhead/revision-rq4/device-verifier-s0/results-s0-575-02-20260904.md)
