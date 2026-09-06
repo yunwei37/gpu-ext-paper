@@ -33,6 +33,8 @@ Each comparison pairs the original implementation with a \sys{} port of the same
 % 每组对比在相同工作负载和执行器上，将原始实现与同一策略的 \sys{} 移植版配对，在 RTX~5090（驱动 575.57.08）上以独占 GPU 和随机完整区块运行。
 All arms pass numerical correctness and policy-engagement checks; we report medians with paired bootstrap intervals.
 % 所有实验臂都通过数值正确性和策略生效检查；报告中位数及配对 bootstrap 区间。
+Systems we could not run are named explicitly: GPREEMPT's artifact is a kernel module built against driver 550 and does not load on our 575 driver, so we port its policy; Tally's artifact evaluation requires an A100; Mooncake requires multi-node RDMA; G10 is simulator-only; DeepUM and LithOS release no public artifact.
+% 我们无法运行的系统也明确点名：GPREEMPT 的 artifact 是针对 550 驱动构建的内核模块，无法加载到我们的 575 驱动上，因此我们移植其策略；Tally 的 artifact 评估需要 A100；Mooncake 需要多节点 RDMA；G10 仅有模拟器；DeepUM 和 LithOS 没有公开 artifact。
 
 \paragraph{MoE-Infinity (expert offloading)}
 % MoE-Infinity（专家卸载）

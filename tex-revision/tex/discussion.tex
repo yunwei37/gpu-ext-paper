@@ -10,6 +10,10 @@ Cross-layer maps publish device observations asynchronously, so a policy may act
 % \sys{} 在两个层面缓解该问题：转移验证防止过期请求破坏驱动状态；策略也可以在检测到抖动加剧时主动提高同步频率，以开销换取新鲜度。
 The driver retains native reclamation authority under memory pressure, bounding the damage a stale policy can cause.
 % 驱动在内存压力下保留原生回收权限，从而限定了过期策略可能造成的损害上限。
+When an application's own heuristics conflict with a policy, as with the KV-cache/weight thrashing in \S\ref{sec:eval}, the policy itself can be updated at runtime, and the driver's native thrashing mitigation continues to apply underneath.
+% 当应用自带的启发式与策略冲突时（如 \S\ref{sec:eval} 中的 KV-cache/权重抖动），策略本身可以在运行时更新，驱动的原生抖动缓解也始终在底层生效。
+On map structure, associative counters merge cleanly across shards, while eviction-list order or unique ownership cannot be reconstructed from merged snapshots and keeps a single authority; a dedicated campaign confirms bounded raw device-to-host readback beyond reducible summaries, recovering 34{,}560 per-thread tuples exactly and detecting all 2{,}560 deliberate-overflow drops.
+% 关于 map 结构，关联计数器可以跨分片干净地合并，而驱逐列表顺序或唯一所有权无法从合并的快照中重建，需保持单一权威；一项专项实验证实了超出可聚合摘要的有界原始设备到主机读回能力——精确恢复 34,560 个每线程元组，并检出全部 2,560 个故意溢出丢弃。
 
 \paragraph{Tenancy and software co-location}
 % 多租户与软件共置
