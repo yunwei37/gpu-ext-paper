@@ -247,7 +247,7 @@ Only 2 of 8 policies yielded positive results.
 
 % Across all four case studies, \sys's programmable policies exploit workload structure (experts, KV-cache, graph structure, index layout) that existing UVM and framework-level mechanisms cannot leverage, and the agent's exploration followed a consistent pattern: broad initial policy, failure-driven refinement, and iterative convergence, with eBPF containment ensuring every failed attempt was recovered in seconds rather than requiring driver rebuilds or reboots.
 
-\subsubsection{Multi-Tenant Memory, Bandwidth, and Scheduling}
+\subsection{Multi-Tenant Memory, Bandwidth, and Scheduling}
 % 多租户内存、带宽与调度
 \label{sec:rq1-mt}
 
@@ -350,8 +350,8 @@ Our multi-tenant setting is software co-location on an unpartitioned GPU, comple
 
 \input{tex/revision_comparisons}
 
-\subsection{RQ2: Mechanism Cost and Overheads}
-% RQ2：机制代价与开销
+\subsection{Mechanism Cost and Overheads}
+% 机制代价与开销
 \label{sec:rq2-cost}
 
 We quantify what the general mechanism costs: the same-policy execution cost measured by the matched ports in \S\ref{sec:policy-mechanism} is 0.7--3.3\%, and the verifier's one-time admission cost is 141~ms for the 60-instruction \texttt{kernelretsnoop} and 12~ms for the 13-instruction \texttt{threadhist} (\S\ref{sec:verification}); below we measure hook, observability, and map-placement overheads.
