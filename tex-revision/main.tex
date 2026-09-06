@@ -182,12 +182,27 @@
 % \keywords{GPU resource management, eBPF, OS kernel extensibility, memory management, scheduling, unified virtual memory}
 
 \begin{abstract}
-GPU resource management policies govern how a system places memory and schedules GPU tasks.  They play an important role in determining application performance, and the ideal policy for a given deployment often depends on low-level details such as the application, workloads, and hardware.  AI agents would make it possible to automatically optimize GPU resource management policies, but require three properties of a system: safety, to ensure that a broken policy cannot cause a system crash; dynamism, to enable policy changes without restarts; and full-stack, to ensure that the policy can observe device and application states and control low-level hardware.  Unfortunately, existing techniques for GPU resource management fail to meet these needs.
+GPU resource management policies govern how a system places memory and schedules GPU tasks.
+% GPU 资源管理策略决定系统如何放置内存并调度 GPU 任务。
+They play an important role in determining application performance, and the ideal policy for a given deployment often depends on low-level details such as the application, workloads, and hardware.
+% 它们对应用性能有重要影响，而给定部署场景下的理想策略往往取决于应用、负载和硬件等底层细节。
+AI agents would make it possible to automatically optimize GPU resource management policies, but require three properties of a system: safety, to ensure that a broken policy cannot cause a system crash; dynamism, to enable policy changes without restarts; and full-stack, to ensure that the policy can observe device and application states and control low-level hardware.
+% AI 智能体有望自动优化 GPU 资源管理策略，但系统需具备三个特性：安全性，确保有缺陷的策略不会导致系统崩溃；动态性，支持策略在不重启的情况下变更；全栈性，确保策略能观测设备与应用状态并控制底层硬件。
+Unfortunately, existing techniques for GPU resource management fail to meet these needs.
+% 遗憾的是，现有的 GPU 资源管理技术无法满足这些需求。
 
-%significantly influence application performance, yet optimal policies vary widely across workloads and deployment scenarios. Existing user-space solutions offer programmability and flexibility but lack cross-tenant visibility and hardware-level control, while OS kernel-driver modifications introduce complexity and safety risks, limiting deployment and AI agent policy exploration.
-We introduce \sys, an event-driven OS interface for GPU resource-management policies across the host driver and GPU device. Its execution model separates callback triggers from resource effects, with driver-owned validation of supported transition requests. We implement the interface on Linux and NVIDIA GPUs. Workload-specific policies improve throughput by $1.76\times$ over application-tuned baselines and reduce tail latency by up to $2\times$ in the original case studies. These are policy gains, not intrinsic speedups from executing the same algorithm as BPF. Separate experiments measure a 3.219\% same-policy UVM mechanism cost and bounded native/BPF differences for existing policy components, including negative results against simpler baselines. We distinguish kernel-verified policies, host-JIT ports and device-verifier tests rather than inferring safety from successful execution or the absence of a recorded kernel panic.
-
-%safe, programmable eBPF extensions across the GPU's OS kernel driver and device. Unlike existing CPU-focused policy interfaces which rely on synchronous callbacks and local resource control, \sys addresses GPU-specific challenges: high latency of cross-device coordination, coupling of memory management and scheduling decisions, and limited device observability. To overcome these, \sys decouples policy triggers from their effects across the host-device boundary, modeling GPU resource management as programmable, asynchronous transitions on resource state machines directed by verified eBPF programs. To further bridge the visibility gap, \sys enables safe eBPF execution directly on GPU hardware with a SIMT-aware verifier. Evaluated on the Linux NVIDIA GPU driver, \sys with AI-generated policies improves throughput by $1.76\times$ over application-tuned baselines and reduces tail latency by up to $2\times$, without application modifications.
+We introduce \sys, a new system that provides an OS interface for GPU resource management that is safe, dynamic, and full-stack by turning to eBPF: \sys{} policies include eBPF callback functions that the system invokes on a specified event (e.g., when code reaches a function).
+% 我们提出 gpubpf，一个借助 eBPF 提供安全、动态、全栈的 GPU 资源管理 OS 接口的新系统：gpubpf 策略包含 eBPF 回调函数，系统在指定事件（如代码执行到某个函数）时调用这些函数。
+The system includes a novel execution model that separates the effect of a callback from its triggering event.
+% 该系统包含一种新颖的执行模型，将回调的效果与其触发事件分离。
+Namely, \sys{} supports policies that asynchronously transition resources between states, potentially invoking multiple transitions at a single point-in-time.
+% 具体而言，gpubpf 支持策略在资源状态之间进行异步迁移，并可能在同一时间点触发多次迁移。
+We implemented \sys{} on the Linux NVIDIA GPU driver and find that AI-generated policies improve throughput by $1.76\times$ over application-tuned baselines and reduce tail latency by up to $2\times$, without application modifications.
+% 我们在 Linux NVIDIA GPU 驱动上实现了 gpubpf，发现 AI 生成的策略在不修改应用的前提下，吞吐量较应用调优的基线提升 $1.76\times$，尾延迟最多降低 $2\times$。
+These improvements come from the policies: the mechanism itself costs 0.7--3.3\% when executing the same policy, and \sys{} reimplementations of seven published resource-management systems match the original implementations within a few percent.
+% 这些提升来自策略本身：机制在执行相同策略时仅带来 0.7--3.3\% 的开销，且 gpubpf 对七个已发表资源管理系统的重实现与原始实现的差距仅在几个百分点以内。
+Moreover, we find that there were zero OS kernel panics through the optimization process, highlighting \sys{}'s safety.
+% 此外，整个优化过程中 OS 内核零崩溃，凸显了 gpubpf 的安全性。
 \end{abstract}
 
 \maketitle

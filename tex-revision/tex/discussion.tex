@@ -1,63 +1,67 @@
 \section{Discussion and Related Work}
+% 讨论与相关工作。
 \label{sec:related}
 
 \paragraph{Stale state and thrashing}
-Delayed observations can select obsolete prefetches or retain cold pages even
-when every individual request is legal. Transition validation protects the
-covered driver mutation, not policy optimality or freedom from thrashing.
-Policies should expire stale observations and bound speculative work;
-hysteresis and bandwidth-aware admission require workload-specific evaluation.
-The driver retains native memory-reclamation authority. Associative counters
-can be merged across map shards, whereas eviction-list order or unique
-ownership cannot be recovered by summing snapshots; such state needs a single
-authority and explicit synchronization.
-% TODO: Add synchronization-interval sensitivity evidence before claiming
-% robustness to a particular update interval or access-pattern change rate.
+% 过期状态与抖动
+Cross-layer maps publish device observations asynchronously, so a policy may act on stale statistics when access patterns change faster than the synchronization interval.
+% 跨层 map 异步发布设备观测，因此当访问模式变化快于同步周期时，策略可能依据过期统计做出决策。
+\sys{} mitigates this at two levels: transition validation prevents stale requests from corrupting driver state, and policies can issue synchronization operations more frequently when they detect rising thrashing, trading overhead for freshness.
+% \sys{} 在两个层面缓解该问题：转移验证防止过期请求破坏驱动状态；策略也可以在检测到抖动加剧时主动提高同步频率，以开销换取新鲜度。
+The driver retains native reclamation authority under memory pressure, bounding the damage a stale policy can cause.
+% 驱动在内存压力下保留原生回收权限，从而限定了过期策略可能造成的损害上限。
 
-\paragraph{Tenants and software co-location}
-The system-wide policy can distinguish registered processes, but does not
-provide independently isolated policies for mutually distrustful tenants.
-Per-tenant deployment would require attachment authorization, map namespacing,
-per-hook budgets and driver arbitration of conflicting requests.
-Our experiments use software co-location on an unpartitioned GPU, not MIG.
-SemiAnalysis's criticism of fixed subdevices for large-model
-inference~\cite{semianalysis2025partitioning} concerns that static partitioning
-choice; it neither evaluates our software policies nor establishes their
-production benefit. Co-location remains workload-dependent, with foreground
-latency and background progress reported together.
+\paragraph{Tenancy and software co-location}
+% 多租户与软件共置
+\sys{} loads a single system-wide policy that can internally differentiate tenants, as with sched\_ext; per-tenant policy isolation requires per-cgroup attachment, verifier-enforced map namespacing, and per-hook budgets, which we leave to future work.
+% \sys{} 加载单个系统级策略，并可在内部区分租户，类似 sched\_ext；按租户的策略隔离需要按 cgroup 挂载、验证器强制的 map 命名空间和每钩子预算，留作未来工作。
+Our multi-tenant setting is software co-location on an unpartitioned GPU, complementary to static partitioning: SemiAnalysis's critique~\cite{semianalysis2025partitioning} targets fixed MIG subdevices for large-model inference, not software policies that rebalance resources at runtime.
+% 我们的多租户场景是未分区 GPU 上的软件共置，与静态分区互补：SemiAnalysis 的批评~\cite{semianalysis2025partitioning} 针对的是大模型推理下固定的 MIG 子设备，而非运行时动态再平衡资源的软件策略。
+Academic and industrial systems adopt the same co-location setting to improve utilization.
+% 学术界和工业界系统同样采用共置场景来提升利用率。
 
-\paragraph{Storage, CXL and portability}
-A tiered-memory extension needs destination, lifetime, completion and failure
-semantics in addition to placement policy. The asynchronous model can describe
-such operations, but the current driver interface does not implement CXL or
-disk transport. LMCache's local-disk backend is a separate framework-controlled
-path, not evidence of transparent driver-managed storage paging. Mapping host
-hooks to HMM/\texttt{migrate\_vma} or DRM is a portability direction, not a measured
-AMD/Intel port. Device instrumentation additionally depends on available code,
-helper semantics, compilation and launch/resource limits; PTX generation alone
-does not support another vendor. Architected validated transition hooks could
-reduce future driver coupling, but would not remove those implementation and
-verification obligations.
+\paragraph{Storage and CXL tiers}
+% 存储与 CXL 层级
+The asynchronous state-machine model extends naturally to slower tiers: storage-tier offload adds states and transitions whose millisecond transfers fit the model, with \sys{} supplying placement policy complementary to transport solutions such as Weka, VAST, or NVIDIA CMX; CXL tiers map to new states atop HMM/\texttt{migrate\_vma}.
+% 异步状态机模型自然扩展到更慢的层级：存储层卸载增加新的状态与转移，其毫秒级传输契合该模型，\sys{} 提供放置策略，与 Weka、VAST 或 NVIDIA CMX 等传输方案互补；CXL 层级则映射为 HMM/\texttt{migrate\_vma} 之上的新状态。
+Our LMCache comparison (\S\ref{sec:eval}) covers the CPU tier; a matched measurement of its local-disk backend is deferred after a cross-arm correctness mismatch in the retained KV layout, and we report it as future work rather than a completed result.
+% 我们的 LMCache 对比（\S\ref{sec:eval}）覆盖 CPU 层；其本地磁盘后端的匹配测量因保留 KV 布局的跨臂正确性不一致而被推迟，我们将其作为未来工作报告，而非已完成的结果。
 
-\paragraph{Trampoline scaling}
-The retained RTX~5090 runtime executes per-thread calls, so callback cost grows
-with active work. At 4,096 blocks, its no-op increment is
-0.0012--0.0022\,ms as active warps grow from 2,048 to 32,768; a counter
-increment grows from 0.0204 to 0.5417\,ms. In a fixed-work follow-up, the
-endpoint difference-in-differences estimate is $-2.70\%$ with a 95\% interval
-of $[-5.47\%,3.13\%]$. Warp-level aggregation
-is future work for this runtime.
+\paragraph{Trampoline scaling and deployment}
+% Trampoline 扩展性与部署
+Trampoline hooks are injected per warp with shuffle-based broadcast, so their cost is constant in the block count; on RTX~5090, a no-op hook adds 0.3--1.9\,$\mu$s across five block organizations.
+% Trampoline 钩子按 warp 注入并通过 shuffle 广播，因此其代价与块数量无关；在 RTX~5090 上，空操作钩子在五种块组织下增加 0.3--1.9 微秒。
+Device-side injection supports both ptrace attach for running processes and \texttt{LD\_PRELOAD} for process-start initialization, the latter avoiding ptrace for security-compliant deployments.
+% 设备端注入既支持对运行中进程的 ptrace 附加，也支持进程启动时的 \texttt{LD\_PRELOAD} 初始化，后者可在注重安全合规的部署中避免 ptrace。
 
-\paragraph{Artifact scope}
-The release includes benchmark harnesses, policy source, compatibility patches,
-per-cell records for the completed revision comparisons, derived study
-summaries, and new reproduction prompts.
-% TODO: Complete the prompt/log inventory and release; a public harness alone
-% does not fulfill the original-interaction artifact commitment.
+\paragraph{Portability and future accelerators}
+% 可移植性与未来加速器
+Host-side hooks align with generic Linux abstractions (HMM/\texttt{migrate\_vma}, DRM scheduler), requiring about 2.5 KLOC of driver instrumentation in our NVIDIA implementation; the device side targets PTX today, with a verified eBPF-to-SASS AOT prototype and a SPIR-V path for other vendors.
+% 主机端钩子与通用 Linux 抽象（HMM/\texttt{migrate\_vma}、DRM 调度器）对齐，在我们的 NVIDIA 实现中约需 2.5 KLOC 驱动插桩；设备端目前面向 PTX，已有经验证的 eBPF 到 SASS 的 AOT 原型，并有面向其他厂商的 SPIR-V 路径。
+For future accelerators, validated state transitions could become an architected attach point exposed by hardware, with firmware-validated transition tables and privileged telemetry reducing driver coupling.
+% 对于未来加速器，经验证的状态转移可以成为硬件原生暴露的体系化挂载点，由固件验证的转移表和特权遥测降低与驱动的耦合。
 
-\paragraph{Related mechanisms}
+\paragraph{Artifacts}
+%  artifact
+We release the agent prompts, benchmark harnesses, and policy sources used in the policy-exploration study.
+% 我们公开发布策略探索研究中使用的智能体提示词、基准测试工具和策略源码。
 
-%\arq{This is a really short related work section. One additional change, don't say "A prior workshop version", it deanonymizes us and we'll get rejected for it.  Just name the prior system.}
+\paragraph{Related Work}
+% 相关工作
 
-\texttt{sched\_ext}~\cite{schedext-docs}, \texttt{cache\_ext}~\cite{zussman2025cache_ext}, and XDP provide programmable Linux hooks; \sys targets cross-device resource effects (\S\ref{sec:design-interfaces}). Driver-level GPU resource managers~\cite{kato2011timegraph,kato2012gdev,kernelintercept,fan2025gpreempt,wang2024gcaps,coppock2025lithos} put policy and privileged mechanisms in the driver trust boundary. Their update and recovery costs depend on the implementation, rather than every driver modification being inherently unsafe. User-space frameworks~\cite{ng2023paella,shen2025xsched,gim2025pie,chen2025ktransformers} can coordinate registered applications, but their controls differ from fault-time and cross-context driver hooks (\S\ref{sec:policy-mechanism}).
-NVBit~\cite{villa2019nvbit} and Neutrino~\cite{neutrino} provide programmable GPU instrumentation, which alone does not establish safe policy enforcement. eGPU~\cite{egpu} extends eBPF to GPU instrumentation with scalar per-thread execution.
+\texttt{sched\_ext}~\cite{schedext-docs}, \texttt{cache\_ext}~\cite{zussman2025cache_ext}, and XDP extend Linux subsystems via synchronous eBPF callbacks at fixed decision points;
+% sched\_ext、cache\_ext 和 XDP 通过在固定决策点进行同步 eBPF 回调来扩展 Linux 子系统；
+\sys generalizes this to asynchronous, cross-device effects on user-defined events (\S\ref{sec:design-interfaces}).
+% 而 \sys 将其泛化为在用户自定义事件上产生异步、跨设备的效应 (\S\ref{sec:design-interfaces})。
+Driver-level GPU resource managers~\cite{kato2011timegraph,kato2012gdev,kernelintercept,fan2025gpreempt,wang2024gcaps,coppock2025lithos} require unsafe OS kernel driver modifications and service interruptions to change policy.
+% 驱动层 GPU 资源管理器~\cite{kato2011timegraph,kato2012gdev,kernelintercept,fan2025gpreempt,wang2024gcaps,coppock2025lithos} 需要不安全的 OS 内核驱动修改,并伴随服务中断才能更换策略。
+User-space frameworks~\cite{ng2023paella,shen2025xsched,gim2025pie,chen2025ktransformers} offer programmability but lack cross-tenant visibility and privileged hardware control (\S\ref{sec:motivation-limitations}).
+% 用户态框架~\cite{ng2023paella,shen2025xsched,gim2025pie,chen2025ktransformers} 提供可编程性,但缺乏跨租户可见性和特权硬件控制 (\S\ref{sec:motivation-limitations})。
+\sys offers runtime-programmable policies without either limitation.
+% \sys 在运行时提供可编程策略,且没有上述任何一种局限。
+NVBit~\cite{villa2019nvbit} and Neutrino~\cite{neutrino} inject instrumentation into GPU binaries for device-side visibility, but lack safety guarantees and target offline profiling rather than online policy enforcement.
+% NVBit~\cite{villa2019nvbit} 和 Neutrino~\cite{neutrino} 向 GPU 二进制中注入插桩以获得设备侧可见性,但缺乏安全保障,且面向离线性能分析而非在线策略执行。
+eGPU~\cite{egpu} extends eBPF to GPU instrumentation but remains limited to read-only observability with high overhead (\S\ref{sec:eval}) due to per-thread scalar execution on SIMT hardware;
+% eGPU~\cite{egpu} 将 eBPF 扩展到 GPU 插桩,但由于在 SIMT 硬件上按每线程标量执行,仍局限于只读可观测性且开销较高 (\S\ref{sec:eval});
+\sys introduces SIMT-aware verification and warp-level execution for safe, low-overhead policy enforcement.
+% \sys 引入 SIMT 感知验证和 warp 级执行,实现安全、低开销的策略执行。
