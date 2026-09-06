@@ -2,20 +2,14 @@
 % 评估
 \label{sec:eval}
 
-Our evaluation addresses the following research questions:
-% 我们的评估围绕以下研究问题展开：
+Our evaluation addresses two research questions:
+% 我们的评估围绕两个研究问题展开：
 
 \begin{itemize}[leftmargin=*]
-  \item \textbf{RQ1 (Single-Tenant Management):} How much performance gain can \sys's programmable memory and scheduling policies provide on oversubscribed single-tenant workloads?
-  % RQ1（单租户管理）：在超订的单租户工作负载上，gpubpf 的可编程内存与调度策略能带来多大的性能提升？
-  \item \textbf{RQ2 (Agent-Driven Exploration):} Does \sys's eBPF containment model make GPU policy space exploration safe and productive for AI agents?
-  % RQ2（智能体驱动的探索）：gpubpf 的 eBPF 隔离模型能否让 AI 智能体安全而高效地探索 GPU 策略空间？
-  \item \textbf{RQ3 (Multi-Tenant Management):} Does \sys improve tail latency, throughput, and resource fairness compared to user-space and global policies in multi-tenant settings?
-  % RQ3（多租户管理）：与单租户策略和全局策略相比，gpubpf 能否在多租户场景下改善尾延迟、吞吐量和资源公平性？
-  \item \textbf{RQ4 (Overhead):} What is the overhead of \sys{}'s core mechanisms and observability capabilities?
-  % RQ4（开销）：gpubpf 核心机制与可观测能力的开销有多大？
-  \item \textbf{RQ5 (Policy versus Mechanism):} Can \sys{} express the policies of published state-of-the-art systems, and what does the mechanism cost when running the same policy?
-  % RQ5（策略与机制）：gpubpf 能否表达已发表的最先进系统的策略？用该机制运行相同策略的代价是多少？
+  \item \textbf{RQ1 (Policy Expression and Benefits):} Can AI agents safely express GPU resource-management policies through \sys---including reimplementations of published state-of-the-art systems---and do those policies improve performance?
+  % RQ1（策略表达与收益）：AI 智能体能否通过 gpubpf 安全地表达 GPU 资源管理策略——包括对己发表最先进系统的重实现——这些策略能否提升性能？
+  \item \textbf{RQ2 (Mechanism Cost):} What does the \sys{} mechanism cost, in hook and observability overhead and in executing the same policy through \sys{}?
+  % RQ2（机制代价）：gpubpf 机制的代价有多大——包括钩子与可观测开销，以及通过 gpubpf 执行同一策略的代价？
 \end{itemize}
 
 
@@ -28,8 +22,8 @@ Unless otherwise specified, experiments run on Server~A, averaging 10 trials usi
 % 除非另有说明，实验均在服务器 A 上进行，每项结果取 10 次试验的几何平均值。
 We compare \sys{} against three classes of baselines: (1) driver defaults (UVM LRU/FIFO eviction, native GPU scheduler), (2) application-level hints (\texttt{cudaMemAdvise}), and (3) framework-managed policies (e.g., llama.cpp \texttt{ncmoe}, vLLM CPU offload, LMCache) where applicable.
 % 我们将 gpubpf 与三类基线对比：(1) 驱动默认行为（UVM LRU/FIFO 驱逐、原生 GPU 调度器），(2) 应用层提示（\texttt{cudaMemAdvise}），以及 (3) 框架管理的策略（如 llama.cpp 的 \texttt{ncmoe}、vLLM CPU offload、LMCache，在适用处）。
-RQ5 additionally compares against published research systems: MoE-Infinity~\cite{xue2025moeinfinity}, XSched~\cite{shen2025xsched}, GPREEMPT~\cite{fan2025gpreempt}, Expert Buffering~\cite{huang2023towards}, FineMoE~\cite{yu2026finemoe}, Hummingbird~\cite{hu2026hummingbird}, and POD-Attention~\cite{kamath2025pod}, each evaluated as a matched pair of the original implementation and a \sys{} port of the same policy (\S\ref{sec:policy-mechanism}).
-% RQ5 进一步与已发表的研究系统对比：MoE-Infinity、XSched、GPREEMPT、Expert Buffering、FineMoE、Hummingbird 和 POD-Attention，每一组都是原始实现与同一策略的 gpubpf 移植版的匹配对比（\S\ref{sec:policy-mechanism}）。
+The matched comparisons in \S\ref{sec:policy-mechanism} additionally compare against published research systems: MoE-Infinity~\cite{xue2025moeinfinity}, XSched~\cite{shen2025xsched}, GPREEMPT~\cite{fan2025gpreempt}, Expert Buffering~\cite{huang2023towards}, FineMoE~\cite{yu2026finemoe}, Hummingbird~\cite{hu2026hummingbird}, and POD-Attention~\cite{kamath2025pod}, each evaluated as a matched pair of the original implementation and a \sys{} port of the same policy.
+% \S\ref{sec:policy-mechanism} 中的匹配对比进一步与已发表的研究系统比较：MoE-Infinity、XSched、GPREEMPT、Expert Buffering、FineMoE、Hummingbird 和 POD-Attention，每一组都是原始实现与同一策略的 gpubpf 移植版的匹配对比。
 We use PyTorch (version 2.9.0) and vLLM (version 0.11.0) with custom allocators, llama.cpp (version 7101), and Faiss (version 1.13.0) with UVM build config.
 % 我们使用 PyTorch（版本 2.9.0）和 vLLM（版本 0.11.0，配自定义分配器）、llama.cpp（版本 7101）以及采用 UVM 构建配置的 Faiss（版本 1.13.0）。
 All tests with \sys policies require no application modifications.
@@ -49,8 +43,15 @@ We release the agent prompts, benchmark harnesses, and policy sources used in th
 
 \end{figure}
 
-\subsection{RQ1: Single-Tenant Memory and Scheduling Policies on GPU kernels}
-% RQ1：GPU 内核上的单租户内存与调度策略
+\subsection{RQ1: Safe Agent-Driven Policy Expression and Performance}
+% RQ1：安全的智能体驱动策略表达与性能
+
+We first show that \sys{} policies improve oversubscribed workloads in microbenchmarks (\S\ref{sec:rq1-micro}), then that AI agents can safely and productively generate such policies on realistic workloads (\S\ref{sec:rq1-agent}), extend to multi-tenant settings (\S\ref{sec:rq1-mt}), and finally that the same interface re-expresses the policies of published state-of-the-art systems (\S\ref{sec:policy-mechanism}).
+% 我们首先展示 \sys{} 策略在微基准上改善超订负载（\S\ref{sec:rq1-micro}），然后展示 AI 智能体能在真实负载上安全高效地生成此类策略（\S\ref{sec:rq1-agent}），并扩展到多租户场景（\S\ref{sec:rq1-mt}），最后展示同一接口能够重新表达已发表最先进系统的策略（\S\ref{sec:policy-mechanism}）。
+
+\subsubsection{Single-Tenant Memory and Scheduling Policies}
+% 单租户内存与调度策略
+\label{sec:rq1-micro}
 
 \paragraph{Memory Prefetch Policies.}
 % 内存预取策略。
@@ -80,8 +81,9 @@ LatencyBudget, which caps per-block stealing time, matches fixed-work baseline.
 This highlights \sys's programmability: different workloads require different scheduling strategies.
 % 这凸显了 gpubpf 的可编程性：不同工作负载需要不同的调度策略。
 
-\subsection{RQ2: Agent-Driven Policy Exploration Case Studies}
-% RQ2：智能体驱动的策略探索案例研究
+\subsubsection{Agent-Driven Policy Exploration Case Studies}
+% 智能体驱动的策略探索案例研究
+\label{sec:rq1-agent}
 
 We provided an AI coding agent (Claude Code with Opus 4.5) with \sys{}'s eBPF interfaces; the agent autonomously generated all policy logic without human review or guidance, while humans authored only the initial framework and benchmark harness.
 % 我们向一个 AI 编程智能体（Claude Code，Opus 4.5）提供 gpubpf 的 eBPF 接口；智能体在无人审阅或指导的情况下自主生成了全部策略逻辑，人类只编写初始框架和基准测试工具。
@@ -248,8 +250,9 @@ Only 2 of 8 policies yielded positive results.
 
 % Across all four case studies, \sys's programmable policies exploit workload structure (experts, KV-cache, graph structure, index layout) that existing UVM and framework-level mechanisms cannot leverage, and the agent's exploration followed a consistent pattern: broad initial policy, failure-driven refinement, and iterative convergence, with eBPF containment ensuring every failed attempt was recovered in seconds rather than requiring driver rebuilds or reboots.
 
-\subsection{RQ3: Multi-Tenant Memory, Bandwidth, and Scheduling}
-% RQ3：多租户内存、带宽与调度
+\subsubsection{Multi-Tenant Memory, Bandwidth, and Scheduling}
+% 多租户内存、带宽与调度
+\label{sec:rq1-mt}
 
 We evaluate \sys on multi-tenant GPU workloads, comparing per-tenant policies against global and framework-managed approaches.
 % 我们在多租户 GPU 工作负载上评估 gpubpf，将每租户策略与全局策略和框架管理的方法进行对比。
@@ -350,11 +353,11 @@ Our multi-tenant setting is software co-location on an unpartitioned GPU, comple
 
 \input{tex/revision_comparisons}
 
-\subsection{RQ4: Overheads}
-% RQ4：开销
+\subsection{RQ2: Mechanism Cost and Overheads}
+% RQ2：机制代价与开销
 
-We quantify \sys's mechanism and observability overhead.
-% 我们量化 gpubpf 的机制开销与可观测性开销。
+We quantify what the general mechanism costs: the same-policy execution cost measured by the matched ports in \S\ref{sec:policy-mechanism} is 0.7--3.3\%, and the verifier's one-time admission cost is 141~ms for the 60-instruction \texttt{kernelretsnoop} and 12~ms for the 13-instruction \texttt{threadhist} (\S\ref{sec:verification}); below we measure hook, observability, and map-placement overheads.
+% 我们量化通用机制的代价：\S\ref{sec:policy-mechanism} 中匹配移植测得的同策略执行代价为 0.7--3.3\%，验证器的一次性准入开销为 60 指令的 \texttt{kernelretsnoop} 141~ms、13 指令的 \texttt{threadhist} 12~ms（\S\ref{sec:verification}）；下文测量钩子、可观测性和 map 放置开销。
 
 
 %\paragraph{Policy Building Blocks.}

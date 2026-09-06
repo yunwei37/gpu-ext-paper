@@ -1,4 +1,5 @@
-\subsection{RQ5: Policy Expressibility and Matched Implementations}
+\subsubsection{Policy Expressibility and Matched Implementations}
+% 策略可表达性与匹配实现
 \label{sec:policy-mechanism}
 
 We evaluate whether \sys{} can express the policies of published state-of-the-art systems, and what the general mechanism costs when it runs the same policy as an ad-hoc implementation.
@@ -81,7 +82,7 @@ A device-BPF selector preserves POD-Attention's~\cite{kamath2025pod} proportiona
 % 机制代价
 Across the matched ports, executing the same policy through \sys{} costs 0.7--3.3\%: 0.7\% for Expert Buffering, 1.8\% for POD-Attention's device selector, and 3.2\% for a kernel-verified UVM no-prefetch policy measured over fifteen paired fault-path runs.
 % 在所有匹配移植中，通过 \sys{} 执行相同策略的代价为 0.7--3.3\%：Expert Buffering 为 0.7\%，POD-Attention 设备端选择器为 1.8\%，经内核验证的 UVM 无预取策略在十五次配对缺页路径运行上测得 3.2\%。
-The headline improvements in RQ1--RQ3 are therefore policy gains, obtainable through a safe, dynamic, and full-stack mechanism at single-digit cost.
+The headline improvements in RQ1 are therefore policy gains, obtainable through a safe, dynamic, and full-stack mechanism at single-digit cost.
 % 因此，RQ1--RQ3 中的头条提升是策略收益，可以通过一个安全、动态、全栈的机制以个位数的代价获得。
 
 \paragraph{Agent-discovered policies}
