@@ -12,6 +12,9 @@ Our evaluation addresses two research questions:
   % RQ2（机制代价）：gpubpf 机制的代价有多大——包括钩子与可观测开销，以及通过 gpubpf 执行同一策略的代价？
 \end{itemize}
 
+We answer RQ1 in \S\ref{sec:rq1-micro}--\S\ref{sec:policy-mechanism}: policy microbenchmarks, agent-driven case studies on realistic workloads, multi-tenant settings, and matched reimplementations of published policies. \S\ref{sec:rq2-cost} answers RQ2.
+% 我们在 \S\ref{sec:rq1-micro}--\S\ref{sec:policy-mechanism} 回答 RQ1：策略微基准、真实负载上的智能体驱动案例研究、多租户场景，以及对已发表策略的匹配重实现；\S\ref{sec:rq2-cost} 回答 RQ2。
+
 
 \subsection{Methodology and Setup}
 % 方法论与实验设置
@@ -43,13 +46,7 @@ We release the agent prompts, benchmark harnesses, and policy sources used in th
 
 \end{figure}
 
-\subsection{RQ1: Safe Agent-Driven Policy Expression and Performance}
-% RQ1：安全的智能体驱动策略表达与性能
-
-We first show that \sys{} policies improve oversubscribed workloads in microbenchmarks (\S\ref{sec:rq1-micro}), then that AI agents can safely and productively generate such policies on realistic workloads (\S\ref{sec:rq1-agent}), extend to multi-tenant settings (\S\ref{sec:rq1-mt}), and finally that the same interface re-expresses the policies of published state-of-the-art systems (\S\ref{sec:policy-mechanism}).
-% 我们首先展示 \sys{} 策略在微基准上改善超订负载（\S\ref{sec:rq1-micro}），然后展示 AI 智能体能在真实负载上安全高效地生成此类策略（\S\ref{sec:rq1-agent}），并扩展到多租户场景（\S\ref{sec:rq1-mt}），最后展示同一接口能够重新表达已发表最先进系统的策略（\S\ref{sec:policy-mechanism}）。
-
-\subsubsection{Single-Tenant Memory and Scheduling Policies}
+\subsection{Single-Tenant Memory and Scheduling Policies}
 % 单租户内存与调度策略
 \label{sec:rq1-micro}
 
@@ -81,7 +78,7 @@ LatencyBudget, which caps per-block stealing time, matches fixed-work baseline.
 This highlights \sys's programmability: different workloads require different scheduling strategies.
 % 这凸显了 gpubpf 的可编程性：不同工作负载需要不同的调度策略。
 
-\subsubsection{Agent-Driven Policy Exploration Case Studies}
+\subsection{Agent-Driven Policy Exploration Case Studies}
 % 智能体驱动的策略探索案例研究
 \label{sec:rq1-agent}
 
@@ -355,6 +352,7 @@ Our multi-tenant setting is software co-location on an unpartitioned GPU, comple
 
 \subsection{RQ2: Mechanism Cost and Overheads}
 % RQ2：机制代价与开销
+\label{sec:rq2-cost}
 
 We quantify what the general mechanism costs: the same-policy execution cost measured by the matched ports in \S\ref{sec:policy-mechanism} is 0.7--3.3\%, and the verifier's one-time admission cost is 141~ms for the 60-instruction \texttt{kernelretsnoop} and 12~ms for the 13-instruction \texttt{threadhist} (\S\ref{sec:verification}); below we measure hook, observability, and map-placement overheads.
 % 我们量化通用机制的代价：\S\ref{sec:policy-mechanism} 中匹配移植测得的同策略执行代价为 0.7--3.3\%，验证器的一次性准入开销为 60 指令的 \texttt{kernelretsnoop} 141~ms、13 指令的 \texttt{threadhist} 12~ms（\S\ref{sec:verification}）；下文测量钩子、可观测性和 map 放置开销。
