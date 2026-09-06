@@ -58,21 +58,21 @@ reports the host Linux-verifier and driver transition-validator layers as
 [invalid-prefetch transition campaign](../../experiment/revision-safety/prefetch-invalid-575-02/result-review.md)
 now completes all three live controls and exact old-UVM restoration. The
 scheduler-init diagnostic and its 16-cell live transition matrix are complete;
-all cells passed and the original driver/services were restored. LMCache disk is paused at the user's
-request after a cross-arm correctness failure; its promised measurement is not
-complete. Expert Buffering has completed its matched-policy study. The RTX 5090
-device-side comparison now has a valid, independently analyzed two-tool subset:
-all five correctness configurations and all 10 randomized pp=512 blocks passed,
-with no rejected or retried cell. Exit-record overhead is 99.663% for gpubpf
-and 99.621% for matched NVBit (gpubpf is 0.04185 percentage points slower),
-while exit-count-histogram overhead is 4.007% and 10.301% (gpubpf is 6.29351
-points lower). This is a mixed result, not a general gpubpf-over-NVBit win.
-It completes only the non-cross-clock `kernelretsnoop` and `threadhist` rows;
-the `launchlate` comparison remains invalid, and the verification-disabled
-Table 1 performance runtime is not relabelled verifier-on. A1 measures only
-the one-time `verify_gpu_program` call described above; the separate S0
-campaign supplies the scoped steady-state STRICT-versus-NO_VERIFY result and
-limitations above.
+all cells passed and the original driver/services were restored. LMCache local
+disk is active again: the first five-block performance-only campaign completed
+15/15 cells with recompute/CPU/disk output throughput of 30.6422/30.1168/28.5723
+token/s and median TTFT of 67.1691/72.6468/96.3280 ms. Native and gpubpf
+storage-aware policy arms remain in implementation. Expert Buffering has
+completed its matched-policy study. The current RTX 5090 Table 1 campaign is a
+complete three-tool, seven-arm, ten-block pp=512 run with all 70 cells returning
+numeric throughput and code 0. Baseline is 37,586.3225 token/s. For
+`kernelretsnoop`, gpubpf/NVBit overhead is 90.7051%/99.6210%; for `threadhist`,
+2.9653%/10.3501%; and for `launchlate`, 0.2208%/8.7959%. These are the requested
+llama.cpp prefill-throughput overhead measurements. Earlier Table 1 runs and
+their numbers remain retained as historical results but do not replace this
+complete campaign. A1 measures only the one-time `verify_gpu_program` call
+described above; the separate S0 campaign supplies the scoped steady-state
+STRICT-versus-NO_VERIFY result and limitations above.
 The frozen plan named llama.cpp build 7101, while every accepted preflight and
 full-run arm consistently used build 7102; this creates no cross-arm mismatch
 but is a disclosed deviation.
@@ -161,7 +161,7 @@ Supporting inventory and safety limits: `reproducibility-commitments.md`.
 ## R0. Author checklist (do not paste)
 
 - [ ] R1 names MoE-Infinity and XSched from `sota-baseline-feasibility.md`, neither of which has been built on this host yet. The short version commits to at least one runnable baseline per axis and names these two as the ones being brought up, so a single failed build is survivable, but both failing is not. Smoke-test them early; `sota-feas-moe.md` lists DeepSpeed ZeRO-Inference and PowerInfer as fallbacks for the MoE axis, and `sota-feas-sched.md` lists Orion for the scheduling axis.
-- [x] R6: NVBit added SM_120 support in v1.7.4, released 2025-02-11, so the old "NVBit lacks Blackwell support" line cannot be reused. The submitted P40-only comparison reflected a gap in the original evaluation, not a lack of Blackwell support in NVBit. The valid 5090 two-tool result above closes those two rows; `launchlate` remains invalid.
+- [x] R6: NVBit added SM_120 support in v1.7.4, released 2025-02-11, so the old "NVBit lacks Blackwell support" line cannot be reused. The submitted P40-only comparison reflected a gap in the original evaluation, not a lack of Blackwell support in NVBit. The complete 5090 three-tool result above closes all three rows while preserving the submitted P40 values.
 - [ ] R1: XSched's public implementation gives Level-1 inter-kernel preemption on sm_120 (`arch.cpp` falls through to `CudaQueueLv1`; Level-2 and Level-3 return `nullptr`). Label the numbers accordingly, or a reviewer who knows the artifact will read them as paper-level preemption.
 - [ ] Fix the LOC errors found in `loc-reconciliation.md` before the revised paper goes out. The 925 (`gpu_preempt_ctrl`) and 408 (`gpu_sched_set_timeslices`) figures check out and are separate entries, but the sequential prefetch claim of 375 should be 573, which shifts the two composite totals at `eval.tex:64` and `eval.tex:92`, and the two-tenant total of 926 at `eval.tex:136` omits the 408 timeslice component it names, so it should be 1334.
 - [ ] Confirm the agent safety-event breakdown in R5 matches the numbers in `eval.tex`.
