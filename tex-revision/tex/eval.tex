@@ -34,6 +34,8 @@ We use PyTorch (version 2.9.0) and vLLM (version 0.11.0) with custom allocators,
 % 我们使用 PyTorch（版本 2.9.0）和 vLLM（版本 0.11.0，配自定义分配器）、llama.cpp（版本 7101）以及采用 UVM 构建配置的 Faiss（版本 1.13.0）。
 All tests with \sys policies require no application modifications.
 % 所有使用 gpubpf 策略的测试均无需修改应用。
+We release the agent prompts, benchmark harnesses, and policy sources used in the policy-exploration study.
+% 我们公开发布策略探索研究中使用的智能体提示词、基准测试工具和策略源码。
 
 
 % \arq{Add lines of code throughout each of the experiments}
@@ -168,6 +170,11 @@ The resulting policy (totaling $\sim$880~LOC) effectively prevents thrashing see
 \label{fig:vllm-kv-offload}
 
 \end{figure}
+
+The same asynchronous state-machine model extends to slower tiers: storage-tier offload adds states and transitions whose millisecond transfers fit the model, with \sys{} supplying placement policy complementary to transport solutions such as Weka, VAST, or NVIDIA CMX; CXL tiers map to new states atop HMM/\texttt{migrate\_vma}.
+% 同样的异步状态机模型可扩展到更慢的层级：存储层卸载增加新的状态与转移，其毫秒级传输契合该模型，\sys{} 提供放置策略，与 Weka、VAST 或 NVIDIA CMX 等传输方案互补；CXL 层级则映射为 HMM/\texttt{migrate\_vma} 之上的新状态。
+This case also shows how \sys{} handles application heuristics that conflict with a policy: the agent updates the policy at runtime to accommodate vLLM's behavior, while the driver's native thrashing mitigation continues to apply underneath.
+% 该案例还展示了 \sys{} 如何应对与策略冲突的应用启发式：智能体在运行时更新策略以适应 vLLM 的行为，而驱动的原生抖动缓解在底层持续生效。
 
 \paragraph{Graph Neural Networks (GNN Training).}
 % 图神经网络（GNN 训练）。
@@ -318,6 +325,11 @@ We compare default UVM (driver FIFO/LRU) against \sys per-tenant memory and sche
 This shows \sys reduces contention for both workloads rather than favoring one over the other.
 % 这说明 gpubpf 减轻了两种工作负载之间的竞争，而非偏袒其中一方。
 
+Our multi-tenant setting is software co-location on an unpartitioned GPU, complementary to static partitioning: SemiAnalysis's critique~\cite{semianalysis2025partitioning} targets fixed MIG subdevices for large-model inference, not software policies that rebalance resources at runtime.
+% 我们的多租户场景是未分区 GPU 上的软件共置，与静态分区互补：SemiAnalysis 的批评~\cite{semianalysis2025partitioning} 针对的是大模型推理下固定的 MIG 子设备，而非运行时动态再平衡资源的软件策略。
+\sys{} loads a single system-wide policy that can internally differentiate tenants, as with sched\_ext; per-tenant policy isolation requires per-cgroup attachment, verifier-enforced map namespacing, and per-hook budgets, which we leave to future work.
+% \sys{} 加载单个系统级策略，并可在内部区分租户，类似 sched\_ext；按租户的策略隔离需要按 cgroup 挂载、验证器强制的 map 命名空间和每钩子预算，留作未来工作。
+
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/fig_colocated_results.pdf}
@@ -449,5 +461,9 @@ The baseline incurs overhead due to per-thread execution and uncoalesced memory 
 % \Cref{fig:microbench}(b) 对比了经 PCIe 的 CPU map 访问与 GPU 端操作，这促使 gpubpf 采用将热状态保留在 GPU 上的分层 map 设计。
 An operation-matched measurement on RTX~5090 (16 balanced blocks, 128 fresh processes) finds that direct host mapping costs 9.43$\times$ the device-resident latency for map updates and 1.09$\times$ for lookups, so the placement benefit is largest for write-heavy policies.
 % RTX~5090 上一项操作匹配的测量（16 个均衡区块、128 个全新进程）发现，直接主机映射的 map 更新延迟是设备驻留的 9.43 倍，查找为 1.09 倍，因此放置收益对写密集型策略最大。
+Trampoline hooks are injected per warp with shuffle-based broadcast, so their cost is constant in the block count; on RTX~5090, a no-op hook adds 0.3--1.9\,$\mu$s across five block organizations.
+% Trampoline 钩子按 warp 注入并通过 shuffle 广播，因此其代价与块数量无关；在 RTX~5090 上，空操作钩子在五种块组织下增加 0.3--1.9 微秒。
+Device-side injection supports both ptrace attach for running processes and \texttt{LD\_PRELOAD} for process-start initialization, the latter avoiding ptrace for security-compliant deployments.
+% 设备端注入既支持对运行中进程的 ptrace 附加，也支持进程启动时的 \texttt{LD\_PRELOAD} 初始化，后者可在注重安全合规的部署中避免 ptrace。
 We do not compare policy-level performance against the prior workshop version or Neutrino because they are limited to read-only observability (\S\ref{sec:background}). %\arq{Do we need this experimentation?  I guess you're wanting to show that this current version of the system is better than the workshop version, but I wonder if that is entirely surprising.}
 % 我们不在策略层面与先前的工作坊版本或 Neutrino 比较，因为它们仅限于只读可观测性（\S\ref{sec:background}）。

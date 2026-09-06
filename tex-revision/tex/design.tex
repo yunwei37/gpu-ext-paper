@@ -136,6 +136,11 @@ Following eBPF's philosophy, \sys{} maps use eventual consistency: periodically 
 This model suffices as policies rely on approximate statistics; occasional staleness may affect optimality but cannot violate correctness invariants like memory integrity.
 % 该模型足够用，因为策略依赖近似统计；偶尔的过期可能影响最优性，但不会违反内存完整性等正确性不变量。
 
+When access patterns change faster than the synchronization interval, policies can issue synchronization operations more frequently, trading overhead for freshness, while transition validation (\S\ref{sec:verification}) prevents stale requests from corrupting driver state.
+% 当访问模式变化快于同步周期时，策略可以提高同步频率，以开销换取新鲜度；同时转移验证（\S\ref{sec:verification}）防止过期请求破坏驱动状态。
+Associative counters merge cleanly across shards, while eviction-list order or unique ownership cannot be reconstructed from merged snapshots and keeps a single authority; a dedicated experiment confirms bounded raw device-to-host readback beyond reducible summaries, recovering 34{,}560 per-thread tuples exactly and detecting all 2{,}560 deliberate-overflow drops.
+% 关联计数器可以跨分片干净地合并，而驱逐列表顺序或唯一所有权无法从合并的快照中重建，需保持单一权威；一项专项实验证实了超出可聚合摘要的有界原始设备到主机读回能力——精确恢复 34,560 个每线程元组，并检出全部 2,560 个故意溢出丢弃。
+
 \subsection{Example: MoE Expert Offloading}
 % 示例：MoE 专家卸载
 

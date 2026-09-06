@@ -13,6 +13,8 @@ Although our implementation targets NVIDIA GPUs, the host-side design aligns wit
 % 尽管我们的实现面向 NVIDIA GPU，但主机端设计遵循通用 Linux 抽象（HMM/\texttt{migrate\_vma}~\cite{rocm-gpu-memory,linux-gpusvm-doc}、DRM 调度器~\cite{drm-gpu-sched,amdgpu-userq-doc}），设备端也可扩展为生成厂商中立的 IR~\cite{spirv-ir-rfc}，以支持未来的可移植性。
 For GPU kernels shipped without PTX, a verified eBPF-to-SASS prototype compiles a strictly verified eBPF program through NVPTX and \texttt{ptxas} into a standalone cubin that loads and executes on the GPU.
 % 对于不带 PTX 发布的 GPU 内核，一个经验证的 eBPF 到 SASS 原型可将严格验证过的 eBPF 程序经 NVPTX 和 \texttt{ptxas} 编译为独立的 cubin，并在 GPU 上加载执行。
+For future accelerators, validated state transitions could become an architected attach point exposed by hardware, with firmware-validated transition tables and privileged telemetry reducing driver coupling.
+% 对于未来加速器，经验证的状态转移可以成为硬件原生暴露的体系化挂载点，由固件验证的转移表和特权遥测降低与驱动的耦合。
 
 \subsection{Host-side Integration}
 % 主机端集成

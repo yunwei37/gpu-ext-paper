@@ -1,55 +1,8 @@
-\section{Discussion and Related Work}
-% 讨论与相关工作。
+\section{Related Work}
+% 相关工作。
 \label{sec:related}
 
-\paragraph{Stale state and thrashing}
-% 过期状态与抖动
-Cross-layer maps publish device observations asynchronously, so a policy may act on stale statistics when access patterns change faster than the synchronization interval.
-% 跨层 map 异步发布设备观测，因此当访问模式变化快于同步周期时，策略可能依据过期统计做出决策。
-\sys{} mitigates this at two levels: transition validation prevents stale requests from corrupting driver state, and policies can issue synchronization operations more frequently when they detect rising thrashing, trading overhead for freshness.
-% \sys{} 在两个层面缓解该问题：转移验证防止过期请求破坏驱动状态；策略也可以在检测到抖动加剧时主动提高同步频率，以开销换取新鲜度。
-The driver retains native reclamation authority under memory pressure, bounding the damage a stale policy can cause.
-% 驱动在内存压力下保留原生回收权限，从而限定了过期策略可能造成的损害上限。
-When an application's own heuristics conflict with a policy, as with the KV-cache/weight thrashing in \S\ref{sec:eval}, the policy itself can be updated at runtime, and the driver's native thrashing mitigation continues to apply underneath.
-% 当应用自带的启发式与策略冲突时（如 \S\ref{sec:eval} 中的 KV-cache/权重抖动），策略本身可以在运行时更新，驱动的原生抖动缓解也始终在底层生效。
-On map structure, associative counters merge cleanly across shards, while eviction-list order or unique ownership cannot be reconstructed from merged snapshots and keeps a single authority; a dedicated campaign confirms bounded raw device-to-host readback beyond reducible summaries, recovering 34{,}560 per-thread tuples exactly and detecting all 2{,}560 deliberate-overflow drops.
-% 关于 map 结构，关联计数器可以跨分片干净地合并，而驱逐列表顺序或唯一所有权无法从合并的快照中重建，需保持单一权威；一项专项实验证实了超出可聚合摘要的有界原始设备到主机读回能力——精确恢复 34,560 个每线程元组，并检出全部 2,560 个故意溢出丢弃。
-
-\paragraph{Tenancy and software co-location}
-% 多租户与软件共置
-\sys{} loads a single system-wide policy that can internally differentiate tenants, as with sched\_ext; per-tenant policy isolation requires per-cgroup attachment, verifier-enforced map namespacing, and per-hook budgets, which we leave to future work.
-% \sys{} 加载单个系统级策略，并可在内部区分租户，类似 sched\_ext；按租户的策略隔离需要按 cgroup 挂载、验证器强制的 map 命名空间和每钩子预算，留作未来工作。
-Our multi-tenant setting is software co-location on an unpartitioned GPU, complementary to static partitioning: SemiAnalysis's critique~\cite{semianalysis2025partitioning} targets fixed MIG subdevices for large-model inference, not software policies that rebalance resources at runtime.
-% 我们的多租户场景是未分区 GPU 上的软件共置，与静态分区互补：SemiAnalysis 的批评~\cite{semianalysis2025partitioning} 针对的是大模型推理下固定的 MIG 子设备，而非运行时动态再平衡资源的软件策略。
-Academic and industrial systems adopt the same co-location setting to improve utilization.
-% 学术界和工业界系统同样采用共置场景来提升利用率。
-
-\paragraph{Storage and CXL tiers}
-% 存储与 CXL 层级
-The asynchronous state-machine model extends naturally to slower tiers: storage-tier offload adds states and transitions whose millisecond transfers fit the model, with \sys{} supplying placement policy complementary to transport solutions such as Weka, VAST, or NVIDIA CMX; CXL tiers map to new states atop HMM/\texttt{migrate\_vma}.
-% 异步状态机模型自然扩展到更慢的层级：存储层卸载增加新的状态与转移，其毫秒级传输契合该模型，\sys{} 提供放置策略，与 Weka、VAST 或 NVIDIA CMX 等传输方案互补；CXL 层级则映射为 HMM/\texttt{migrate\_vma} 之上的新状态。
-
-\paragraph{Trampoline scaling and deployment}
-% Trampoline 扩展性与部署
-Trampoline hooks are injected per warp with shuffle-based broadcast, so their cost is constant in the block count; on RTX~5090, a no-op hook adds 0.3--1.9\,$\mu$s across five block organizations.
-% Trampoline 钩子按 warp 注入并通过 shuffle 广播，因此其代价与块数量无关；在 RTX~5090 上，空操作钩子在五种块组织下增加 0.3--1.9 微秒。
-Device-side injection supports both ptrace attach for running processes and \texttt{LD\_PRELOAD} for process-start initialization, the latter avoiding ptrace for security-compliant deployments.
-% 设备端注入既支持对运行中进程的 ptrace 附加，也支持进程启动时的 \texttt{LD\_PRELOAD} 初始化，后者可在注重安全合规的部署中避免 ptrace。
-
-\paragraph{Portability and future accelerators}
-% 可移植性与未来加速器
-Host-side hooks align with generic Linux abstractions (HMM/\texttt{migrate\_vma}, DRM scheduler), requiring about 2.5 KLOC of driver instrumentation in our NVIDIA implementation; the device side targets PTX today, with a verified eBPF-to-SASS AOT prototype and a SPIR-V path for other vendors.
-% 主机端钩子与通用 Linux 抽象（HMM/\texttt{migrate\_vma}、DRM 调度器）对齐，在我们的 NVIDIA 实现中约需 2.5 KLOC 驱动插桩；设备端目前面向 PTX，已有经验证的 eBPF 到 SASS 的 AOT 原型，并有面向其他厂商的 SPIR-V 路径。
-For future accelerators, validated state transitions could become an architected attach point exposed by hardware, with firmware-validated transition tables and privileged telemetry reducing driver coupling.
-% 对于未来加速器，经验证的状态转移可以成为硬件原生暴露的体系化挂载点，由固件验证的转移表和特权遥测降低与驱动的耦合。
-
-\paragraph{Artifacts}
-%  artifact
-We release the agent prompts, benchmark harnesses, and policy sources used in the policy-exploration study.
-% 我们公开发布策略探索研究中使用的智能体提示词、基准测试工具和策略源码。
-
-\paragraph{Related Work}
-% 相关工作
+%\arq{This is a really short related work section. One additional change, don't say "A prior workshop version", it deanonymizes us and we'll get rejected for it.  Just name the prior system.}
 
 \texttt{sched\_ext}~\cite{schedext-docs}, \texttt{cache\_ext}~\cite{zussman2025cache_ext}, and XDP extend Linux subsystems via synchronous eBPF callbacks at fixed decision points;
 % sched\_ext、cache\_ext 和 XDP 通过在固定决策点进行同步 eBPF 回调来扩展 Linux 子系统；
@@ -63,7 +16,7 @@ User-space frameworks~\cite{ng2023paella,shen2025xsched,gim2025pie,chen2025ktran
 % \sys 在运行时提供可编程策略,且没有上述任何一种局限。
 NVBit~\cite{villa2019nvbit} and Neutrino~\cite{neutrino} inject instrumentation into GPU binaries for device-side visibility, but lack safety guarantees and target offline profiling rather than online policy enforcement.
 % NVBit~\cite{villa2019nvbit} 和 Neutrino~\cite{neutrino} 向 GPU 二进制中注入插桩以获得设备侧可见性,但缺乏安全保障,且面向离线性能分析而非在线策略执行。
-eGPU~\cite{egpu} extends eBPF to GPU instrumentation but remains limited to read-only observability with high overhead (\S\ref{sec:eval}) due to per-thread scalar execution on SIMT hardware;
-% eGPU~\cite{egpu} 将 eBPF 扩展到 GPU 插桩,但由于在 SIMT 硬件上按每线程标量执行,仍局限于只读可观测性且开销较高 (\S\ref{sec:eval});
+A prior workshop paper~\cite{egpu} extends eBPF to GPU instrumentation but remains limited to read-only observability with high overhead (\S\ref{sec:eval}) due to per-thread scalar execution on SIMT hardware;
+% 一篇先前的 workshop 论文~\cite{egpu} 将 eBPF 扩展到 GPU 插桩,但由于在 SIMT 硬件上按每线程标量执行,仍局限于只读可观测性且开销较高 (\S\ref{sec:eval});
 \sys introduces SIMT-aware verification and warp-level execution for safe, low-overhead policy enforcement.
 % \sys 引入 SIMT 感知验证和 warp 级执行,实现安全、低开销的策略执行。
