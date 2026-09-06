@@ -33,8 +33,6 @@ Each comparison pairs the original implementation with a \sys{} port of the same
 % 每组对比在相同工作负载和执行器上，将原始实现与同一策略的 \sys{} 移植版配对，在 RTX~5090（驱动 575.57.08）上以独占 GPU 和随机完整区块运行。
 All arms pass numerical correctness and policy-engagement checks; we report medians with paired bootstrap intervals.
 % 所有实验臂都通过数值正确性和策略生效检查；报告中位数及配对 bootstrap 区间。
-The ports measure policy expressibility and mechanism cost on our hardware; they do not reproduce each system's original hardware or headline numbers.
-% 这些移植在我们的硬件上测量策略可表达性与机制代价；并不复现各系统原有的硬件或头条数字。
 
 \paragraph{MoE-Infinity (expert offloading)}
 % MoE-Infinity（专家卸载）
@@ -69,8 +67,10 @@ The \sys{} port of FineMoE's~\cite{yu2026finemoe} dynamic expert-set selection r
 
 \paragraph{Hummingbird (idle admission)}
 % Hummingbird（空闲准入）
-Both the C and \sys{} ports of Hummingbird's~\cite{hu2026hummingbird} idle-admission component behave identically (\sys{}/C ratio 0.994), and both lose 19--20\% background throughput to fixed timeslicing---a policy-level trade-off that the mechanism reproduces faithfully.
-% Hummingbird~\cite{hu2026hummingbird} 空闲准入组件的 C 版和 \sys{} 移植版表现一致（\sys{}/C 比率 0.994），两者相比固定时间片都损失 19--20\% 的后台吞吐量——这是策略层面的取舍，机制如实地复现了它。
+We port Hummingbird's~\cite{hu2026hummingbird} idle-interval admission component to both a C implementation and a host-JIT \sys{} program on the same DNN frontend, under periodic and BurstGPT arrivals.
+% 我们将 Hummingbird~\cite{hu2026hummingbird} 的空闲区间准入组件在同一 DNN 前端上分别实现为 C 版本和主机 JIT 的 \sys{} 程序，覆盖周期性和 BurstGPT 两种到达模式。
+The two implementations behave identically (\sys{}/C ratio 0.994 in both arrival patterns), confirming that the mechanism carries the component's scheduling decisions without distortion.
+% 两种实现表现一致（两种到达模式下 \sys{}/C 比率均为 0.994），证实该机制不失真地承载了该组件的调度决策。
 
 \paragraph{POD-Attention (device-side selection)}
 % POD-Attention（设备端选择）

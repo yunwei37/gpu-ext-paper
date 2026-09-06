@@ -69,7 +69,7 @@ Verification cost is one-time: admitting the 60-instruction \texttt{kernelretsno
 
 \paragraph{Failure classes and TCB}
 % 失败类别与 TCB
-We distinguish four failure classes: programs the verifier rejects, resource requests that transition validation turns into no-ops, valid policies that are merely ineffective, and failures outside policy verification entirely (workload OOM, GPU faults, loader or driver bugs), each diagnosed at its own layer.
+We distinguish four failure classes: programs the verifier rejects, resource requests that transition validation turns into no-ops, valid policies that do not improve performance, and failures outside policy verification entirely (workload OOM, GPU faults, loader or driver bugs), each diagnosed at its own layer.
 % 我们区分四类失败：验证器拒绝的程序、被转移验证变为空操作的资源请求、合法但无效的策略，以及完全处于策略验证之外的失败（工作负载 OOM、GPU 故障、加载器或驱动 bug），各自在所属层面诊断。
 The TCB includes Linux's verifier and JIT, \sys{}'s driver hooks and validators, and the native actuators; the verified device path additionally includes PREVAIL, the SIMT analysis, helper and map models, and the GPU compilation toolchain.
 % TCB 包括 Linux 验证器与 JIT、\sys{} 的驱动钩子与验证器以及原生执行器；经验证的设备路径还包括 PREVAIL、SIMT 分析、helper 与 map 模型以及 GPU 编译工具链。
