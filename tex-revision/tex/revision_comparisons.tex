@@ -29,17 +29,17 @@ Disk/CXL placement & Framework-controlled I/O & Destination/lifetime/completion 
 
 \paragraph{Methodology}
 % 方法
-Each comparison pairs the original implementation with a \sys{} port of the same policy on the same workload and executor, on RTX~5090 (driver 575.57.08) with exclusive GPU access and randomized complete blocks.
-% 每组对比在相同工作负载和执行器上，将原始实现与同一策略的 \sys{} 移植版配对，在 RTX~5090（驱动 575.57.08）上以独占 GPU 和随机完整区块运行。
-All arms pass numerical correctness and policy-engagement checks; we report medians with paired bootstrap intervals.
-% 所有实验臂都通过数值正确性和策略生效检查；报告中位数及配对 bootstrap 区间。
+Each comparison pairs the original implementation with a \sys{} port of the same policy on the same workload and executor, on RTX~5090 (driver 575.57.08) with exclusive GPU access and repeated randomized trials.
+% 每组对比在相同工作负载和执行器上，将原始实现与同一策略的 \sys{} 移植版配对，在 RTX~5090（驱动 575.57.08）上以独占 GPU 和重复随机试验运行。
+Every configuration passes numerical correctness checks with the policy verifiably executing; we report medians with paired bootstrap intervals.
+% 每种配置都通过数值正确性检查且策略可验证地执行；报告中位数及配对 bootstrap 区间。
 
 \paragraph{MoE-Infinity (expert offloading)}
 % MoE-Infinity（专家卸载）
 We port MoE-Infinity's~\cite{xue2025moeinfinity} activation-aware prediction, prefetch ranking, and score-based eviction to host-JIT \sys{} selectors sharing the same GPT-OSS-120B frontend.
 % 我们将 MoE-Infinity~\cite{xue2025moeinfinity} 的激活感知预测、预取排序和基于分数的驱逐移植到共享同一 GPT-OSS-120B 前端的 \sys{} 主机 JIT 选择器。
-Over five blocks, baseline, native, and \sys{} achieve 11.90, 11.22, and 11.19 tokens/s: the \sys{} port tracks the native policy within 0.4\% while cutting first-visible-text latency by 22.5\% relative to baseline.
-% 五个区块下，基线、原生实现和 \sys{} 分别达到 11.90、11.22 和 11.19 token/s：\sys{} 移植版与原生策略的差距在 0.4\% 以内，同时相对基线将首个可见文本延迟降低 22.5\%。
+Across five repeated runs, baseline, native, and \sys{} achieve 11.90, 11.22, and 11.19 tokens/s: the \sys{} port tracks the native policy within 0.4\% while cutting first-visible-text latency by 22.5\% relative to baseline.
+% 五次重复试验下，基线、原生实现和 \sys{} 分别达到 11.90、11.22 和 11.19 token/s：\sys{} 移植版与原生策略的差距在 0.4\% 以内，同时相对基线将首个可见文本延迟降低 22.5\%。
 
 \paragraph{XSched (preemptive scheduling)}
 % XSched（抢占式调度）
@@ -79,8 +79,8 @@ A device-BPF selector preserves POD-Attention's~\cite{kamath2025pod} proportiona
 
 \paragraph{Mechanism cost}
 % 机制代价
-Across the matched ports, executing the same policy through \sys{} costs 0.7--3.3\%: 0.7\% for Expert Buffering, 1.8\% for POD-Attention's device selector, and 3.2\% for a kernel-verified UVM no-prefetch policy measured over fifteen paired fault-path blocks.
-% 在所有匹配移植中，通过 \sys{} 执行相同策略的代价为 0.7--3.3\%：Expert Buffering 为 0.7\%，POD-Attention 设备端选择器为 1.8\%，经内核验证的 UVM 无预取策略在十五个配对缺页区块上测得 3.2\%。
+Across the matched ports, executing the same policy through \sys{} costs 0.7--3.3\%: 0.7\% for Expert Buffering, 1.8\% for POD-Attention's device selector, and 3.2\% for a kernel-verified UVM no-prefetch policy measured over fifteen paired fault-path runs.
+% 在所有匹配移植中，通过 \sys{} 执行相同策略的代价为 0.7--3.3\%：Expert Buffering 为 0.7\%，POD-Attention 设备端选择器为 1.8\%，经内核验证的 UVM 无预取策略在十五次配对缺页路径运行上测得 3.2\%。
 The headline improvements in RQ1--RQ3 are therefore policy gains, obtainable through a safe, dynamic, and full-stack mechanism at single-digit cost.
 % 因此，RQ1--RQ3 中的头条提升是策略收益，可以通过一个安全、动态、全栈的机制以个位数的代价获得。
 

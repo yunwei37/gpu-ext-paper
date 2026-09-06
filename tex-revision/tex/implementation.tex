@@ -5,8 +5,8 @@
 
 We implemented \sys on Linux 6.15, extending the OS kernel with a standalone file ($\sim$1 KLOC) that handles hook registration and verifier extensions.
 % 我们在 Linux 6.15 上实现了 gpubpf，用一个独立的文件（约 1 KLOC）扩展 OS 内核，负责钩子注册和 verifier 扩展。
-We integrated lightweight instrumentation into NVIDIA's open GPU OS kernel modules to expose memory and scheduling state transitions as GPU-specific kfuncs (\S\ref{sec:impl-host}); the audited delta on driver 575.57.08 spans 18 files with 2,556 added lines, including validation and diagnostics.
-% 我们在 NVIDIA 开放 GPU OS 内核模块中集成了轻量级插桩，将内存与调度状态变迁暴露为 GPU 专用 kfunc（见 \S\ref{sec:impl-host}）；在 575.57.08 驱动上经审计的改动覆盖 18 个文件、新增 2,556 行，包含验证与诊断逻辑。
+We integrated lightweight instrumentation into NVIDIA's open GPU OS kernel modules to expose memory and scheduling state transitions as GPU-specific kfuncs (\S\ref{sec:impl-host}); the delta on driver 575.57.08 spans 18 files with 2,556 added lines, including validation and diagnostics.
+% 我们在 NVIDIA 开放 GPU OS 内核模块中集成了轻量级插桩，将内存与调度状态变迁暴露为 GPU 专用 kfunc（见 \S\ref{sec:impl-host}）；在 575.57.08 驱动上的改动覆盖 18 个文件、新增 2,556 行，包含验证与诊断逻辑。
 Our user-space loader and JIT infrastructure ($\sim$10 KLOC) builds upon bpftime's framework~\cite{bpftime} for device-side code generation, while an LLVM-based backend ($\sim$1 KLOC) translates the restricted \sys eBPF instruction subset into GPU device code (PTX) (\S\ref{sec:impl-gpu}).
 % 我们的用户态加载器与 JIT 基础设施（约 10 KLOC）基于 bpftime 框架~\cite{bpftime} 构建，用于设备端代码生成；同时，基于 LLVM 的后端（约 1 KLOC）将受限的 gpubpf eBPF 指令子集翻译为 GPU 设备代码（PTX）（见 \S\ref{sec:impl-gpu}）。
 Although our implementation targets NVIDIA GPUs, the host-side design aligns with generic Linux abstractions (HMM/\texttt{migrate\_vma}~\cite{rocm-gpu-memory,linux-gpusvm-doc}, DRM scheduler~\cite{drm-gpu-sched,amdgpu-userq-doc}), and the device-side can be extended to generate vendor-neutral IR~\cite{spirv-ir-rfc} for future portability.

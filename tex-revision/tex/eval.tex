@@ -399,8 +399,8 @@ With hooks enabled but no policy attached, the overhead is less than 0.2\%.
 
 \paragraph{Device-side Overhead.}
 % 设备端开销。
-We evaluate device-side observability tools built on \sys (\Cref{tab:obs-overhead}) using llama.cpp prefill on two GPUs: the P40 (Llama 1B, sequence-mixed) and the RTX~5090 (TinyLlama-1.1B, ten randomized blocks with paired custom NVBit adapters~\cite{villa2019nvbit}).
-% 我们在两块 GPU 上使用 llama.cpp 预填充评估基于 gpubpf 构建的设备端可观测工具（\Cref{tab:obs-overhead}）：P40（Llama 1B，序列混合）和 RTX~5090（TinyLlama-1.1B，十个随机区块，配对的定制 NVBit 适配器~\cite{villa2019nvbit}）。
+We evaluate device-side observability tools built on \sys (\Cref{tab:obs-overhead}) using llama.cpp prefill on two GPUs: the P40 (Llama 1B, sequence-mixed) and the RTX~5090 (TinyLlama-1.1B, ten randomized repetitions with paired custom NVBit adapters~\cite{villa2019nvbit}).
+% 我们在两块 GPU 上使用 llama.cpp 预填充评估基于 gpubpf 构建的设备端可观测工具（\Cref{tab:obs-overhead}）：P40（Llama 1B，序列混合）和 RTX~5090（TinyLlama-1.1B，十次随机重复，配对的定制 NVBit 适配器~\cite{villa2019nvbit}）。
 Tools include \texttt{kernel\-ret\-snoop} (per-block finish timestamps), \texttt{thread\-hist} (load imbalance detection), and \texttt{launch\-late} (GPU kernel launch latency).
 % 工具包括 \texttt{kernel\-ret\-snoop}（每块完成时间戳）、\texttt{thread\-hist}（负载不均衡检测）和 \texttt{launch\-late}（GPU 内核启动延迟）。
 Overhead is measured as token/s degradation during prefill.
@@ -459,8 +459,8 @@ The baseline incurs overhead due to per-thread execution and uncoalesced memory 
 % 基线因每线程执行和未合并的内存访问产生开销，而 gpubpf 的 warp 统一执行与合并 map 访问将开销降低 60--80\%。
 \Cref{fig:microbench}(b) compares CPU map access via PCIe against GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU.
 % \Cref{fig:microbench}(b) 对比了经 PCIe 的 CPU map 访问与 GPU 端操作，这促使 gpubpf 采用将热状态保留在 GPU 上的分层 map 设计。
-An operation-matched measurement on RTX~5090 (16 balanced blocks, 128 fresh processes) finds that direct host mapping costs 9.43$\times$ the device-resident latency for map updates and 1.09$\times$ for lookups, so the placement benefit is largest for write-heavy policies.
-% RTX~5090 上一项操作匹配的测量（16 个均衡区块、128 个全新进程）发现，直接主机映射的 map 更新延迟是设备驻留的 9.43 倍，查找为 1.09 倍，因此放置收益对写密集型策略最大。
+An operation-matched measurement on RTX~5090 (16 balanced repetitions, 128 fresh processes) finds that direct host mapping costs 9.43$\times$ the device-resident latency for map updates and 1.09$\times$ for lookups, so the placement benefit is largest for write-heavy policies.
+% RTX~5090 上一项操作匹配的测量（16 次均衡重复、128 个全新进程）发现，直接主机映射的 map 更新延迟是设备驻留的 9.43 倍，查找为 1.09 倍，因此放置收益对写密集型策略最大。
 Trampoline hooks are injected per warp with shuffle-based broadcast, so their cost is constant in the block count; on RTX~5090, a no-op hook adds 0.3--1.9\,$\mu$s across five block organizations.
 % Trampoline 钩子按 warp 注入并通过 shuffle 广播，因此其代价与块数量无关；在 RTX~5090 上，空操作钩子在五种块组织下增加 0.3--1.9 微秒。
 Device-side injection supports both ptrace attach for running processes and \texttt{LD\_PRELOAD} for process-start initialization, the latter avoiding ptrace for security-compliant deployments.

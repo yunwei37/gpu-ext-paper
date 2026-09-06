@@ -33,7 +33,7 @@ For physical-memory-manager (PMM) reordering, validation checks the owning PMM, 
 % 对于物理内存管理器（PMM）的重排序，验证在现有列表锁下检查所属 PMM、根标识、来源列表和代际计数器；合法目标仅限 used/unused 列表的头部和尾部。
 Fallback is operation-specific: an invalid PMM request preserves entry state, while an invalid prefetch action or region falls back to native prefetch behavior.
 % 回退行为因操作而异：非法 PMM 请求保留原有状态，非法的预取动作或区域则回退到原生预取行为。
-On RTX~5090, live controls confirm the behavior: 42{,}053 native, 131{,}072 legal-bypass, and 41{,}882 invalid requests each complete with exact native fallback for every invalid request and no data mismatch; scheduler initialization validates timeslice and interleave independently across all 16 cells of the live transition matrix.
+On RTX~5090, live controls confirm the behavior: 42{,}053 native, 131{,}072 legal-bypass, and 41{,}882 invalid requests each complete with exact native fallback for every invalid request and no data mismatch; scheduler initialization validates timeslice and interleave independently across the full live transition matrix.
 % 在 RTX~5090 上，实测控制验证了这一行为：42,053 个原生请求、131,072 个合法 bypass 请求和 41,882 个非法请求均完成，每个非法请求都精确回退到原生行为且无数据不一致；调度器初始化在全部 16 个实测转移矩阵单元中独立验证时间片和交错参数。
 
 \subsubsection{SIMT-aware Verification}
@@ -62,7 +62,7 @@ verify_gpu(program, maps):
 
 The verifier rejects, for example, an eight-byte stack write at offset $-520$, an unbounded helper-dependent loop, a branch on lane ID, lane-derived map keys and shared-map values, and an atomic whose target comes from a per-thread map; the warp-uniform counterparts of each case are admitted, so atomics on uniform targets remain available to policies.
 % 验证器会拒绝诸如偏移 $-520$ 处的 8 字节栈写、依赖 helper 的无界循环、基于 lane ID 的分支、lane 导出的 map 键与共享 map 值，以及目标来自每线程 map 的原子操作；每种情况的 warp 一致版本都会被接受，因此策略仍可使用一致目标上的原子操作。
-On RTX~5090, strict-mode pairs on the real counter path admit each 13-instruction callback and record all 32{,}768 invocations, while a 15-instruction lane-varying branch is rejected before insertion; a 15-cell loader matrix further shows strict mode rejects an out-of-stack program without consuming a program ID, whereas warning and default modes admit it.
+On RTX~5090, strict-mode pairs on the real counter path admit each 13-instruction callback and record all 32{,}768 invocations, while a 15-instruction lane-varying branch is rejected before insertion; a 15-configuration loader matrix further shows strict mode rejects an out-of-stack program without consuming a program ID, whereas warning and default modes admit it.
 % 在 RTX~5090 上，真实计数路径上的严格模式用例对接受每个 13 指令回调并记录全部 32,768 次调用，而一个 15 指令的 lane 可变分支在插入前被拒绝；15 单元的加载器矩阵进一步表明，严格模式拒绝越界栈写程序且不消耗程序 ID，而警告和默认模式会接受它。
 Verification cost is one-time: admitting the 60-instruction \texttt{kernelretsnoop} tool takes 141~ms and the 13-instruction \texttt{threadhist} takes 12~ms; steady-state throughput with strict verification is statistically indistinguishable from unverified execution for both tools.
 % 验证开销是一次性的：接受 60 指令的 \texttt{kernelretsnoop} 工具耗时 141~ms，13 指令的 \texttt{threadhist} 耗时 12~ms；两个工具在严格验证下的稳态吞吐量与未验证执行在统计上不可区分。
