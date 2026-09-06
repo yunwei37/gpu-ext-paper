@@ -389,8 +389,6 @@ On the P40, \sys achieves 3--14\% overhead versus NVBit's 85--93\%, due to the w
 % 在 P40 上，得益于 warp 统一执行模型，gpubpf 的开销为 3--14\%，而 NVBit 为 85--93\%。
 On the RTX~5090, which retains the complete per-exit record stream (23~M records), \sys's exit-count histogram overhead is 4.0\% versus NVBit's 10.3\%; the full per-exit record stream is dominated by record transport for both tools (99.66\% vs 99.62\%).
 % 在保留完整逐条退出记录流（2,300 万条记录）的 RTX~5090 上，gpubpf 的退出计数直方图开销为 4.0\%，而 NVBit 为 10.3\%；完整的逐条退出记录流对两种工具都受记录传输主导（99.66\% 对 99.62\%）。
-\texttt{launchlate} is reported on the P40; its host/device cross-clock measurement on the RTX~5090 remains under validation.
-% \texttt{launchlate} 在 P40 上报告；其在 RTX~5090 上的主机/设备跨时钟测量仍在验证中。
 Attaching to a running process requires no application restart.
 % 附加到正在运行的进程无需重启应用。
 

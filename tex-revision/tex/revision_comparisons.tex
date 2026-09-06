@@ -14,7 +14,7 @@ We evaluate whether \sys{} can express the policies of published state-of-the-ar
 Decision class & User space & Driver changes & \sys{} path \\
 \midrule
 Expert prediction/prefetch & Framework routing/transfers & Unneeded for application-owned transfers & Host-JIT selectors; semantic adapters \\
-Priority queue admission & Cooperative XSched Level-1 & Unneeded for Level-1 & Host-JIT HPF; original suspend/resume \\
+Priority queue admission & Cooperative XSched queue & Unneeded & Host-JIT HPF; original suspend/resume \\
 TSG timeslices & Scoped custom C API & Required API/hooks & Kernel BPF; native GSP actuator \\
 Fault-time prefetch & Explicit prefetch is not fault handling & Expose fault decisions & Kernel BPF; bounded current-VA-block selection \\
 UVM eviction-list order & Ordinary hints lack this control & Expose PMM lists & Kernel BPF; validated used/unused head/tail, not arbitrary victims \\
@@ -43,8 +43,8 @@ Over five blocks, baseline, native, and \sys{} achieve 11.90, 11.22, and 11.19 t
 
 \paragraph{XSched (preemptive scheduling)}
 % XSched（抢占式调度）
-On XSched's~\cite{shen2025xsched} public Level-1 inter-kernel preemption, a host-JIT \sys{} program makes the bounded highest-priority-first decision while the original executor performs suspend/resume.
-% 在 XSched~\cite{shen2025xsched} 公开的 Level-1 内核间抢占上，主机 JIT 的 \sys{} 程序做出有界的最高优先级优先决策，由原始执行器执行挂起/恢复。
+We port XSched's~\cite{shen2025xsched} inter-kernel preemption: a host-JIT \sys{} program makes the bounded highest-priority-first decision while the original executor performs suspend/resume.
+% 我们移植 XSched~\cite{shen2025xsched} 的内核间抢占：主机 JIT 的 \sys{} 程序做出有界的最高优先级优先决策，由原始执行器执行挂起/恢复。
 LC submission-to-first-CTA p99 is 76.9~s native, 27.0~s with XSched, and 27.3~s with the \sys{} port (paired difference $+0.29$~s, CI $[-0.11,+0.64]$), with BE throughput unchanged.
 % LC 提交到首个 CTA 的 p99：原生 76.9 秒，XSched 27.0 秒，\sys{} 移植版 27.3 秒（配对差 $+0.29$ 秒，CI $[-0.11,+0.64]$），BE 吞吐量不变。
 

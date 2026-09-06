@@ -24,8 +24,6 @@ Academic and industrial systems adopt the same co-location setting to improve ut
 % 存储与 CXL 层级
 The asynchronous state-machine model extends naturally to slower tiers: storage-tier offload adds states and transitions whose millisecond transfers fit the model, with \sys{} supplying placement policy complementary to transport solutions such as Weka, VAST, or NVIDIA CMX; CXL tiers map to new states atop HMM/\texttt{migrate\_vma}.
 % 异步状态机模型自然扩展到更慢的层级：存储层卸载增加新的状态与转移，其毫秒级传输契合该模型，\sys{} 提供放置策略，与 Weka、VAST 或 NVIDIA CMX 等传输方案互补；CXL 层级则映射为 HMM/\texttt{migrate\_vma} 之上的新状态。
-Our LMCache comparison (\S\ref{sec:eval}) covers the CPU tier; a matched measurement of its local-disk backend is left to future work.
-% 我们的 LMCache 对比（\S\ref{sec:eval}）覆盖 CPU 层；其本地磁盘后端的匹配测量留作未来工作。
 
 \paragraph{Trampoline scaling and deployment}
 % Trampoline 扩展性与部署
