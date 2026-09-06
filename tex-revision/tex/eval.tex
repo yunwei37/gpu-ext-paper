@@ -175,6 +175,15 @@ The same asynchronous state-machine model extends to slower tiers: storage-tier 
 This case also shows how \sys{} handles application heuristics that conflict with a policy: the agent updates the policy at runtime to accommodate vLLM's behavior, while the driver's native thrashing mitigation continues to apply underneath.
 % 该案例还展示了 \sys{} 如何应对与策略冲突的应用启发式：智能体在运行时更新策略以适应 vLLM 的行为，而驱动的原生抖动缓解在底层持续生效。
 
+\paragraph{Local-storage control.}
+% 本地存储控制。
+In five rotated LMCache/cuFile blocks on the RTX~5090, recompute/CPU/FIFO/native/BPF output throughput is 31.01/29.76/37.41/37.47/38.37~token/s, with TTFT 66.89/74.41/78.08/78.45/77.44~ms.
+% RTX~5090 上五组轮换 LMCache/cuFile 实验中，重算/CPU/FIFO/原生/BPF 吞吐为 31.01/29.76/37.41/37.47/38.37~token/s，TTFT 为 66.89/74.41/78.08/78.45/77.44~ms。
+Default inputs make all storage decisions submit immediately: the paired BPF/native throughput difference has median $+0.28\%$ (range $-3.42\%$ to $+5.17\%$), measuring admission cost without establishing scheduling gains.
+% 默认输入使存储决策均为立即提交：BPF/原生配对吞吐差异中位数为 $+0.28\%$（范围 $-3.42\%$ 至 $+5.17\%$），衡量准入代价，尚未确立调度收益。
+LMCache owns transfers and buffers; cuFile uses compatibility mode here, without demonstrated direct NVMe-to-GPU DMA.
+% LMCache 管理传输和缓冲区；cuFile 在此使用兼容模式，尚未证明 NVMe 到 GPU 的直接 DMA。
+
 \paragraph{Graph Neural Networks (GNN Training).}
 % 图神经网络（GNN 训练）。
 We evaluate \sys on PyTorch-based GCN training with random graphs of varying sizes (1M--15M nodes, 10 edges/node).
