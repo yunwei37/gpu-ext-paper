@@ -65,7 +65,7 @@ For block-level scheduling, \sys implements policies using persistent GPU kernel
 For memory observation, \sys attaches eBPF handlers at memory instructions, GPU kernel function boundaries, and tracepoints to capture access patterns and issue policy hints to the host driver via cross-layer maps (e.g., device L2 prefetch can trigger a host callback for extended prefetch).
 % 对于内存观测，gpubpf 在内存指令、GPU 内核函数边界和 tracepoint 处挂载 eBPF 处理函数，以捕获访问模式并通过跨层 map 向主机端驱动下发策略提示（例如，设备端 L2 预取可触发主机端回调以进行扩展预取）。
 
-\paragraph{Binaries without PTX.}
+\paragraph{Binaries without PTX}
 % 不含 PTX 的二进制程序。
 Host-side policies do not require application PTX; for device-side observation, we additionally implement a bounded SASS-injection prototype using NVBit~\cite{villa2019nvbit}.
 % 主机端策略不依赖应用 PTX；对于设备端观测，我们还使用 NVBit~\cite{villa2019nvbit} 实现了一个范围受限的 SASS 注入原型。
