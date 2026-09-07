@@ -60,6 +60,10 @@ Trampolines insert prologue/epilogue logic for SIMT register preservation.
 % Trampoline 插入用于 SIMT 寄存器保存的前导/收尾逻辑。
 Each trampoline aggregates per-lane inputs, selects an active warp leader to execute the policy once, and broadcasts its decisions to the participating lanes.
 % 每个 trampoline 聚合逐 lane 输入，选择一个活跃的 warp leader 执行一次策略，并将决策广播给参与的 lane。
+Aggregation reduces duplicate work within a warp; it does not make total instrumentation cost independent of block count.
+% 聚合减少了 warp 内的重复工作，但并不使插桩总成本独立于线程块数量。
+Total cost still depends on the number of executed hooks and their map accesses or output records, as illustrated by the complete-record and GPU-local-buffer variants in \S\ref{sec:rq2-cost}.
+% 总成本仍取决于实际执行的钩子数量及其 map 访问或输出记录，\S\ref{sec:rq2-cost} 中的完整记录流与 GPU 本地缓冲变体展示了这一点。
 For block-level scheduling, \sys implements policies using persistent GPU kernels that poll and claim logical work units; on Blackwell GPUs, we use cluster launch control APIs~\cite{cuda-clc} to schedule thread blocks.
 % 对于块级调度，gpubpf 使用常驻 GPU 内核（轮询并认领逻辑工作单元）来实现策略；在 Blackwell GPU 上，我们使用 cluster launch control API~\cite{cuda-clc} 来调度线程块。
 For memory observation, \sys attaches eBPF handlers at memory instructions, GPU kernel function boundaries, and tracepoints to capture access patterns and issue policy hints to the host driver via cross-layer maps (e.g., device L2 prefetch can trigger a host callback for extended prefetch).
