@@ -12,8 +12,8 @@ Our evaluation addresses two research questions:
   % RQ2（机制代价）：gpubpf 机制的代价有多大——包括钩子与可观测开销，以及通过 gpubpf 执行同一策略的代价？
 \end{itemize}
 
-We answer RQ1 in \S\ref{sec:rq1} through policy microbenchmarks, agent-driven case studies on realistic workloads, multi-tenant settings, and matched ports of published policies. \S\ref{sec:rq2-cost} answers RQ2.
-% 我们在 \S\ref{sec:rq1} 通过策略微基准、真实负载上的智能体驱动案例研究、多租户场景，以及对已发表策略的匹配移植回答 RQ1；\S\ref{sec:rq2-cost} 回答 RQ2。
+We answer RQ1 in \S\ref{sec:rq1} through policy microbenchmarks, agent-driven case studies on realistic workloads, multi-tenant settings, and comparisons with native implementations of published policies. \S\ref{sec:rq2-cost} answers RQ2.
+% 我们在 \S\ref{sec:rq1} 通过策略微基准、真实负载上的智能体驱动案例研究、多租户场景，以及与已发表策略的原生实现的比较回答 RQ1；\S\ref{sec:rq2-cost} 回答 RQ2。
 
 \subsection{Methodology and Setup}
 % 方法论与实验设置
@@ -24,7 +24,7 @@ Unless otherwise specified, experiments run on Server~A, averaging 10 trials usi
 % 除非另有说明，实验均在服务器 A 上进行，每项结果取 10 次试验的几何平均值。
 We compare \sys{} against three classes of baselines: (1) driver defaults (UVM LRU/FIFO eviction, native GPU scheduler), (2) application-level hints (\texttt{cudaMemAdvise}), and (3) framework-managed policies (e.g., llama.cpp \texttt{ncmoe}, vLLM CPU offload, LMCache) where applicable.
 % 我们将 gpubpf 与三类基线对比：(1) 驱动默认行为（UVM LRU/FIFO 驱逐、原生 GPU 调度器），(2) 应用层提示（\texttt{cudaMemAdvise}），以及 (3) 框架管理的策略（如 llama.cpp 的 \texttt{ncmoe}、vLLM CPU offload、LMCache，在适用处）。
-The matched comparisons in \S\ref{sec:policy-mechanism} additionally evaluate policies from published research systems: MoE-Infinity~\cite{xue2025moeinfinity}, XSched~\cite{shen2025xsched}, GPREEMPT~\cite{fan2025gpreempt}, Expert Buffering~\cite{huang2023towards}, FineMoE~\cite{yu2026finemoe}, Hummingbird~\cite{hu2026hummingbird}, and POD-Attention~\cite{kamath2025pod}; each pairs a native policy implementation with a \sys{} port.
+The comparisons in \S\ref{sec:policy-mechanism} additionally evaluate policies from published research systems: MoE-Infinity~\cite{xue2025moeinfinity}, XSched~\cite{shen2025xsched}, GPREEMPT~\cite{fan2025gpreempt}, Expert Buffering~\cite{huang2023towards}, FineMoE~\cite{yu2026finemoe}, Hummingbird~\cite{hu2026hummingbird}, and POD-Attention~\cite{kamath2025pod}; each pairs a native policy implementation with a \sys{} port.
 % \S\ref{sec:policy-mechanism} 进一步评估 MoE-Infinity、XSched、GPREEMPT、Expert Buffering、FineMoE、Hummingbird 和 POD-Attention 等已发表系统的策略；每组配对原生策略实现和 \sys{} 移植版。
 We use PyTorch (version 2.9.0) and vLLM (version 0.11.0) with custom allocators, llama.cpp (version 7101), and Faiss (version 1.13.0) with UVM build config.
 % 我们使用 PyTorch（版本 2.9.0）和 vLLM（版本 0.11.0，配自定义分配器）、llama.cpp（版本 7101）以及采用 UVM 构建配置的 Faiss（版本 1.13.0）。
@@ -322,8 +322,8 @@ The tenants share an unpartitioned GPU managed by a system-wide policy.
 \label{fig:microbench}
 \end{figure*}
 
-\subsubsection{Policy Expressibility and Matched Implementations}
-% 策略可表达性与匹配实现
+\subsubsection{Policies from Published Systems}
+% 已发表系统的策略
 \label{sec:policy-mechanism}
 
 We evaluate whether \sys{} can express the policies of published state-of-the-art systems, and what the general mechanism costs when it runs the same policy as a native implementation.
@@ -334,8 +334,8 @@ The ports span host-side expert caching and queue admission, driver-side timesli
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{img/results-raw/revision/matched-policy-panels.pdf}
-\caption{Matched policy ports on RTX~5090: workload baseline, native policy, and \sys on the same executor. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) all-positive prefetch, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. TTFT measures first-visible-text latency; panel (e) uses Llama decode batch 128. Bars show medians over five blocks, except (e) means and (f) ten blocks; whiskers in (b,f,g) show full ranges. Panel (d) uses idle admission; (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s, or continuous load.}
-% RTX~5090 上的匹配策略移植：相同执行器上的工作负载基线、原生策略与 gpubpf。基线为关闭预测的专家缓存（a）、固定 K 的 FIFO（b）、全正例预取（c）、默认调度（d、g）、双流 FlashAttention（e）和原生 CUDA（f）。TTFT 表示首个可见文本延迟；面板（e）使用 Llama 解码批量 128。柱形为五组实验的中位数，但（e）为均值、（f）使用十组；（b、f、g）的须线表示完整范围。（d）使用空闲准入；（g）为每秒 100 个 VGG19 LC 请求，对应 ResNet152 BE 每秒 100、200 请求或连续负载。
+\caption{Policy comparisons on RTX~5090: workload baseline, native policy, and \sys on the same executor. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) prefetching all positively predicted experts, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. TTFT measures first-visible-text latency; panel (e) uses Llama decode batch 128. Bars show medians over five blocks, except (e) means and (f) ten blocks; whiskers in (b,f,g) show full ranges. Panel (d) uses idle admission; (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s, or continuous load.}
+% RTX~5090 上的策略比较：相同执行器上的工作负载基线、原生策略与 gpubpf。基线为关闭预测的专家缓存（a）、固定 K 的 FIFO（b）、预取所有预测会用到的专家（c）、默认调度（d、g）、双流 FlashAttention（e）和原生 CUDA（f）。TTFT 表示首个可见文本延迟；面板（e）使用 Llama 解码批量 128。柱形为五组实验的中位数，但（e）为均值、（f）使用十组；（b、f、g）的须线表示完整范围。（d）使用空闲准入；（g）为每秒 100 个 VGG19 LC 请求，对应 ResNet152 BE 每秒 100、200 请求或连续负载。
 \label{fig:matched-ports}
 \end{figure*}
 
@@ -380,8 +380,8 @@ At the same cache capacity, both the native policy and \sys{} reduce whole-exper
 % FineMoE（动态专家集）
 A host-side \sys{} program implements FineMoE's~\cite{yu2026finemoe} dynamic-set rule to select experts for speculative prefetch, while the shared inference executor performs their transfers and computation.
 % 主机侧 \sys{} 程序实现 FineMoE~\cite{yu2026finemoe} 的动态集合规则，选择推测预取的专家，由共用的推理执行器完成传输与计算。
-\sys{} improves throughput by 24.6\% over an all-positive prefetch policy that fetches every positive prediction; native and \sys{} throughput differ by 0.21\% in paired runs (95\% CI $[-0.17\%,+0.52\%]$).
-% 对 FineMoE~\cite{yu2026finemoe} 的动态专家集选择，相比预取所有正预测的全正例策略，\sys{} 将吞吐提高 24.6\%；原生与 \sys{} 在配对运行中的吞吐差异为 0.21\%（95\% CI $[-0.17\%,+0.52\%]$）。
+\sys{} improves throughput by 24.6\% over a policy that prefetches every expert with a positive prediction; native and \sys{} throughput differ by 0.21\% in paired runs (95\% CI $[-0.17\%,+0.52\%]$).
+% 对 FineMoE~\cite{yu2026finemoe} 的动态专家集选择，相比预取所有预测会用到的专家的策略，\sys{} 将吞吐提高 24.6\%；原生与 \sys{} 在配对运行中的吞吐差异为 0.21\%（95\% CI $[-0.17\%,+0.52\%]$）。
 
 \paragraph{Hummingbird (idle admission)}
 % Hummingbird（空闲准入）
@@ -401,15 +401,15 @@ For Llama decode batch 128, operator latency falls from 5.360~ms with two-stream
 
 \paragraph{Mechanism cost}
 % 机制代价
-Expert Buffering incurs 0.7\% overhead; POD's paired operator-latency effects range from a 0.44\% reduction to a 1.18\% increase across ten shapes; a kernel-verified UVM no-prefetch policy incurs 3.2\% overhead over fifteen paired fault-path runs.
-% Expert Buffering 的开销为 0.7\%；POD 在十种形状上的配对算子延迟效应从降低 0.44\% 到增加 1.18\%；经内核验证的 UVM 无预取策略在十五次配对缺页路径运行中的开销为 3.2\%。
+Expert Buffering incurs 0.7\% overhead; POD's operator latency changes in paired runs range from a 0.44\% reduction to a 1.18\% increase across ten shapes; a kernel-verified UVM no-prefetch policy incurs 3.2\% overhead over fifteen paired fault-path runs.
+% Expert Buffering 的开销为 0.7\%；POD 在十种形状上的配对运行中的算子延迟变化从降低 0.44\% 到增加 1.18\%；经内核验证的 UVM 无预取策略在十五次配对缺页路径运行中的开销为 3.2\%。
 
 \subsection{RQ2: Mechanism Cost}
 % RQ2：机制代价
 \label{sec:rq2-cost}
 
-We measure hook, observability, and map-placement overheads below; \S\ref{sec:policy-mechanism} reports the execution costs of matched policy ports.
-% 下文测量钩子、可观测性和 map 放置开销；\S\ref{sec:policy-mechanism} 报告匹配策略移植的执行代价。
+We measure hook, observability, and map-placement overheads below; \S\ref{sec:policy-mechanism} compares the execution costs of native and \sys{} implementations of the same policies.
+% 下文测量钩子、可观测性和 map 放置开销；\S\ref{sec:policy-mechanism} 比较相同策略的原生实现与 \sys{} 实现的执行代价。
 
 \paragraph{Verification Overhead.}
 % 验证开销。

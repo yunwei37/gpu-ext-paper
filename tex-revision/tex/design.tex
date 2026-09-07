@@ -172,8 +172,8 @@ At control-flow joins, varying information dominates uniform information; propag
 
 The verifier then requires uniform branch conditions, map keys, shared-map values, and atomic target addresses; unknown values cannot satisfy these requirements.
 % 随后，验证器要求分支条件、map 键、共享 map 值与原子操作目标地址具有一致性；未知值无法满足这些要求。
-These restrictions let a warp follow one policy decision and apply consistent shared effects; a branch on lane ID or a shared-map update derived from it is rejected.
-% 这些约束使一个 warp 遵循同一策略决策，并产生一致的共享效果；基于 lane ID 的分支或由其派生的共享 map 更新会被拒绝。
+These restrictions let a warp follow one policy decision and update shared state consistently; a branch on lane ID or a shared-map update derived from it is rejected.
+% 这些约束使一个 warp 遵循同一策略决策，并一致地更新共享状态；基于 lane ID 的分支或由其派生的共享 map 更新会被拒绝。
 GPU-wide barriers and global synchronization are prohibited to keep policy execution bounded.
 % GPU 级屏障与全局同步被禁止，以保持策略执行有界。
 
@@ -186,7 +186,7 @@ GPU-wide barriers and global synchronization are prohibited to keep policy execu
 \midrule
 Out-of-bounds access or unbounded loop & Memory bounds; termination & Reject program \\
 Lane-dependent branch & Uniform control flow & Reject program \\
-Varying shared-map value or atomic target & Uniform shared effects & Reject program \\
+Varying shared-map value or atomic target & Uniform updates to shared state & Reject program \\
 GPU-wide barrier & Bounded synchronization & Reject program \\
 Stale eviction request & Current resource state & Preserve state \\
 Conflicting requests & Request consistency & Operation fallback \\
