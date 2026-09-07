@@ -4,8 +4,8 @@
 
 We evaluate whether \sys{} can express the policies of published state-of-the-art systems, and what the general mechanism costs when it runs the same policy as an ad-hoc implementation.
 % 我们评估 \sys{} 能否表达已发表最先进系统的策略，以及通用机制在运行与临时实现相同的策略时代价几何。
-\Cref{fig:matched-ports} summarizes the seven matched reimplementations: each panel pairs the original implementation with a \sys{} port of the same policy on the same workload and executor.
-% \Cref{fig:matched-ports} 汇总了七个匹配重实现：每个子图在相同工作负载和执行器上，将原始实现与同一策略的 \sys{} 移植版配对。
+\Cref{fig:matched-ports} summarizes five matched reimplementations (scheduling ports XSched and GPREEMPT appear in \Cref{fig:scheduler-latency}): each panel pairs the original implementation with a \sys{} port of the same policy on the same workload and executor.
+% \Cref{fig:matched-ports} 汇总了五个匹配重实现（调度移植版 XSched 和 GPREEMPT 见 \Cref{fig:scheduler-latency}）：每个子图在相同工作负载和执行器上，将原始实现与同一策略的 \sys{} 移植版配对。
 Across the decision classes these systems span, host-JIT \sys{} selectors express expert prediction/prefetch and priority queue admission; kernel-BPF programs driving native actuators express TSG timeslices, fault-time prefetch, and UVM eviction-list ordering with validated used/unused heads and tails rather than arbitrary victims; and a device-BPF selector expresses SM-local task selection.
 % 这些系统覆盖的决策类别与 \sys{} 各层的对应关系为：主机 JIT 的 \sys{} 选择器可表达专家预测/预取与优先级队列准入；驱动原生执行器的内核 BPF 程序可表达 TSG 时间片、缺页时预取和 UVM 驱逐列表排序（仅限经验证的 used/unused 头尾，而非任意 victim）；设备端 BPF 选择器可表达 SM 本地任务选择。
 Disk/CXL placement has no general \sys{} backend.
@@ -14,8 +14,8 @@ Disk/CXL placement has no general \sys{} backend.
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{img/results-raw/revision/matched-port-panels.pdf}
-\caption{Matched reimplementations of published policies on RTX~5090: (a)--(g) pair the original implementation with the \sys{} port of the same policy on the same workload and executor; (h) summarizes the measured mechanism cost of running the same policy through \sys{}. Higher is better for token/s, lower for latency and overhead.}
-% RTX~5090 上对已发表策略的匹配重实现：(a)--(g) 在相同工作负载和执行器上将原始实现与同一策略的 \sys{} 移植版配对；(h) 汇总通过 \sys{} 执行同一策略的实测机制代价。token/s 越高越好，延迟与开销越低越好。
+\caption{Matched reimplementations of published policies on RTX~5090: each panel pairs the original implementation with the \sys{} port of the same policy. Higher is better for token/s, lower for latency.}
+% RTX~5090 上对已发表策略的匹配重实现：每个子图将原始实现与同一策略的 \sys{} 移植版配对。token/s 越高越好，延迟越低越好。
 \label{fig:matched-ports}
 \end{figure*}
 
