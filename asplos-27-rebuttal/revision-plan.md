@@ -2,6 +2,25 @@
 
 ## Active follow-up — 2026-09-07 UTC
 
+The [event-driven LMCache follow-up](../../../workloads/lmcache-disk/results-575-gds-live-event-driven-20260907.md)
+now completes all 15 cells / 2,400 requests and is published in main
+`f7412aa4` (implementation `c2ecedcb`). FIFO/native/BPF read-p99 medians are
+279.361/431.303/255.874 ms. Paired BPF/FIFO p99 change has median -8.407%;
+BPF/native has median -9.135%, but range -86.876% to +123.960%.
+Both comparisons improve in four of five pairs, not all five. The executor
+reduces repeated decisions to 306--350 per native/BPF cell, but substantial
+within-campaign storage variation precludes a stable-superiority claim.
+The old polling and GIL-ablation records remain. This closes the event-driven
+implementation and measurement listed as future work below; it does not
+close the remaining paper-wide commitments.
+
+The GDS-compatible stale-state source now builds successfully and is pushed
+in driver `a2b40efd`; the direct performance runner without historical
+preflight is in main `e88e1265`. Neither the new module nor a new stale-state
+GPU campaign has been run. The saved current GDS module is recorded in the
+[build report](../../../workloads/stale-state-575/current-gds-compatibility-20260907.md)
+for restoration after the upcoming module experiment.
+
 Latest update: the live-feedback provider, executor, runner and
 [five-block performance comparison](../../../workloads/lmcache-disk/results-575-gds-mixed-live-feedback-20260907.md)
 are complete and pushed in main `674bf3d2`. All 15 cells and 2,400 requests
