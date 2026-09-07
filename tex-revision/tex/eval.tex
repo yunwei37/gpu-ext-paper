@@ -396,6 +396,9 @@ A host-JIT \sys{} program implements FineMoE's~\cite{yu2026finemoe} dynamic-set 
 % 主机 JIT 的 \sys{} 程序实现 FineMoE~\cite{yu2026finemoe} 的动态集合规则，选择推测预取的专家，由共用的推理执行器完成传输与计算。
 \sys{} improves throughput by 24.6\% over an all-positive prefetch policy that fetches every positive prediction; native and \sys{} throughput differ by 0.21\% in paired runs (95\% CI $[-0.17\%,+0.52\%]$).
 % 对 FineMoE~\cite{yu2026finemoe} 的动态专家集选择，相比预取所有正预测的全正例策略，\sys{} 将吞吐提高 24.6\%；原生与 \sys{} 在配对运行中的吞吐差异为 0.21\%（95\% CI $[-0.17\%,+0.52\%]$）。
+However, disabling speculative prefetch remains faster: demand-only/native/\sys{} throughput medians are 5.17/4.50/4.51 token/s, and \sys{} is 12.6\% slower than demand-only in paired runs; the gain over all-positive does not establish a net benefit from speculation on this workload.
+% 但关闭推测预取仍更快：仅按需加载/原生/\sys{} 的吞吐中位数为 5.17/4.50/4.51 token/s，\sys{} 在配对运行中比仅按需加载慢 12.6\%；优于全正例消融不代表推测预取在此负载上有净收益。
+% Evidence: gpu_ext workloads/finemoe/results-performance.md, all 20 completed cells retained; no rerun.
 
 \paragraph{Hummingbird (idle admission)}
 % Hummingbird（空闲准入）
