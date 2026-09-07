@@ -209,7 +209,7 @@ def _draw(data: dict, paths: list[Path]) -> None:
     rows = {tool: index for index, tool in enumerate(reversed(TOOLS))}
 
     with plt.rc_context(STYLE):
-        figure, axes = plt.subplots(2, 1, figsize=(3.4, 3.2), sharex=True)
+        figure, axes = plt.subplots(2, 1, figsize=(3.4, 2.5), sharex=True)
         for axis in axes:
             axis.set_xscale("symlog", linthresh=1.0)
             axis.set_xlim(-2, 150)

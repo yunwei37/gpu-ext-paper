@@ -33,6 +33,10 @@ concurrent-kernel streaming collector.
 
 ## Reproduction
 
+The final canvas is 3.4 by 2.5 inches with unchanged 7.5 pt labels. This
+compact rendering removes vertical whitespace from the earlier 3.2-inch-high
+version without changing plotted measurements, axis scaling or font size.
+
 Run from the gpu_ext root. The script refuses to overwrite existing
 outputs, so write to a fresh directory instead of deleting anything:
 
