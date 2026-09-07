@@ -359,8 +359,8 @@ Across five paired runs, the native policy and \sys{} reduce first-visible-text 
 % XSched（抢占式调度）
 We port XSched's~\cite{shen2025xsched} inter-kernel preemption: a host-side \sys{} program selects the highest-priority task, and the original executor performs suspend/resume.
 % 我们移植 XSched~\cite{shen2025xsched} 的内核间抢占：主机侧 \sys{} 程序选择最高优先级任务，原始执行器执行挂起/恢复。
-With two latency-critical (LC) and four best-effort (BE) processes, LC submission-to-first-CTA p99 falls from 76.9~s under native CUDA to 27.0~s with the native policy and 27.3~s with \sys{} (\Cref{fig:matched-ports}(f)).
-% 在两个延迟关键（LC）和四个尽力型（BE）进程下，LC 提交到首个 CTA 的 p99 从原生 CUDA 的 76.9 秒降至原生策略的 27.0 秒和 \sys{} 的 27.3 秒（\Cref{fig:matched-ports}(f)）。
+With two LC and four BE processes, LC p99 latency from submission until the first thread block starts falls from 76.9~s under native CUDA to 27.0~s with the native policy and 27.3~s with \sys{} (\Cref{fig:matched-ports}(f)).
+% 在两个 LC 和四个 BE 进程下，LC 从提交到首个线程块开始执行的 p99 延迟 从原生 CUDA 的 76.9 秒降至原生策略的 27.0 秒和 \sys{} 的 27.3 秒（\Cref{fig:matched-ports}(f)）。
 
 \paragraph{GPREEMPT (priority timeslicing)}
 % GPREEMPT（优先级时间片）

@@ -14,8 +14,10 @@ The system includes a novel execution model that separates the effect of a callb
 % 该系统包含一种新颖的执行模型，将回调的效果与其触发事件分离。
 Namely, \sys{} supports policies that asynchronously transition resources between states, potentially invoking multiple transitions at a single point-in-time.
 % 具体而言，gpubpf 支持策略在资源状态之间进行异步迁移，并可能在同一时间点触发多次迁移。
-We implemented \sys{} on the Linux NVIDIA GPU driver and find that AI-generated policies improve throughput by $1.76\times$ over application-tuned baselines and reduce tail latency by up to $2\times$, without application modifications. The \sys{} mechanism incurs 0.7--3.3\% overhead when executing policies reproduced from prior work.
+We implemented \sys{} on the Linux NVIDIA GPU driver and find that AI-generated policies improve throughput by $1.76\times$ over application-tuned baselines and reduce tail latency by up to $2\times$, without application modifications.
 % 我们在 Linux NVIDIA GPU 驱动上实现了 gpubpf，发现 AI 生成的策略在不修改应用的前提下，吞吐量较应用调优的基线提升 $1.76\times$，尾延迟最多降低 $2\times$。
+The \sys{} mechanism incurs 0.7--3.3\% overhead when executing policies reproduced from prior work.
+% 在执行从已有工作中复现的策略时，\sys{} 机制引入的开销为 0.7--3.3\%。
 Moreover, we find that there were zero OS kernel panics through the optimization process, highlighting \sys{}'s safety.
 % 此外，整个优化过程中 OS 内核零崩溃，凸显了 gpubpf 的安全性。
 \end{abstract}
