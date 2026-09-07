@@ -57,6 +57,13 @@ def _draw(panels: list[dict], paths: list[Path]) -> None:
     with plt.rc_context(STYLE):
         figure, axes = plt.subplots(1, len(panels), figsize=(7.0, 1.8))
         for panel, axis in zip(panels, axes):
+            if panel["id"] == "gpreempt":
+                # Keep the two request-rate groups in the compact figure;
+                # continuous-load measurements remain in the data and prose.
+                visible = [i for i, group in enumerate(panel["groups"])
+                           if group["label"] != "cont."]
+                panel = dict(panel, groups=[panel["groups"][i] for i in visible],
+                             samples=[panel["samples"][i] for i in visible])
             n_arms = max(sum(1 for key, _ in LEGEND if key in group)
                          for group in panel["groups"])
             span = .7

@@ -370,8 +370,8 @@ GPREEMPT~\cite{fan2025gpreempt} & Control task admission and assign timeslices b
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{tex-revision/img/results-raw/revision/matched-policy-panels.pdf}
-\caption{Policy comparisons on RTX~5090: workload baseline, native policy, and \sys on the same executor. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) prefetching all positively predicted experts, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. TTFT measures first-visible-text latency; panel (e) uses Llama decode batch 128. Bars show medians over five blocks, except (e) means and (f) ten blocks; whiskers in (b,f,g) show full ranges. Panel (d) uses idle admission; (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s, or continuous load.}
-% RTX~5090 上的策略比较：相同执行器上的工作负载基线、原生策略与 gpubpf。基线为关闭预测的专家缓存（a）、固定 K 的 FIFO（b）、预取所有预测会用到的专家（c）、默认调度（d、g）、双流 FlashAttention（e）和原生 CUDA（f）。TTFT 表示首个可见文本延迟；面板（e）使用 Llama 解码批量 128。柱形为五组实验的中位数，但（e）为均值、（f）使用十组；（b、f、g）的须线表示完整范围。（d）使用空闲准入；（g）为每秒 100 个 VGG19 LC 请求，对应 ResNet152 BE 每秒 100、200 请求或连续负载。
+\caption{Policy comparisons on RTX~5090: workload baseline, native policy, and \sys on the same executor. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) prefetching all positively predicted experts, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. TTFT measures first-visible-text latency; panel (e) uses Llama decode batch 128. Bars show medians over five blocks, except (e) means and (f) ten blocks; whiskers in (b,f,g) show full ranges. Panel (d) uses idle admission; (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s.}
+% RTX~5090 上的策略比较：相同执行器上的工作负载基线、原生策略与 gpubpf。基线为关闭预测的专家缓存（a）、固定 K 的 FIFO（b）、预取所有预测会用到的专家（c）、默认调度（d、g）、双流 FlashAttention（e）和原生 CUDA（f）。TTFT 表示首个可见文本延迟；面板（e）使用 Llama 解码批量 128。柱形为五组实验的中位数，但（e）为均值、（f）使用十组；（b、f、g）的须线表示完整范围。（d）使用空闲准入；（g）为每秒 100 个 VGG19 LC 请求，对应 ResNet152 BE 每秒 100 或 200 请求。
 \label{fig:matched-ports}
 \end{figure*}
 
@@ -397,8 +397,8 @@ With Hummingbird's policy, \sys{} lowers LC response p99 by 5.9--9.1\% relative 
 % 采用 Hummingbird 策略时，在周期性和 BurstGPT 到达模式下，相对默认调度，\sys{} 将 LC 响应 p99 降低 5.9--9.1\%，原生策略降低 7.5--8.2\%。
 For XSched with two LC and four BE processes, LC p99 latency from submission until the first thread block starts falls from 76.9~s under native CUDA to 27.0~s with the native policy and 27.3~s with \sys{} (\Cref{fig:matched-ports}(f)).
 % 对 XSched，在两个 LC 和四个 BE 进程下，LC 从提交到首个线程块开始执行的 p99 延迟从原生 CUDA 的 76.9 秒降至原生策略的 27.0 秒和 \sys{} 的 27.3 秒（\Cref{fig:matched-ports}(f)）。
-Under continuous background load, GPREEMPT's policy reduces LC response p99 from 1.796~ms under default scheduling to 1.615~ms with the native policy and 1.610~ms with \sys{} (\Cref{fig:matched-ports}(g)).
-% 在连续后台负载下，GPREEMPT 策略将 LC 响应 p99 从默认调度的 1.796 毫秒降至原生策略的 1.615 毫秒和 \sys{} 的 1.610 毫秒（\Cref{fig:matched-ports}(g)）。
+Under continuous background load, GPREEMPT's policy reduces LC response p99 from 1.796~ms under default scheduling to 1.615~ms with the native policy and 1.610~ms with \sys{}.
+% 在连续后台负载下，GPREEMPT 策略将 LC 响应 p99 从默认调度的 1.796 毫秒降至原生策略的 1.615 毫秒和 \sys{} 的 1.610 毫秒。
 
 For POD-Attention, we evaluate ten shapes over five blocks against non-fused FlashAttention and native POD implementations.
 % 对 POD-Attention，我们在十种形状和五组实验中与未融合的 FlashAttention 及原生 POD 实现比较。
