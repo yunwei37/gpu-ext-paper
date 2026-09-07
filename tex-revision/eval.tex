@@ -328,8 +328,44 @@ The tenants share an unpartitioned GPU managed by a system-wide policy.
 
 We evaluate whether \sys{} can express the policies of published state-of-the-art systems, and what the general mechanism costs when it runs the same policy as a native implementation.
 % 我们评估 \sys{} 能否表达已发表最先进系统的策略，以及通用机制相对原生实现运行同一策略的开销。
-The ports span host-side expert caching and queue admission, driver-side timeslicing and memory migration, and device-side task selection.
-% 这些移植覆盖主机侧的专家缓存与队列准入、驱动侧的时间片与内存迁移，以及设备侧的任务选择。
+\Cref{tab:published-policies} summarizes the seven policies, their execution requirements, and their implementations through \sys{}.
+% \Cref{tab:published-policies} 汇总七种策略、其执行需求以及通过 \sys{} 实现的方式。
+
+\begin{table*}[t]
+\centering
+\caption{Published policies and their implementation through \sys{}, in the order of \Cref{fig:matched-ports}(a--g).}
+% 已发表策略及其通过 \sys{} 实现的方式，顺序对应 \Cref{fig:matched-ports}(a--g)。
+\label{tab:published-policies}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{@{} >{\hsize=0.5\hsize\raggedright\arraybackslash}X >{\hsize=0.9\hsize\raggedright\arraybackslash}X >{\hsize=1.6\hsize\raggedright\arraybackslash}X @{}}
+\toprule
+System & Original policy & Execution location and \sys{} implementation \\
+% 系统；原有策略；执行位置与 gpubpf 实现。
+\midrule
+MoE-Infinity~\cite{xue2025moeinfinity} & Match access predictions, rank expert prefetches, and select eviction victims. & Native user-space cache decisions become host-side \sys{} programs; the shared GPT-OSS-120B executor handles expert transfers and inference. \\
+% MoE-Infinity：匹配访问预测、排列专家预取顺序并选择驱逐对象；用户态原生缓存决策由主机侧 gpubpf 程序实现，共用的 GPT-OSS-120B 执行器负责专家传输与推理。
+\addlinespace
+Expert Buffering~\cite{huang2023towards} & Admit experts to the cache and prioritize eviction of experts unused by the current batch. & Native user-space admission and eviction become host-side \sys{} decisions, applied by the shared cache executor. \\
+% Expert Buffering：决定专家缓存准入，优先驱逐当前批次不用的专家；用户态原生准入与驱逐决策由主机侧 gpubpf 程序实现，并由共用缓存执行器执行。
+\addlinespace
+FineMoE~\cite{yu2026finemoe} & Select a dynamic set of experts for speculative prefetch. & Native user-space expert selection becomes a host-side \sys{} program; the shared inference executor performs transfers and computation. \\
+% FineMoE：动态选择推测预取的专家集合；用户态原生专家选择由主机侧 gpubpf 程序实现，共用推理执行器完成传输与计算。
+\addlinespace
+Hummingbird~\cite{hu2026hummingbird} & Admit background work during foreground idle intervals. & Native user-space admission becomes a host-side \sys{} program; the shared DNN executor submits the admitted work. \\
+% Hummingbird：在前台空闲区间准入后台工作；用户态原生准入决策由主机侧 gpubpf 程序实现，共用 DNN 执行器提交获准的工作。
+\addlinespace
+POD-Attention~\cite{kamath2025pod} & Proportionally select prefill or decode work for each SM. & Native selection inside the GPU kernel becomes a device-side \sys{} program; the fused attention kernel executes the selected work. \\
+% POD-Attention：按比例为各 SM 选择 prefill 或 decode 工作；GPU 内核中的原生选择逻辑由设备侧 gpubpf 程序实现，融合注意力内核执行所选工作。
+\addlinespace
+XSched~\cite{shen2025xsched} & Select the highest-priority task using inter-kernel preemption. & Native user-space task selection becomes a host-side \sys{} program; the original executor provides inter-kernel suspend/resume. \\
+% XSched：利用内核间抢占选择最高优先级任务；用户态原生任务选择由主机侧 gpubpf 程序实现，原始执行器提供内核间挂起与恢复。
+\addlinespace
+GPREEMPT~\cite{fan2025gpreempt} & Control task admission and assign timeslices by priority. & Native user-space blocking/release and driver timeslicing become host- and driver-side \sys{} decisions, applied by the original executor and GPU driver. \\
+% GPREEMPT：控制任务准入并按优先级分配时间片；用户态原生阻塞与释放决策以及驱动时间片决策，分别由主机侧和驱动侧 gpubpf 程序实现，原始执行器和 GPU 驱动负责执行。
+\bottomrule
+\end{tabularx}
+\end{table*}
 
 \begin{figure*}[t]
 \centering
@@ -348,54 +384,24 @@ Each comparison pairs a native implementation with a \sys{} port of the same pol
 Unless stated otherwise, we report medians with paired bootstrap intervals; POD's operator plot uses the mean of five per-run means.
 % 除非另有说明，我们报告中位数及配对 bootstrap 区间；POD 算子图使用五次运行均值的平均值。
 
-\paragraph{MoE-Infinity (expert offloading)}
-% MoE-Infinity（专家卸载）
-Host-side \sys{} programs implement MoE-Infinity's~\cite{xue2025moeinfinity} prediction matching, prefetch ranking, and eviction selection, while the shared GPT-OSS-120B executor performs expert transfers and inference.
-% 主机侧 \sys{} 程序实现 MoE-Infinity~\cite{xue2025moeinfinity} 的预测匹配、预取排序和驱逐选择，共用的 GPT-OSS-120B 执行器负责专家传输与推理。
-Across five paired runs, the native policy and \sys{} reduce first-visible-text latency by 22.1\% and 22.5\%, respectively, relative to prediction-disabled expert caching.
-% 五次配对试验中，相对关闭预测的专家缓存，原生策略与 \sys{} 分别将首个可见文本延迟降低 22.1\% 和 22.5\%。
+\paragraph{Results}
+% 结果
+With MoE-Infinity's policy, the native implementation and \sys{} reduce first-visible-text latency by 22.1\% and 22.5\%, respectively, relative to prediction-disabled expert caching across five paired runs.
+% 采用 MoE-Infinity 策略时，五次配对运行中原生实现与 \sys{} 相比关闭预测的专家缓存，分别将首个可见文本延迟降低 22.1\% 和 22.5\%。
+For Expert Buffering at the same cache capacity, both the native policy and \sys{} reduce whole-expert loads by 12.85\% relative to fixed-$K$ FIFO (\Cref{fig:matched-ports}(b)).
+% 对 Expert Buffering，在相同缓存容量下，原生策略与 \sys{} 均相对固定 K 的 FIFO 将完整专家加载次数减少 12.85\%（\Cref{fig:matched-ports}(b)）。
+With FineMoE's policy, \sys{} improves throughput by 24.6\% over a policy that prefetches every expert with a positive prediction; native and \sys{} throughput differ by 0.21\% in paired runs (95\% CI $[-0.17\%,+0.52\%]$).
+% 采用 FineMoE 策略时，相比预取所有预测会用到的专家，\sys{} 将吞吐提高 24.6\%；原生与 \sys{} 在配对运行中的吞吐差异为 0.21\%（95\% CI $[-0.17\%,+0.52\%]$）。
 
-\paragraph{XSched (preemptive scheduling)}
-% XSched（抢占式调度）
-We port XSched's~\cite{shen2025xsched} inter-kernel preemption: a host-side \sys{} program selects the highest-priority task, and the original executor performs suspend/resume.
-% 我们移植 XSched~\cite{shen2025xsched} 的内核间抢占：主机侧 \sys{} 程序选择最高优先级任务，原始执行器执行挂起/恢复。
-With two LC and four BE processes, LC p99 latency from submission until the first thread block starts falls from 76.9~s under native CUDA to 27.0~s with the native policy and 27.3~s with \sys{} (\Cref{fig:matched-ports}(f)).
-% 在两个 LC 和四个 BE 进程下，LC 从提交到首个线程块开始执行的 p99 延迟 从原生 CUDA 的 76.9 秒降至原生策略的 27.0 秒和 \sys{} 的 27.3 秒（\Cref{fig:matched-ports}(f)）。
+With Hummingbird's policy, \sys{} lowers LC response p99 by 5.9--9.1\% relative to default scheduling across periodic and BurstGPT arrivals, compared with 7.5--8.2\% for the native policy.
+% 采用 Hummingbird 策略时，在周期性和 BurstGPT 到达模式下，相对默认调度，\sys{} 将 LC 响应 p99 降低 5.9--9.1\%，原生策略降低 7.5--8.2\%。
+For XSched with two LC and four BE processes, LC p99 latency from submission until the first thread block starts falls from 76.9~s under native CUDA to 27.0~s with the native policy and 27.3~s with \sys{} (\Cref{fig:matched-ports}(f)).
+% 对 XSched，在两个 LC 和四个 BE 进程下，LC 从提交到首个线程块开始执行的 p99 延迟从原生 CUDA 的 76.9 秒降至原生策略的 27.0 秒和 \sys{} 的 27.3 秒（\Cref{fig:matched-ports}(f)）。
+Under continuous background load, GPREEMPT's policy reduces LC response p99 from 1.796~ms under default scheduling to 1.615~ms with the native policy and 1.610~ms with \sys{} (\Cref{fig:matched-ports}(g)).
+% 在连续后台负载下，GPREEMPT 策略将 LC 响应 p99 从默认调度的 1.796 毫秒降至原生策略的 1.615 毫秒和 \sys{} 的 1.610 毫秒（\Cref{fig:matched-ports}(g)）。
 
-\paragraph{GPREEMPT (priority timeslicing)}
-% GPREEMPT（优先级时间片）
-For GPREEMPT~\cite{fan2025gpreempt}, host-side \sys{} programs issue blocking and release decisions, and driver-side \sys{} programs assign priority-based timeslices; the original executor and GPU driver carry out these decisions.
-% 对 GPREEMPT~\cite{fan2025gpreempt}，主机侧 \sys{} 程序做出阻塞与释放决策，驱动侧 \sys{} 程序按优先级分配时间片，由原始执行器和 GPU 驱动执行。
-Under continuous background load, this policy reduces LC response p99 from 1.796~ms under default scheduling to 1.615~ms with the native policy and 1.610~ms with \sys{} (\Cref{fig:matched-ports}(g)).
-% 在连续后台负载下，GPREEMPT~\cite{fan2025gpreempt} 的优先级时间片将 LC 响应 p99 从默认调度的 1.796 毫秒降至原生策略的 1.615 毫秒和 \sys{} 的 1.610 毫秒（\Cref{fig:matched-ports}(g)）。
-
-\paragraph{Expert Buffering (expert residency)}
-% Expert Buffering（专家驻留）
-A host-side \sys{} program implements Expert Buffering's~\cite{huang2023towards} expert admission and eviction policy, prioritizing eviction of experts unused by the current batch; the shared cache executor applies its decisions.
-% 主机侧 \sys{} 程序实现 Expert Buffering~\cite{huang2023towards} 专家准入与驱逐策略，优先驱逐当前批次不用的专家；共用的缓存执行器执行这些决策。
-At the same cache capacity, both the native policy and \sys{} reduce whole-expert loads by 12.85\% relative to fixed-$K$ FIFO (\Cref{fig:matched-ports}(b)).
-% 在相同缓存容量下，原生策略与 gpubpf 均相对固定 K 的 FIFO 将完整专家加载次数减少 12.85\%（\Cref{fig:matched-ports}(b)）。
-
-\paragraph{FineMoE (dynamic expert sets)}
-% FineMoE（动态专家集）
-A host-side \sys{} program implements FineMoE's~\cite{yu2026finemoe} dynamic-set rule to select experts for speculative prefetch, while the shared inference executor performs their transfers and computation.
-% 主机侧 \sys{} 程序实现 FineMoE~\cite{yu2026finemoe} 的动态集合规则，选择推测预取的专家，由共用的推理执行器完成传输与计算。
-\sys{} improves throughput by 24.6\% over a policy that prefetches every expert with a positive prediction; native and \sys{} throughput differ by 0.21\% in paired runs (95\% CI $[-0.17\%,+0.52\%]$).
-% 对 FineMoE~\cite{yu2026finemoe} 的动态专家集选择，相比预取所有预测会用到的专家的策略，\sys{} 将吞吐提高 24.6\%；原生与 \sys{} 在配对运行中的吞吐差异为 0.21\%（95\% CI $[-0.17\%,+0.52\%]$）。
-
-\paragraph{Hummingbird (idle admission)}
-% Hummingbird（空闲准入）
-A host-side \sys{} program implements Hummingbird's~\cite{hu2026hummingbird} idle-admission rule by deciding when background work may enter a foreground idle interval, while the shared DNN executor submits the admitted work.
-% 主机侧 \sys{} 程序实现 Hummingbird~\cite{hu2026hummingbird} 的空闲准入规则，决定后台工作何时可进入前台空闲区间，由共用的 DNN 执行器提交获准的工作。
-Across periodic and BurstGPT arrivals, \sys{} lowers LC response p99 by 5.9--9.1\% relative to default scheduling, compared with 7.5--8.2\% for the native policy.
-% 在周期性和 BurstGPT 到达模式下，相对默认调度，\sys{} 将 LC 响应 p99 降低 5.9--9.1\%，原生策略降低 7.5--8.2\%。
-
-\paragraph{POD-Attention (device-side selection)}
-% POD-Attention（设备端选择）
-A device-side \sys{} program implements POD-Attention's~\cite{kamath2025pod} proportional selection of prefill or decode work for each SM, which the fused attention kernel executes.
-% 设备端 \sys{} 程序实现 POD-Attention~\cite{kamath2025pod} 按比例为每个 SM 选择 prefill 或 decode 工作的策略，由融合注意力内核执行。
-We evaluate ten shapes over five blocks against non-fused FlashAttention and native POD implementations.
-% 我们在十种形状和五组实验中与未融合的 FlashAttention 及原生 POD 实现比较。
+For POD-Attention, we evaluate ten shapes over five blocks against non-fused FlashAttention and native POD implementations.
+% 对 POD-Attention，我们在十种形状和五组实验中与未融合的 FlashAttention 及原生 POD 实现比较。
 For Llama decode batch 128, operator latency falls from 5.360~ms with two-stream FlashAttention to 4.322~ms with the native policy and 4.344~ms with \sys{}.
 % 在 Llama 解码批量 128 下，算子延迟从双流 FlashAttention 的 5.360 毫秒降至原生策略的 4.322 毫秒和 \sys{} 的 4.344 毫秒。
 
