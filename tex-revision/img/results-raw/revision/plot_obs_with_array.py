@@ -1,18 +1,13 @@
 #!/usr/bin/env python3
 """Render the updated device-side observability overhead figure.
 
-Two vertically stacked horizontal dot/range panels, one per GPU:
-  (a) P40, published submitted-paper values (historical; no per-pair
-      variance is recorded for these values, so single points are drawn).
-  (b) RTX 5090: all ten paired blocks per arm of the original three-tool
-      campaign (points + min-max whisker + mean tick), plus the completed
-      GPU-local-array kernelretsnoop result: five paired points (diamonds)
-      with min-max and mean from its own independent five-pair campaign.
-
-The x axis is symlog with a linear region between -1 and +1, so the
-negative gpubpf launchlate pairs remain visible; nothing is clamped,
-dropped, or replaced by a positive floor. All measures are prefill
-throughput loss in percent relative to the same-campaign baseline.
+Two side-by-side grouped-bar panels preserve the earlier figure's layout.
+P40 uses the submitted values. RTX 5090 uses the original ten paired blocks
+per tool plus five independent GPU-buffer pairs for kernelretsnoop. Bars
+show means, and RTX 5090 whiskers show the complete observed range.
+The symlog axis includes zero and the negative launchlate range.
+All measurements are prefill throughput loss relative to the baseline
+from the same campaign.
 
 Paired overhead per block is derived as 100*(baseline - tool)/baseline
 from the recorded cells and cross-checked against the recorded per-cell
@@ -134,8 +129,8 @@ def build_data(p40: dict, old: dict, new: dict) -> dict:
         "schema": "obs_overhead_with_array_v1",
         "metric": "prefill throughput loss, percent of the same-campaign "
                   "baseline throughput (lower is better)",
-        "plot_note": "symlog axis, linear between -1 and +1; the negative "
-                     "gpubpf launchlate pairs are shown, not clamped",
+        "plot_note": "grouped mean bars with full-range whiskers; symlog axis "
+                     "linear between -1 and +1 retains the negative launchlate range",
         "campaigns": {
             "p40_submitted": {
                 "gpu": "P40",
@@ -199,82 +194,58 @@ def _draw(data: dict, paths: list[Path]) -> None:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
 
     p40 = data["campaigns"]["p40_submitted"]["published_point_pct"]
     old = data["campaigns"]["rtx5090_table1"]
     new = data["campaigns"]["rtx5090_gpu_array"]
-    old_pairs = old["per_pair_overhead_pct"]
-    new_pairs = new["per_pair_overhead_pct"]["gpubpf_kernelretsnoop"]
-    rows = {tool: index for index, tool in enumerate(reversed(TOOLS))}
-
-    with plt.rc_context(STYLE):
-        figure, axes = plt.subplots(2, 1, figsize=(3.4, 2.7), sharex=True)
-        for axis in axes:
-            axis.set_xscale("symlog", linthresh=1.0)
-            axis.set_xlim(-2, 150)
-            axis.set_ylim(-0.6, 2.6)
-            axis.set_yticks([0, 1, 2], TOOL_TICKS[::-1])
-            axis.grid(axis="x", alpha=.25, linewidth=.6, which="major")
-        for axis in axes:
-            axis.set_xticks([-1, 0, 1, 10, 100])
-            axis.set_xticklabels(["-1", "0", "1", "10", "100"])
-        axes[1].set_xlabel("Prefill throughput loss (%)")
-        axes[0].set_title("(a) P40, Llama 1B prefill", fontsize=8.0, pad=3)
-        axes[1].set_title("(b) RTX 5090, TinyLlama-1.1B prefill", fontsize=8.0, pad=3)
-
-        for tool in TOOLS:
-            y = rows[tool]
-            for system, offset in zip(SYSTEMS, (0.18, -0.18)):
-                arm = f"{system}_{tool}"
-                axis = axes[0]
-                axis.scatter([p40[arm]], [y + offset], marker=("o" if system == "gpubpf" else "^"), s=16,
-                             color=ARM_COLORS[system], zorder=3)
-        top = axes[0]
-        for tool in TOOLS:
-            y = rows[tool]
-            for system, offset in zip(SYSTEMS, (0.18, -0.18)):
-                arm = f"{system}_{tool}"
-                values = [old_pairs[arm][str(block)] for block in range(1, 11)]
-                axis = axes[1]
-                axis.hlines(y + offset, min(values), max(values),
-                            color=ARM_COLORS[system], linewidth=1.0, zorder=2)
-                for end in (min(values), max(values)):
-                    axis.vlines(end, y + offset - .05, y + offset + .05,
-                                color=ARM_COLORS[system], linewidth=1.0, zorder=2)
-                for index, value in enumerate(values):
-                    jiggled = y + offset + (0.06 if index % 2 == 0 else -0.06)
-                    axis.scatter([value], [jiggled], marker=("o" if system == "gpubpf" else "^"), s=16,
-                                 color=ARM_COLORS[system], zorder=3)
-                axis.vlines(old["mean_overhead_pct"][arm], y + offset - .09,
-                            y + offset + .09, color=GRAY, linewidth=1.0, zorder=4)
-        y = rows["kernelretsnoop"]
-        axis = axes[1]
-        values = [new_pairs[str(block)] for block in range(1, 6)]
-        axis.hlines(y, min(values), max(values), color=GRAY, linewidth=1.0, zorder=2)
-        for end in (min(values), max(values)):
-            axis.vlines(end, y - .05, y + .05, color=GRAY, linewidth=1.0, zorder=2)
-        for index, value in enumerate(values):
-            jiggled = y + (0.05 if index % 2 == 0 else -0.05)
-            axis.scatter([value], [jiggled], marker="D", s=16,
-                         facecolor=ARM_COLORS["gpubpf"], edgecolor="#002A43",
-                         linewidth=.3, zorder=4)
-        axis.vlines(new["mean_overhead_pct"]["gpubpf_kernelretsnoop"], y - .09,
-                    y + .09, color=GRAY, linewidth=1.0, zorder=4)
-        handles = [
-            Line2D([0], [0], marker="o", color=ARM_COLORS["gpubpf"], linestyle="",
-                   markersize=4, label="gpubpf"),
-            Line2D([0], [0], marker="^", color=ARM_COLORS["nvbit"], linestyle="",
-                   markersize=4, label="NVBit"),
-            Line2D([0], [0], marker="D", color=ARM_COLORS["gpubpf"], linestyle="",
-                   markersize=4, label="GPU buffer"),
-            Line2D([0], [0], marker="|", color=GRAY, linestyle="",
-                   markersize=6, label="mean"),
-        ]
-        figure.legend(handles=handles, loc="upper center", bbox_to_anchor=(.5, 1.02),
-                      ncol=2, frameon=False, handlelength=1.1, handletextpad=.4,
-                      columnspacing=1.0)
-        figure.tight_layout(rect=(0, 0, .98, .88), h_pad=0.8, w_pad=1.0)
+    style = dict(STYLE, **{"font.size": 7.5, "axes.labelsize": 7.5,
+                          "xtick.labelsize": 7, "ytick.labelsize": 7,
+                          "legend.fontsize": 7.5})
+    with plt.rc_context(style):
+        figure, axes = plt.subplots(1, 2, figsize=(3.4, 2.0), sharey=True)
+        for column, axis in enumerate(axes):
+            for index, tool in enumerate(TOOLS):
+                for system, offset in zip(SYSTEMS, (-.22, .22)):
+                    arm = f"{system}_{tool}"
+                    mean = p40[arm] if column == 0 else old["mean_overhead_pct"][arm]
+                    # Leave room for the additional buffered gpubpf result.
+                    center = index + offset
+                    width = .36
+                    if column == 1 and index == 0:
+                        center = index + (-.29 if system == "gpubpf" else 0)
+                        width = .25
+                    axis.bar(center, mean, width=width, color=ARM_COLORS[system],
+                             edgecolor="#333333", linewidth=.3,
+                             hatch="//" if system == "nvbit" else None)
+                    if column == 1:
+                        low = old["min_overhead_pct"][arm]
+                        high = old["max_overhead_pct"][arm]
+                        axis.errorbar(center, mean, yerr=[[mean-low], [high-mean]],
+                                      fmt="none", color=GRAY, capsize=1.5, linewidth=1)
+            axis.set_yscale("symlog", linthresh=1)
+            axis.set_ylim(-1, 200)
+            axis.set_yticks([-1, 0, 1, 10, 100], ["−1", "0", "1", "10", "100"])
+            axis.set_xticks(range(3), ["kernelret\nsnoop", "thread-\nhist", "launch-\nlate"])
+            axis.set_title(("(a) P40", "(b) RTX 5090")[column], fontsize=7.5, pad=4)
+            axis.grid(axis="y", alpha=.25, linewidth=.6)
+            axis.axhline(0, color="#555555", linewidth=.6)
+        arm = "gpubpf_kernelretsnoop"
+        mean = new["mean_overhead_pct"][arm]
+        low, high = new["min_overhead_pct"][arm], new["max_overhead_pct"][arm]
+        axes[1].bar(.29, mean, width=.25, facecolor="white",
+                    edgecolor=ARM_COLORS["gpubpf"], hatch="xxxx", linewidth=.7)
+        axes[1].errorbar(.29, mean, yerr=[[mean-low], [high-mean]],
+                         fmt="none", color=GRAY, capsize=1.5, linewidth=1)
+        axes[0].set_ylabel("Prefill throughput loss (%)")
+        handles = [Patch(facecolor=ARM_COLORS["gpubpf"], label="gpubpf"),
+                   Patch(facecolor=ARM_COLORS["nvbit"], hatch="//", label="NVBit"),
+                   Patch(facecolor="white", edgecolor=ARM_COLORS["gpubpf"],
+                         hatch="xxxx", label="GPU buffer")]
+        figure.legend(handles=handles, loc="upper center", ncol=3, frameon=False,
+                      bbox_to_anchor=(.5, 1.0), handlelength=1.1,
+                      handletextpad=.4, columnspacing=.9)
+        figure.subplots_adjust(left=.17, right=.99, bottom=.23, top=.76, wspace=.20)
         try:
             for path in paths:
                 figure.savefig(path, dpi=300)

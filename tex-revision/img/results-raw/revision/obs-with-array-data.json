@@ -1,7 +1,7 @@
 {
   "schema": "obs_overhead_with_array_v1",
   "metric": "prefill throughput loss, percent of the same-campaign baseline throughput (lower is better)",
-  "plot_note": "symlog axis, linear between -1 and +1; the negative gpubpf launchlate pairs are shown, not clamped",
+  "plot_note": "grouped mean bars with full-range whiskers; symlog axis linear between -1 and +1 retains the negative launchlate range",
   "campaigns": {
     "p40_submitted": {
       "gpu": "P40",

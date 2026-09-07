@@ -423,8 +423,8 @@ Attaching to a running process requires no application restart.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/revision/obs-overhead-with-array.pdf}
-\caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B: ten pairs per tool, plus five independent pairs for \sys GPU buffering. Points show runs, whiskers their range, and ticks means; P40 shows original reported values. The axis is linear within $\pm1\%$ and logarithmic beyond. GPU buffering yields 5.57\% prefill overhead; its final collection (10.38\,ms) occurs outside prefill timing.}
-% 相对未插桩基线的预填充吞吐下降。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B：每个工具十组配对，另加 gpubpf GPU 缓冲的五组独立配对。点表示各次运行，须线表示范围，短线表示均值；P40 使用原文报告值。坐标轴在 ±1\% 内为线性，之外为对数。预填充计时不含最终收集（GPU 缓冲为 10.38 ms）；GPU 缓冲的预填充开销为 5.57\%。
+\caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B: ten pairs per tool, plus five independent pairs for \sys GPU buffering. Bars show means, with whiskers for the RTX~5090 run ranges; P40 shows original reported values. The axis is linear within $\pm1\%$ and logarithmic beyond. GPU buffering yields 5.57\% prefill overhead; its final collection (10.38\,ms) occurs outside prefill timing.}
+% 相对未插桩基线的预填充吞吐下降。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B：每个工具十组配对，另加 gpubpf GPU 缓冲的五组独立配对。柱形表示均值，须线表示 RTX~5090 各次运行的范围；P40 使用原文报告值。坐标轴在 ±1\% 内为线性，之外为对数。预填充计时不含最终收集（GPU 缓冲为 10.38 ms）；GPU 缓冲的预填充开销为 5.57\%。
 \label{fig:obs-overhead}
 \end{figure}
 

@@ -62,10 +62,11 @@ from the enclosing gpu_ext checkout without overwriting existing outputs:
 python tex-revision/img/results-raw/revision/plot_obs_with_array.py --output-prefix /tmp/obs-buffer --data-output /tmp/obs-buffer-data.json
 ```
 
-The plot uses circles for gpubpf, triangles for NVBit, and diamonds for GPU
-buffering; ranges and means accompany the RTX 5090 samples. Historical P40
-points retain their reported values. The single-column vector canvas is
-3.4 inches wide with 8 pt text. The previous `obs-overhead-bars.pdf` is kept.
+The plot retains the earlier two-panel grouped-bar layout. Bars show means;
+whiskers show the full RTX 5090 run ranges, including the launchlate range
+below zero. GPU buffering uses an additional hatched bar for kernelretsnoop.
+P40 retains the original reported values. The single-column vector canvas is
+3.4 inches wide with 7--7.5 pt text. The previous `obs-overhead-bars.pdf` is kept.
 
 ## Combined seven-policy figure
 
