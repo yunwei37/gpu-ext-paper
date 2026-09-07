@@ -313,16 +313,16 @@ The ports span host-side expert caching and queue admission, driver-side timesli
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=\textwidth]{img/results-raw/revision/matched-port-panels.pdf}
-\caption{Matched policy ports on RTX~5090. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) all-positive prefetch, (d) default scheduling, and (e) two-stream FlashAttention. Each panel reports one metric over five blocks: median first-visible-text latency (a), median throughput (b,c), median LC response p99 (d), and mean operator latency for Llama decode batch 128 (e). Native-policy bars use the same executor as \sys{}; panel (d) uses the idle-admission component.}
-% RTX~5090 上的匹配策略移植。基线依次为关闭预测的专家缓存、固定 K 的 FIFO、全正例预取、默认调度和双流 FlashAttention。每个面板报告五组实验中的一个指标：首个可见文本延迟中位数（a）、吞吐中位数（b、c）、LC 响应 p99 中位数（d），以及 Llama 解码批量 128 的平均算子延迟（e）。原生策略与 \sys{} 使用相同执行器；面板（d）使用空闲准入组件。
+\includegraphics[width=\textwidth]{img/results-raw/revision/matched-policy-panels.pdf}
+\caption{Matched policy ports on RTX~5090: workload baseline, native policy, and \sys on the same executor. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) all-positive prefetch, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. TTFT measures first-visible-text latency; panel (e) uses Llama decode batch 128. Bars show medians over five blocks, except (e) means and (f) ten blocks; whiskers in (b,f,g) show full ranges. Panel (d) uses idle admission; (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s, or continuous load.}
+% RTX~5090 上的匹配策略移植：相同执行器上的工作负载基线、原生策略与 gpubpf。基线为关闭预测的专家缓存（a）、固定 K 的 FIFO（b）、全正例预取（c）、默认调度（d、g）、双流 FlashAttention（e）和原生 CUDA（f）。TTFT 表示首个可见文本延迟；面板（e）使用 Llama 解码批量 128。柱形为五组实验的中位数，但（e）为均值、（f）使用十组；（b、f、g）的须线表示完整范围。（d）使用空闲准入；（g）为每秒 100 个 VGG19 LC 请求，对应 ResNet152 BE 每秒 100、200 请求或连续负载。
 \label{fig:matched-ports}
 \end{figure*}
 
 \paragraph{Methodology}
 % 方法
-\Cref{fig:matched-ports} separates two comparisons: a workload baseline versus a native policy implementation measures policy benefit, while native versus \sys{} on the same executor measures the port's cost; XSched and GPREEMPT appear in \Cref{fig:scheduler-latency}.
-% \Cref{fig:matched-ports} 区分两层比较：工作负载基线与原生策略实现比较策略收益，相同执行器上的原生实现与 \sys{} 比较移植代价；XSched 和 GPREEMPT 见 \Cref{fig:scheduler-latency}。
+\Cref{fig:matched-ports} separates two comparisons: a workload baseline versus a native policy implementation measures policy benefit, while native versus \sys{} on the same executor measures the port's cost.
+% \Cref{fig:matched-ports} 区分两层比较：工作负载基线与原生策略实现比较策略收益，相同执行器上的原生实现与 \sys{} 比较移植代价。
 Each comparison pairs a native implementation with a \sys{} port of the same policy on the same workload and executor, on RTX~5090 (driver 575.57.08) with exclusive GPU access and repeated randomized trials.
 % 每组对比在相同工作负载和执行器上，将原生实现与同一策略的 \sys{} 移植版配对，在 RTX~5090（驱动 575.57.08）上以独占 GPU 和重复随机试验运行。
 Unless stated otherwise, we report medians with paired bootstrap intervals; POD's operator plot uses the mean of five per-run means.
@@ -339,32 +339,22 @@ Across five paired runs, the native policy and \sys{} reduce first-visible-text 
 % XSched（抢占式调度）
 We port XSched's~\cite{shen2025xsched} inter-kernel preemption: a host-JIT \sys{} program selects the highest-priority task, and the original executor performs suspend/resume.
 % 我们移植 XSched~\cite{shen2025xsched} 的内核间抢占：主机 JIT 的 \sys{} 程序选择最高优先级任务，原始执行器执行挂起/恢复。
-With two latency-critical (LC) and four best-effort (BE) processes, LC submission-to-first-CTA p99 falls from 76.9~s under native CUDA to 27.0~s with XSched and 27.3~s with \sys{} (\Cref{fig:matched-scheduling}).
-% 在两个延迟关键（LC）和四个尽力型（BE）进程下，LC 提交到首个 CTA 的 p99 从原生 CUDA 的 76.9 秒降至 XSched 的 27.0 秒和 \sys{} 的 27.3 秒（\Cref{fig:matched-scheduling}）。
+With two latency-critical (LC) and four best-effort (BE) processes, LC submission-to-first-CTA p99 falls from 76.9~s under native CUDA to 27.0~s with XSched and 27.3~s with \sys{} (\Cref{fig:matched-ports}(f)).
+% 在两个延迟关键（LC）和四个尽力型（BE）进程下，LC 提交到首个 CTA 的 p99 从原生 CUDA 的 76.9 秒降至 XSched 的 27.0 秒和 \sys{} 的 27.3 秒（\Cref{fig:matched-ports}(f)）。
 
 \paragraph{GPREEMPT (priority timeslicing)}
 % GPREEMPT（优先级时间片）
 For GPREEMPT~\cite{fan2025gpreempt}, host-JIT \sys{} programs issue blocking and release decisions, and kernel-BPF programs assign priority-based timeslices; the original executor and GPU driver carry out these decisions.
 % 对 GPREEMPT~\cite{fan2025gpreempt}，主机 JIT 的 \sys{} 程序做出阻塞与释放决策，内核 BPF 程序按优先级分配时间片，由原始执行器和 GPU 驱动执行。
-Under continuous background load, this policy reduces LC response p99 from 1.796~ms under default scheduling to 1.615~ms with the original C policy and 1.610~ms with \sys{} (\Cref{fig:matched-scheduling}).
-% 在连续后台负载下，GPREEMPT~\cite{fan2025gpreempt} 的优先级时间片将 LC 响应 p99 从默认调度的 1.796 毫秒降至原始 C 策略的 1.615 毫秒和 \sys{} 的 1.610 毫秒（\Cref{fig:matched-scheduling}）。
-
-\begin{figure}
-\centering
-\includegraphics[width=\columnwidth]{img/results-raw/revision/scheduling-comparison-lc-bars.pdf}
-
-\caption{Matched scheduling policies on RTX~5090, LC latency: (a) XSched workload, two LC and four BE processes, LC queue-entry p99; (b) VGG19 LC at 100 requests/s against three ResNet152 BE loads, arrival-to-verified-response p99. Bars show medians (XSched: ten paired repetitions; GPreempt: five per load).}
-% RTX 5090 上的匹配调度策略，LC 延迟：(a) XSched 工作负载，两个 LC 和四个 BE 进程，LC 入队 p99；(b) VGG19 LC 每秒 100 请求、对应三种 ResNet152 BE 负载，到已验证响应的 p99。柱形为中位数（XSched：十次配对重复；GPreempt：每种负载五次）。
-\label{fig:scheduler-latency}
-\label{fig:matched-scheduling}
-\end{figure}
+Under continuous background load, this policy reduces LC response p99 from 1.796~ms under default scheduling to 1.615~ms with the original C policy and 1.610~ms with \sys{} (\Cref{fig:matched-ports}(g)).
+% 在连续后台负载下，GPREEMPT~\cite{fan2025gpreempt} 的优先级时间片将 LC 响应 p99 从默认调度的 1.796 毫秒降至原始 C 策略的 1.615 毫秒和 \sys{} 的 1.610 毫秒（\Cref{fig:matched-ports}(g)）。
 
 \paragraph{Expert Buffering (expert residency)}
 % Expert Buffering（专家驻留）
 A host-JIT \sys{} program implements Expert Buffering's~\cite{huang2023towards} inactive-first expert admission and eviction decisions, which the shared cache executor applies.
 % 主机 JIT 的 \sys{} 程序实现 Expert Buffering~\cite{huang2023towards} 非活跃优先的专家准入与驱逐决策，由共用的缓存执行器执行。
-Throughput improves over fixed-$K$ FIFO by 2.6\% with the native policy and 1.8\% with \sys{}.
-% 相比固定 K 的 FIFO，原生策略与 \sys{} 分别将吞吐提高 2.6\% 和 1.8\%。
+At the same cache capacity, both the native policy and \sys{} reduce whole-expert loads by 12.85\% relative to fixed-$K$ FIFO (\Cref{fig:matched-ports}(b)).
+% 在相同缓存容量下，原生策略与 gpubpf 均相对固定 K 的 FIFO 将完整专家加载次数减少 12.85\%（\Cref{fig:matched-ports}(b)）。
 
 \paragraph{FineMoE (dynamic expert sets)}
 % FineMoE（动态专家集）

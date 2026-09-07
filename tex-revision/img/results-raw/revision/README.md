@@ -1,6 +1,6 @@
 # Matched scheduling figure
 
-`scheduling-comparison-lc-bars.pdf` is the current figure: a single-column
+`scheduling-comparison-lc-bars.pdf` is the earlier separate figure: a single-column
 two-panel rendering of LC latency (XSched and GPreempt workloads), rendered
 by `workloads/gpreempt/plot_scheduling_comparison_lc.py` from the published
 per-point data below. The paper reports the LC latency metric for these policy ports.
@@ -28,7 +28,8 @@ full text width; verify the final printed scale in a fresh paper build.
 ## Matched policy ports
 
 `matched-port-panels.pdf` reports one metric per policy component.
-Regenerate with `python plot_port_panels.py --output-prefix /tmp/matched-ports`.
+Regenerate the earlier five-panel version with
+`python plot_port_panels.py --panels port-panels.json --output-prefix /tmp/matched-ports`.
 `port-panels.json` names each source report in gpu_ext and retains the plotted
 values. FineMoE uses all-positive prefetch as its comparison baseline;
 POD uses the Llama decode batch-128 case, not a ten-shape average.
@@ -65,3 +66,31 @@ The plot uses circles for gpubpf, triangles for NVBit, and diamonds for GPU
 buffering; ranges and means accompany the RTX 5090 samples. Historical P40
 points retain their reported values. The single-column vector canvas is
 3.4 inches wide with 8 pt text. The previous `obs-overhead-bars.pdf` is kept.
+
+## Combined seven-policy figure
+
+`matched-policy-panels.pdf` combines the former Figures 16 and 17 in one
+seven-panel row at the paper's 7-inch text width, with 7 pt labels. The
+workload baseline, native policy, and BPF port share one legend.
+
+`matched-policy-panels.json` retains the first figure's values except for
+Expert Buffering's selected metric: completed whole-expert demand loads,
+13,304 for FIFO and 11,595 for both policies (12.85% fewer, K=16). These
+are workload transfers, counted identically in all five cohorts per arm.
+The original throughput values remain in `port-panels.json`. MoE-Infinity
+latency is displayed in seconds instead of milliseconds.
+
+XSched and GPREEMPT medians are derived from the per-run samples in
+`workloads/gpreempt/figures/scheduling-comparison-2x2.points.json`. The merged
+figure keeps both previously plotted BE rates and adds the already measured
+continuous-load group used by the GPREEMPT paragraph. Raw plotted samples
+are copied into the panel data, and whiskers show their full ranges.
+
+Regenerate from this directory with:
+
+```sh
+python plot_port_panels.py --output-prefix /tmp/matched-seven
+```
+
+No new experiment was run. The earlier figure PDFs and five-panel data remain
+available; the paper references the combined figure.
