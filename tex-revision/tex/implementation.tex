@@ -43,10 +43,10 @@ Policies triggered from uprobes or tracepoints can also preempt running GPU kern
 
 \paragraph{Verification and JIT Compilation.}
 % 验证与 JIT 编译
-Kernel-resident host programs use Linux's eBPF verifier; device programs use PREVAIL~\cite{prevail-verifier} with GPU helper and map models, followed by the uniformity analysis and SIMT checks in \S\ref{sec:verification}.
-% 驻留内核的主机程序使用 Linux 的 eBPF 验证器；设备程序使用带 GPU helper 与 map 模型的 PREVAIL~\cite{prevail-verifier}，随后执行 \S\ref{sec:verification} 中的一致性分析与 SIMT 检查。
-The user-space backend compiles accepted device bytecode into PTX.
-% 用户态后端将通过验证的设备字节码编译为 PTX。
+Kernel-resident host programs use Linux's eBPF verifier; device-side programs use PREVAIL~\cite{prevail-verifier} with GPU helper and map models, followed by the uniformity analysis and SIMT checks in \S\ref{sec:verification}.
+% 驻留内核的主机程序使用 Linux 的 eBPF 验证器；设备端程序使用带 GPU helper 与 map 模型的 PREVAIL~\cite{prevail-verifier}，随后执行 \S\ref{sec:verification} 中的一致性分析与 SIMT 检查。
+The user-space backend compiles accepted device-side bytecode into PTX.
+% 用户态后端将通过验证的设备端字节码编译为 PTX。
 During JIT compilation, we inline helper functions and map accesses.
 % 在 JIT 编译过程中，我们内联辅助函数和 map 访问。
 Unlike the workshop version~\cite{egpu}, which relies on atomic synchronization, \sys{} avoids cross-SM primitives to prevent hardware stalls.

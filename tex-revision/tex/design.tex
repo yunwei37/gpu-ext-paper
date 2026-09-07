@@ -162,13 +162,13 @@ apply(resource, observed, request):
 Device-side verification checks memory bounds and termination, then analyzes whether policy values are identical across the lanes of a warp.
 % 设备端验证检查内存边界与终止性，随后分析策略值在同一 warp 的各 lane 间是否相同。
 The analysis assigns values \emph{unknown}, \emph{uniform}, or \emph{varying} labels and propagates them through the control-flow graph.
-% 分析为值赋予\emph{未知}、\emph{一致}或\emph{可变}标签，并沿控制流图传播。
+% 分析为值赋予\emph{未知}、\emph{lane 间一致}或\emph{lane 间不一致}标签，并沿控制流图传播。
 Constants are uniform, while lane identifiers are varying; copies preserve labels, and arithmetic propagates lane variation from its operands.
-% 常量是一致值，lane 标识是可变值；复制保留标签，算术运算传播操作数中的 lane 差异。
+% 常量在 lane 间一致，lane 标识在 lane 间不一致；复制保留标签，算术运算传播操作数中的 lane 差异。
 Loads and helper results use the uniformity of their source data and the declared helper semantics.
 % 加载操作与 helper 返回值依据源数据的一致性以及声明的 helper 语义确定标签。
 At control-flow joins, varying information dominates uniform information; propagation repeats until the labels stabilize, including across loop back edges.
-% 在控制流合并点，可变信息优先于一致信息；传播持续到标签稳定，并覆盖循环回边。
+% 在控制流合并点，非一致信息优先于一致信息；传播持续到标签稳定，并覆盖循环回边。
 
 The verifier then requires uniform branch conditions, map keys, shared-map values, and atomic target addresses; unknown values cannot satisfy these requirements.
 % 随后，验证器要求分支条件、map 键、共享 map 值与原子操作目标地址具有一致性；未知值无法满足这些要求。
@@ -193,17 +193,17 @@ Conflicting requests & Request consistency & Operation fallback \\
 Invalid prefetch range & Valid migration range & Native prefetch \\
 \bottomrule
 \end{tabularx}
-\caption{Safety rules and representative rejected behaviors. Program rejection occurs before execution; resource requests are checked before actuation.}
-% 安全规则与典型拒绝行为。程序在执行前被拒绝；资源请求在执行操作前被检查。
+\caption{Safety rules and representative rejected behaviors. Program rejection occurs before execution; resource requests are checked before transition initiation.}
+% 安全规则与典型拒绝行为。程序在执行前被拒绝；资源请求在发起转移前被检查。
 \label{tab:safety-rules}
 \end{table}
 
 \paragraph{Failure handling and trusted computing base.}
 % 失败处理与可信计算基。
-Program rejection prevents policy installation, while transition rejection invokes the operation-specific fallback.
-% 程序拒绝阻止策略安装，转移拒绝则调用相应操作的回退行为。
-Verification covers execution safety and resource-state invariants.
-% 验证覆盖执行安全与资源状态不变量。
+Program rejection prevents policy installation, while request rejection invokes the operation-specific fallback.
+% 程序拒绝阻止策略安装，请求拒绝则调用相应操作的回退行为。
+Together, program verification and transition validation cover execution safety and resource-state invariants.
+% 程序验证与转移验证共同覆盖执行安全与资源状态不变量。
 The trusted computing base (TCB) comprises the host OS, GPU driver and firmware, policy verifiers and compilation toolchain, and \sys{}'s hooks, helpers, and transition validators.
 % 可信计算基（TCB）包括主机 OS、GPU 驱动与固件、策略验证器与编译工具链，以及 \sys{} 的钩子、helper 和转移验证器。
 Policy safety assumes correct operation of the GPU hardware and this TCB.
@@ -232,8 +232,8 @@ This model suffices as policies rely on approximate statistics; occasional stale
 
 When access patterns change faster than the synchronization interval, policies can issue synchronization operations more frequently, trading overhead for freshness, while transition validation (\S\ref{sec:verification}) prevents stale requests from corrupting driver state.
 % 当访问模式变化快于同步周期时，策略可以提高同步频率，以开销换取新鲜度；同时转移验证（\S\ref{sec:verification}）防止过期请求破坏驱动状态。
-Associative counters can be merged across shards; eviction-list order and unique ownership require a single authority.
-% 关联计数器可以跨分片合并；驱逐列表顺序与唯一所有权需要单一权威。
+Counters with associative merge operations can be combined across shards; eviction-list order and unique ownership require a single authority.
+% 合并运算满足结合律的计数器可以跨分片合并；驱逐列表顺序与唯一所有权需要单一权威。
 
 \subsection{Example: MoE Expert Offloading}
 % 示例：MoE 专家卸载

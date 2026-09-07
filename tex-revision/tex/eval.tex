@@ -6,14 +6,14 @@ Our evaluation addresses two research questions:
 % 我们的评估围绕两个研究问题展开：
 
 \begin{itemize}[leftmargin=*]
-  \item \textbf{RQ1 (Policy Expression and Benefits):} Can AI agents safely express GPU resource-management policies through \sys---including reimplementations of published state-of-the-art systems---and do those policies improve performance?
-  % RQ1（策略表达与收益）：AI 智能体能否通过 gpubpf 安全地表达 GPU 资源管理策略——包括对己发表最先进系统的重实现——这些策略能否提升性能？
+  \item \textbf{RQ1 (Policy Expressibility and Benefits):} Can AI agents safely express GPU resource-management policies through \sys---including policies from published state-of-the-art systems---and do those policies improve performance?
+  % RQ1（策略可表达性与收益）：AI 智能体能否通过 gpubpf 安全地表达 GPU 资源管理策略——包括已发表最先进系统的策略——这些策略能否提升性能？
   \item \textbf{RQ2 (Mechanism Cost):} What does the \sys{} mechanism cost, in hook and observability overhead and in executing the same policy through \sys{}?
   % RQ2（机制代价）：gpubpf 机制的代价有多大——包括钩子与可观测开销，以及通过 gpubpf 执行同一策略的代价？
 \end{itemize}
 
-We answer RQ1 in \S\ref{sec:rq1} through policy microbenchmarks, agent-driven case studies on realistic workloads, multi-tenant settings, and matched reimplementations of published policies. \S\ref{sec:rq2-cost} answers RQ2.
-% 我们在 \S\ref{sec:rq1} 通过策略微基准、真实负载上的智能体驱动案例研究、多租户场景，以及对已发表策略的匹配重实现回答 RQ1；\S\ref{sec:rq2-cost} 回答 RQ2。
+We answer RQ1 in \S\ref{sec:rq1} through policy microbenchmarks, agent-driven case studies on realistic workloads, multi-tenant settings, and matched ports of published policies. \S\ref{sec:rq2-cost} answers RQ2.
+% 我们在 \S\ref{sec:rq1} 通过策略微基准、真实负载上的智能体驱动案例研究、多租户场景，以及对已发表策略的匹配移植回答 RQ1；\S\ref{sec:rq2-cost} 回答 RQ2。
 
 \subsection{Methodology and Setup}
 % 方法论与实验设置
@@ -40,8 +40,8 @@ All tests with \sys policies require no application modifications.
 
 \end{figure}
 
-\subsection{RQ1: Policy Expression and Benefits}
-% RQ1：策略表达与收益
+\subsection{RQ1: Policy Expressibility and Benefits}
+% RQ1：策略可表达性与收益
 \label{sec:rq1}
 
 \subsubsection{Single-Tenant Memory and Scheduling Policies}
@@ -359,8 +359,8 @@ Across five paired runs, the native policy and \sys{} reduce first-visible-text 
 % XSched（抢占式调度）
 We port XSched's~\cite{shen2025xsched} inter-kernel preemption: a host-side \sys{} program selects the highest-priority task, and the original executor performs suspend/resume.
 % 我们移植 XSched~\cite{shen2025xsched} 的内核间抢占：主机侧 \sys{} 程序选择最高优先级任务，原始执行器执行挂起/恢复。
-With two latency-critical (LC) and four best-effort (BE) processes, LC submission-to-first-CTA p99 falls from 76.9~s under native CUDA to 27.0~s with XSched and 27.3~s with \sys{} (\Cref{fig:matched-ports}(f)).
-% 在两个延迟关键（LC）和四个尽力型（BE）进程下，LC 提交到首个 CTA 的 p99 从原生 CUDA 的 76.9 秒降至 XSched 的 27.0 秒和 \sys{} 的 27.3 秒（\Cref{fig:matched-ports}(f)）。
+With two latency-critical (LC) and four best-effort (BE) processes, LC submission-to-first-CTA p99 falls from 76.9~s under native CUDA to 27.0~s with the native policy and 27.3~s with \sys{} (\Cref{fig:matched-ports}(f)).
+% 在两个延迟关键（LC）和四个尽力型（BE）进程下，LC 提交到首个 CTA 的 p99 从原生 CUDA 的 76.9 秒降至原生策略的 27.0 秒和 \sys{} 的 27.3 秒（\Cref{fig:matched-ports}(f)）。
 
 \paragraph{GPREEMPT (priority timeslicing)}
 % GPREEMPT（优先级时间片）
