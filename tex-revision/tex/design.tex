@@ -206,8 +206,8 @@ Verification covers execution safety and resource-state invariants.
 % 验证覆盖执行安全与资源状态不变量。
 The trusted computing base (TCB) comprises the host OS, GPU driver and firmware, policy verifiers and compilation toolchain, and \sys{}'s hooks, helpers, and transition validators.
 % 可信计算基（TCB）包括主机 OS、GPU 驱动与固件、策略验证器与编译工具链，以及 \sys{} 的钩子、helper 和转移验证器。
-Failures in these trusted components or GPU hardware lie outside the policy-safety guarantee.
-% 这些可信组件或 GPU 硬件中的故障不属于策略安全保证的覆盖范围。
+Policy safety assumes correct operation of the GPU hardware and this TCB.
+% 策略安全以 GPU 硬件和上述 TCB 正确运行为前提。
 
 \subsubsection{Warp-level Execution Optimizations}
 % warp 级执行优化

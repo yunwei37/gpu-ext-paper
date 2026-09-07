@@ -42,3 +42,26 @@ the current dated version is `matched-port-panels-baselines-20260907-print`.
 Two `pdflatex` passes complete at 16 pages with no undefined references or
 citations; this figure appears on page 12. This is a rendering fix, not new
 performance evidence or a claim that every selected policy beats no policy.
+
+## Device-side observability with GPU buffering
+
+`obs-overhead-with-array.pdf` extends the revision observability comparison
+with the completed five-pair GPU-local-buffer campaign. Original P40 values
+and all ten-pair RTX 5090 measurements are retained. The five new pairs use
+their own uninstrumented baseline; they were measured separately from the
+NVBit and original gpubpf campaign. Only prefill throughput is plotted; final
+collection averages 10.379343 ms and is outside that timing window.
+
+`obs-with-array-data.json` records every plotted pair and source paths.
+`plot_obs_with_array.py` derives percentages from the original baseline/tool
+throughputs and verifies them against the campaign summaries. To regenerate
+from the enclosing gpu_ext checkout without overwriting existing outputs:
+
+```sh
+python tex-revision/img/results-raw/revision/plot_obs_with_array.py --output-prefix /tmp/obs-buffer --data-output /tmp/obs-buffer-data.json
+```
+
+The plot uses circles for gpubpf, triangles for NVBit, and diamonds for GPU
+buffering; ranges and means accompany the RTX 5090 samples. Historical P40
+points retain their reported values. The single-column vector canvas is
+3.4 inches wide with 8 pt text. The previous `obs-overhead-bars.pdf` is kept.

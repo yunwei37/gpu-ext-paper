@@ -425,14 +425,16 @@ On the P40, \sys achieves 3--14\% overhead versus NVBit's 85--93\%, due to the w
 % 在 P40 上，得益于 warp 统一执行模型，gpubpf 的开销为 3--14\%，而 NVBit 为 85--93\%。
 On the RTX~5090, \sys has lower overhead than NVBit for all three tools: 90.71\% versus 99.62\% for the complete per-warp kernel-return stream, 2.97\% versus 10.35\% for the exit-count histogram, and 0.22\% versus 8.80\% for \texttt{launchlate}.
 % 在 RTX~5090 上，gpubpf 在三个工具上的开销均低于 NVBit：完整的逐 warp 内核返回记录流为 90.71\% 对 99.62\%，退出计数直方图为 2.97\% 对 10.35\%，\texttt{launchlate} 为 0.22\% 对 8.80\%。
+For 512-token prefill on the RTX~5090, buffering the complete per-warp return records in GPU memory reduces prefill overhead to 5.57\% across five additional baseline/tool pairs, with records collected after prefill.
+% 在 RTX~5090 的 512-token 预填充中，将完整的逐 warp 返回记录缓存在 GPU 内存中，并在预填充后收集，使另外五组基线/工具配对测量的预填充开销降至 5.57\%。
 Attaching to a running process requires no application restart.
 % 附加到正在运行的进程无需重启应用。
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{img/results-raw/revision/obs-overhead-bars.pdf}
-\caption{\sys device-side observability overhead versus NVBit (log scale). (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B, ten paired runs.}
-% gpubpf 设备端可观测开销与 NVBit 对比（对数坐标）。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B，十次配对运行。
+\includegraphics[width=\columnwidth]{img/results-raw/revision/obs-overhead-with-array.pdf}
+\caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B: ten pairs per tool, plus five independent pairs for \sys GPU buffering. Points show runs, whiskers their range, and ticks means; P40 shows original reported values. The axis is linear within $\pm1\%$ and logarithmic beyond. GPU buffering yields 5.57\% prefill overhead; its final collection (10.38\,ms) occurs outside prefill timing.}
+% 相对未插桩基线的预填充吞吐下降。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B：每个工具十组配对，另加 gpubpf GPU 缓冲的五组独立配对。点表示各次运行，须线表示范围，短线表示均值；P40 使用原文报告值。坐标轴在 ±1\% 内为线性，之外为对数。预填充计时不含最终收集（GPU 缓冲为 10.38 ms）；GPU 缓冲的预填充开销为 5.57\%。
 \label{fig:obs-overhead}
 \end{figure}
 
