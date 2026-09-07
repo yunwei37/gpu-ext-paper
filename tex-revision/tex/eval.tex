@@ -310,8 +310,8 @@ Our multi-tenant setting is software co-location on an unpartitioned GPU, comple
 
 We evaluate whether \sys{} can express the policies of published state-of-the-art systems, and what the general mechanism costs when it runs the same policy as an ad-hoc implementation.
 % 我们评估 \sys{} 能否表达已发表最先进系统的策略，以及通用机制在运行与临时实现相同的策略时代价几何。
-\Cref{fig:matched-ports} separates two comparisons: a workload baseline versus a native policy implementation measures policy benefit, while native versus \sys{} on the same executor measures the port's cost; XSched and GPREEMPT appear in \Cref{fig:matched-scheduling}.
-% \Cref{fig:matched-ports} 区分两层比较：工作负载基线与原生策略实现比较策略收益，相同执行器上的原生实现与 \sys{} 比较移植代价；XSched 和 GPREEMPT 见 \Cref{fig:matched-scheduling}。
+\Cref{fig:matched-ports} separates two comparisons: a workload baseline versus a native policy implementation measures policy benefit, while native versus \sys{} on the same executor measures the port's cost; XSched and GPREEMPT appear in \Cref{fig:scheduler-latency}.
+% \Cref{fig:matched-ports} 区分两层比较：工作负载基线与原生策略实现比较策略收益，相同执行器上的原生实现与 \sys{} 比较移植代价；XSched 和 GPREEMPT 见 \Cref{fig:scheduler-latency}。
 The ports span host-side expert caching and queue admission, driver-side timeslicing and memory migration, and device-side task selection.
 % 这些移植覆盖主机侧的专家缓存与队列准入、驱动侧的时间片与内存迁移，以及设备侧的任务选择。
 
@@ -357,22 +357,8 @@ Under continuous background load, this policy reduces LC response p99 from 1.796
 
 \caption{Matched scheduling policies on RTX~5090, LC latency: (a) XSched workload, two LC and four BE processes, LC queue-entry p99; (b) VGG19 LC at 100 requests/s against three ResNet152 BE loads, arrival-to-verified-response p99. Bars show medians (XSched: ten paired repetitions; GPreempt: five per load).}
 % RTX 5090 上的匹配调度策略，LC 延迟：(a) XSched 工作负载，两个 LC 和四个 BE 进程，LC 入队 p99；(b) VGG19 LC 每秒 100 请求、对应三种 ResNet152 BE 负载，到已验证响应的 p99。柱形为中位数（XSched：十次配对重复；GPreempt：每种负载五次）。
-\label{fig:matched-scheduling}
-\end{figure}
-
-\paragraph{Compute-kernel scheduling.}
-% 计算内核调度。
-The original compute-kernel workload runs two LC and four BE processes, each submitting 50 kernels through four CUDA streams; \Cref{fig:scheduler-latency} reports launch latency and BE throughput with differentiated timeslices.
-% 原有计算内核工作负载运行两个 LC 和四个 BE 进程，每个进程通过四条 CUDA 流提交 50 个内核；\Cref{fig:scheduler-latency} 报告差异化时间片下的启动延迟和 BE 吞吐量。
-
-\begin{figure}
-\centering
-\includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/scheduler_latency_throughput.pdf}
-
-\caption{Multi-tenant GPU scheduling with \sys{} (LC: latency-critical, BE: best-effort).}
-% 使用 gpubpf 的多租户 GPU 调度（LC：延迟关键型，BE：尽力型）。
 \label{fig:scheduler-latency}
-% \vspace{-1.5em}
+\label{fig:matched-scheduling}
 \end{figure}
 
 \paragraph{Expert Buffering (expert residency)}
@@ -450,8 +436,14 @@ Overhead is measured as token/s degradation during prefill.
 % 开销以预填充期间 token/s 的下降来衡量。
 On the P40, \sys achieves 3--14\% overhead versus NVBit's 85--93\%, due to the warp-uniform execution model.
 % 在 P40 上，得益于 warp 统一执行模型，gpubpf 的开销为 3--14\%，而 NVBit 为 85--93\%。
-On the RTX~5090, \sys has lower overhead than NVBit for all three tools: 90.71\% versus 99.62\% for the complete per-warp kernel-return stream, 2.97\% versus 10.35\% for the exit-count histogram, and 0.22\% versus 8.80\% for \texttt{launchlate}.
-% 在 RTX~5090 上，gpubpf 在三个工具上的开销均低于 NVBit：完整的逐 warp 内核返回记录流为 90.71\% 对 99.62\%，退出计数直方图为 2.97\% 对 10.35\%，\texttt{launchlate} 为 0.22\% 对 8.80\%。
+On the RTX~5090, \sys has lower overhead than NVBit for all three tools: 90.71\% versus 99.62\% for the complete per-warp kernel-return stream, 2.97\% versus 10.35\% for the exit-count histogram, and 0.22\% versus 8.80\% for \texttt{launchlate}. The full record stream remains expensive even with warp-level recording.
+% 在 RTX~5090 上，gpubpf 在三个工具上的开销均低于 NVBit：完整的逐 warp 内核返回记录流为 90.71\% 对 99.62\%，退出计数直方图为 2.97\% 对 10.35\%，\texttt{launchlate} 为 0.22\% 对 8.80\%。即使按 warp 记录，完整记录流的开销仍然很高。
+A separate five-pair experiment buffers the complete kernel-return records in a GPU-local array, yielding mean prefill overhead of 5.57\% (range 4.02--6.70\%) while retaining all 720,896 records per run.
+% 另一组五次配对实验将完整的内核返回记录缓存在 GPU 本地数组中，平均预填充开销为 5.57\%（范围 4.02--6.70\%），每次运行保留全部 720,896 条记录。
+The final 23.2~MB readback averages 10.38~ms outside prefill timing; the finite buffer is sized for this pp512, serial-launch workload, not unbounded streaming.
+% 最终 23.2~MB 回读平均耗时 10.38~ms，不计入预填充计时；该有限缓冲区按本次 pp512、串行启动工作负载配置，并非无界流式记录。
+Like the RTX~5090 tool campaign, this variant uses warning-mode admission and provides performance evidence, not evidence of strict verifier acceptance.
+% 与 RTX~5090 工具实验相同，该变体使用警告模式准入，提供性能证据，而非严格验证器接受该程序的证据。
 Attaching to a running process requires no application restart.
 % 附加到正在运行的进程无需重启应用。
 

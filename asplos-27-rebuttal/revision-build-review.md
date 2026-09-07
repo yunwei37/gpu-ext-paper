@@ -1,27 +1,4 @@
-# Revision draft build review
-
-## Current checkpoint — 2026-09-07
-
-Paper `a60ffb0` integrates the optimized device figure while retaining all
-historical P40 and original RTX 5090 measurements; `d3d8fa8` adds its
-reproduction note. The new three-tool campaign and separate five-pair
-complete-record GPU-array result are measured and published. Earlier statements
-below that launchlate is missing or requires a clock-accuracy prerequisite are
-superseded historical status, not current instructions or performance gates.
-
-Two pdflatex passes succeed (17 pages, 4,538,515 bytes;
-`/var/tmp/revision-device-array-figure-20260907.log`). Root inspected the
-compiled device figure on page 15: its labels fit, negative samples remain,
-and the caption identifies independent campaigns and bulk readback outside
-prefill. Conclusion and references begin on page 15. Final prose/page-budget
-work remains; the build has a 1.848 pt final-page vertical overflow and is
-not a submission-ready declaration. LMCache budget, stale-state, fresh
-Fig. 13 and target-EXIT SASS results are complete at their reported scopes;
-see [revision-plan.md](revision-plan.md). No completed performance cells repeat.
-
-## Historical checkpoints — retained, not current execution requirements
-
-### 2026-09-03
+# Revision draft build review — 2026-09-03
 
 This is a checked draft checkpoint, **not a submission-ready or fully completed
 revision**. It preserves the pre-existing paper revision `d1ab623`.
