@@ -1,5 +1,31 @@
 # ASPLOS'27 #1797 Revision Plan
 
+## Active follow-up — 2026-09-06
+
+The LMCache native/BPF storage-policy implementations are now running on the
+575 driver. The [five-arm end-to-end comparison](../../../workloads/lmcache-disk/results-575-lmcache-gds-five-arm-20260906.md)
+completed 25 measurements: recompute, CPU cache, cuFile FIFO, native policy,
+and BPF policy. The [separate policy-input ablation](../../../workloads/lmcache-disk/results-575-gds-policy-input-ablation-20260906.md)
+also completed 25 measurements. Its BPF/full-native paired throughput change
+has median -0.185%; the cold-then-warm workload does not overlap background
+writes with demand reads, so it does not measure contention relief.
+
+The ongoing [mixed-storage experiment](../../../workloads/lmcache-disk/gds-control/next-policy-experiment.md)
+does overlap real cuFile reads and writes. One 64-read/96-write comparison
+completed all 480 requests and exercised native/BPF write deferral. The first
+five-repeat attempt retained GPU staging allocations across measurements and
+ran out of memory after seven completed measurements. Its records remain in
+the repository; the [implementation follow-up](../../../workloads/lmcache-disk/gds-control/mixed-runner-followup.md)
+calls for fresh processes and separate scheduled-arrival/dispatch timestamps.
+This uses cuFile compatibility-mode storage, not established NVMe-to-GPU P2P.
+
+RTX 5090 Table 1 is complete for all three tools, as recorded below. The next
+device-tool task is a separately selectable GPU-local event-buffer and bulk
+readback optimization for `kernelretsnoop`, whose current gpubpf overhead is
+90.7051% versus NVBit's 99.6210%. No optimized throughput result is available
+yet; all existing RTX 5090 and P40 numbers remain retained. Local OpenCode
+models implement these two follow-ups; the root reviews, measures and publishes.
+
 ## Current execution record — 2026-09-04
 
 This file retains the historical proposal below, not a completion report.
