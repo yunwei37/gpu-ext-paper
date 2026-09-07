@@ -41,15 +41,27 @@ throughput has paired median change -1.673%. BPF/native p99 changes have
 median +0.538% but range from -15.884% to +6.322%, not a tight overhead bound.
 These are storage-request latencies, not vLLM TTFT. The policy uses controlled
 pressure and one 10 ms write deferral; live pending-demand feedback remains
-unimplemented. Fresh-process isolation and separate scheduled/dispatch
+unfinished beyond its matching native/BPF decision branch, which is built
+and now attached on the same 575 driver. The live counter/executor and
+opt-in runner wiring are in parallel local-model implementation; no feedback
+performance is claimed. Fresh-process isolation and separate scheduled/dispatch
 timestamps are no longer pending implementation tasks.
 
-RTX 5090 Table 1 is complete for all three tools, as recorded below. The next
-device-tool task is a separately selectable GPU-local event-buffer and bulk
-readback optimization for `kernelretsnoop`, whose current gpubpf overhead is
-90.7051% versus NVBit's 99.6210%. No optimized throughput result is available
-yet; all existing RTX 5090 and P40 numbers remain retained. Local OpenCode
-models implement these two follow-ups; the root reviews, measures and publishes.
+RTX 5090 Table 1 is complete for all three tools, as recorded below. The
+[GPU-local event-array follow-up](../../../workloads/llama.cpp/observability_overhead/revision-rq4/results-onevalue-array-bootstrap-575-20260907/README.md)
+now also completes five paired blocks: baseline/tool mean throughput is
+37979.2561/35861.5351 token/s, with mean paired overhead **5.5726%**
+(range 4.0175%–6.7050%). All ten benchmarks and five collectors exit zero,
+and each tool run retains all 720896 full coordinate/timestamp records.
+The final 23199768-byte host lookup averages 10.379 ms, outside prefill
+timing and reported separately. This is a finite buffer for the pp512
+geometry, not unbounded streaming. The existing warning-mode runtime
+reports map-pointer verifier warnings, so the result is performance evidence,
+not strict-admission evidence. The original 90.7051% gpubpf / 99.6210% NVBit
+campaign and all prior RTX 5090/P40 numbers remain retained. Source and data
+are pushed in main commits `99b66423` and `7911b79a`; no completed cells need
+repeating. Local OpenCode models now complete the remaining LMCache wiring;
+the root reviews, measures and publishes.
 
 ## Current execution record — 2026-09-04
 
