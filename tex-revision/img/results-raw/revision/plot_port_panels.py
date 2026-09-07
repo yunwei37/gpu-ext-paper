@@ -17,7 +17,7 @@ import statistics
 from pathlib import Path
 
 COLORS = {"baseline": "#666666", "original": "#D97706", "port": "#0072B2"}
-LEGEND = (("baseline", "Baseline"), ("original", "Native policy"), ("port", "BPF port"))
+LEGEND = (("baseline", "Baseline"), ("original", "Native policy"), ("port", "gpubpf"))
 STYLE = {"font.family": "DejaVu Sans", "font.size": 7,
          "axes.labelsize": 7, "xtick.labelsize": 7, "ytick.labelsize": 7,
          "legend.fontsize": 7, "axes.spines.top": False,
@@ -85,7 +85,8 @@ def _draw(panels: list[dict], paths: list[Path]) -> None:
                 axis.text(.1, top * 1.035, f"−{reduction:.2f}%",
                           ha="center", va="bottom", fontsize=7)
             axis.set_xticks(range(len(panel["groups"])),
-                            [g["label"] for g in panel["groups"]])
+                            [g["label"] if panel["id"] != "finemoe" else ""
+                             for g in panel["groups"]])
             if panel["id"] in ("hummingbird", "gpreempt"):
                 axis.tick_params(axis="x", labelrotation=55)
                 for label in axis.get_xticklabels():
