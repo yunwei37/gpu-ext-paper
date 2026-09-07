@@ -161,6 +161,24 @@ The resulting policy effectively prevents thrashing seen with default LRU.
 
 \end{figure}
 
+\paragraph{Storage-tier Policy (LMCache).}
+% 存储层策略（LMCache）。
+We extend LMCache 0.5.4 with native and driver-BPF admission policies over real cuFile compatibility-mode disk I/O on RTX 5090; this does not establish hardware NVMe-to-GPU P2P.
+% 我们在 RTX 5090 上为 LMCache 0.5.4 的真实 cuFile 兼容模式磁盘 I/O 加入原生和驱动 BPF 准入策略；这不代表已实现硬件 NVMe 到 GPU 的 P2P。
+Both submit demand reads immediately and defer safe background writes while demand reads remain pending; LMCache performs the transfers, and a shared event-driven executor waits for demand drain or cumulative budget expiry before requesting a fresh decision.
+% 两者均立即提交需求读取，在仍有需求读取未完成时延迟可安全推迟的后台写入；LMCache 执行传输，共享事件驱动执行器等待需求读取清空或累计预算到期，再请求新的决策。
+Five balanced blocks compare FIFO with native/BPF policies at 10 and 200 ms budgets, each using 64 reads and 96 writes of 24 MiB objects at 2/4 ms arrivals.
+% 五个平衡轮次比较 FIFO 与采用 10 和 200 ms 预算的原生/BPF 策略，每次以 2/4 ms 到达间隔执行 64 次读取和 96 次写入，对象大小为 24 MiB。
+Increasing the cumulative budget from 10 to 200 ms lowers BPF read p99 by a paired median 51.0\% and raises write throughput by 15.3\%, with both improving in all five pairs; native achieves corresponding improvements of 54.0\% and 12.7\%.
+% 累计预算从 10 增至 200 ms 后，BPF 读取 p99 的配对中位数降低 51.0\%，写吞吐提高 15.3\%，五组在两个指标上均改善；原生实现的对应改善为 54.0\% 和 12.7\%。
+FIFO and the 200 ms native/BPF variants have read-p99 medians of 323.7/123.1/118.1 ms; these are storage-request latencies including arrival queueing, not inference TTFT.
+% 采用 200 ms 策略时，FIFO/原生/BPF 的读取 p99 中位数为 323.7/123.1/118.1 ms；这些是包含到达排队的存储请求延迟，不是推理首 token 延迟。
+This gain comes from the shared write-protection policy and executor budget, not BPF itself or a 200 ms scalar BPF defer action.
+% 这一收益来自共享的写入保护策略与执行器预算，而非 BPF 本身，也不是一次 200 ms 的标量 BPF 延迟动作。
+BPF/native paired p99 differences range from $-39.7\%$ to $+33.8\%$, so the result does not establish tight latency equivalence; all earlier and adverse measurements remain in the artifact.
+% BPF 相对原生的配对 p99 差异范围为 -39.7\% 到 +33.8\%，因此结果不能证明严格的延迟等效；所有历史及不利测量均保留在工件中。
+% Evidence: gpu_ext a451db6a; workloads/lmcache-disk/results-575-gds-write-budget-20260907.md.
+
 \paragraph{Graph Neural Networks (GNN Training).}
 % 图神经网络（GNN 训练）。
 We evaluate \sys on PyTorch-based GCN training with random graphs of varying sizes (1M--15M nodes, 10 edges/node).

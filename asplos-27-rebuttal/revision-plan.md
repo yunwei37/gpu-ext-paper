@@ -2,6 +2,19 @@
 
 ## Active follow-up — 2026-09-07 UTC
 
+The [matched live write-budget comparison](../../../workloads/lmcache-disk/results-575-gds-write-budget-20260907.md)
+is now complete in main `a451db6a`: five balanced blocks, 25 cells, 4,000
+requests. Raising the shared executor budget from 10 to 200 ms lowers paired
+BPF read p99 by median 51.011% and raises write throughput by 15.315%, both
+in all five pairs. Native improves by 53.999%/12.698%, respectively. The
+200 ms FIFO/native/BPF p99 medians are 323.707/123.141/118.097 ms; BPF/native
+paired p99 still ranges from -39.718% to +33.849%, not tight equivalence.
+The new storage-tier paragraph in `tex-revision/tex/eval.tex` attributes the
+gain to the shared policy/executor budget, distinguishes cumulative budget
+from scalar BPF defer duration, and retains compatibility-mode/TTFT limits.
+The draft builds in 16 pages. All historical results and startup failures
+remain; this completed matrix must not be repeated.
+
 The [LMCache admission-stage diagnostic](../../../workloads/lmcache-disk/results-575-gds-admission-timing-20260907.md)
 is complete in main `37299d27`: 15 cells and 2,400 storage requests. Median
 native/BPF demand-read admission is 11.973/30.140 us, while end-to-end reads
