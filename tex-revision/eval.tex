@@ -159,12 +159,12 @@ The resulting policy effectively prevents thrashing seen with default LRU.
 
 \end{figure}
 
-We extend this case study to disk-backed KV-cache requests through LMCache's cuFile backend in compatibility mode, with 64 reads and 96 writes of 24~MiB objects arriving every 2~ms and 4~ms, respectively.
-% 我们将此案例扩展到经由 LMCache cuFile 后端兼容模式处理的磁盘 KV-cache 请求：64 次读取和 96 次写入，对象大小为 24 MiB，读取和写入分别每 2 ms 和 4 ms 到达一次。
-An agent-developed \sys{} policy prioritizes demand reads and defers background writes with a cumulative budget of 200~ms, also used by the native policy implementation.
-% 智能体开发的 \sys{} 策略优先处理按需读取，并在累计 200 ms 的预算内延迟后台写入；原生策略实现使用相同预算。
-Across five paired blocks, median read-request p99 latency from scheduled arrival to completion is 323.707~ms for FIFO, 123.141~ms for the native policy, and 118.097~ms for \sys{}, with a median paired reduction of 61.9\% relative to FIFO.
-% 五组配对实验中，从计划到达到完成的读请求 p99 延迟中位数分别为 FIFO 的 323.707 ms、原生策略的 123.141 ms 和 \sys{} 的 118.097 ms；\sys{} 相对 FIFO 的配对降幅中位数为 61.9\%。
+For LMCache's cuFile backend in compatibility mode, an agent-developed policy prioritizes reads and defers background writes within a 200~ms cumulative budget.
+% 对 LMCache 的 cuFile 后端兼容模式，智能体开发的策略优先处理读取，并在累计 200 ms 的预算内延迟后台写入。
+Across five paired blocks, median storage-read p99 latency from scheduled arrival is 323.707/123.141/118.097~ms for FIFO/native/\sys{}, respectively.
+% 五组配对实验中，从预定到达时刻起算的存储读请求 p99 延迟中位数，FIFO、原生策略和 \sys{} 分别为 323.707、123.141 和 118.097 ms。
+The median paired reduction with \sys{} relative to FIFO is 61.9\%.
+% \sys{} 相对 FIFO 的配对降幅中位数为 61.9\%。
 
 \paragraph{Graph Neural Networks (GNN Training).}
 % 图神经网络（GNN 训练）。
