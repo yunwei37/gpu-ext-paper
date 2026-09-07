@@ -40,8 +40,14 @@ now completes all 21 cells and restoration of the saved GDS module in main
 `bc0ff88a` (driver `a2b40efd`, runner `e88e1265`). Fresh native/BPF throughput
 medians are 272832.196/271397.413 checked words/s. Delaying state by 1000 ms
 reduces paired throughput by median 23.192%/22.684%, respectively. The raw
-traces and lifecycle logs are retained; phase-aligned decision-age and UVM
-analysis remains in progress, without repeating completed GPU cells.
+traces and lifecycle logs are retained. Phase-aligned analysis is complete
+in main `1ea66808`: 15,747,386 decisions across all 18 policy cells, with
+three default controls correctly labelled without policy decisions. At
+1000 ms delay, native/BPF wrong-phase fractions have medians 88.708%/88.854%;
+these are decision-weighted, not time-weighted. All driver thrashing-event
+counters are zero. The revision's map-consistency discussion now states the
+measured performance sensitivity without claiming observed driver-classified
+thrashing or an evaluated adaptive mitigation. No completed GPU cells repeat.
 
 Latest update: the live-feedback provider, executor, runner and
 [five-block performance comparison](../../../workloads/lmcache-disk/results-575-gds-mixed-live-feedback-20260907.md)

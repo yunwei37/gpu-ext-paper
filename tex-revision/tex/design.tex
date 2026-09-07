@@ -232,6 +232,13 @@ This model suffices as policies rely on approximate statistics; occasional stale
 
 When access patterns change faster than the synchronization interval, policies can issue synchronization operations more frequently, trading overhead for freshness, while transition validation (\S\ref{sec:verification}) prevents stale requests from corrupting driver state.
 % 当访问模式变化快于同步周期时，策略可以提高同步频率，以开销换取新鲜度；同时转移验证（\S\ref{sec:verification}）防止过期请求破坏驱动状态。
+A controlled 21-cell RTX 5090 UVM study delays driver-owned phase snapshots while holding the native/BPF policy fixed: a 1 s publication delay reduces paired throughput by median 23.2\%/22.7\%, respectively.
+% 一个受控的 RTX 5090 UVM 实验包含 21 个配置，保持原生/BPF 策略不变并延迟驱动持有的阶段快照：1 秒发布延迟使两者的配对吞吐中位数分别下降 23.2\%/22.7\%。
+About 89\% of decisions then use a snapshot from the wrong dense/sparse phase; this is a decision-weighted fraction, not time spent with stale state.
+% 此时约 89\% 的决策使用了与实际稠密/稀疏阶段不符的快照；这是按决策次数计算的比例，不是状态陈旧的时间比例。
+The driver reports no thrashing events in this study, so the evidence establishes a performance sensitivity to delayed state, not observed driver-classified thrashing or a tested adaptive mitigation.
+% 该实验中驱动未报告 thrashing 事件，因此证据表明性能对状态延迟敏感，而不是观测到了驱动分类的 thrashing，也未验证自适应缓解机制。
+% Evidence: gpu_ext 1ea66808; workloads/stale-state-575/results-performance-gds-20260907.md.
 Associative counters can be merged across shards; eviction-list order and unique ownership require a single authority.
 % 关联计数器可以跨分片合并；驱逐列表顺序与唯一所有权需要单一权威。
 
