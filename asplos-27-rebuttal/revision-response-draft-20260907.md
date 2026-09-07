@@ -13,11 +13,13 @@ conclusion on page 15.
 
 Completed scoped comparisons cover MoE-Infinity, XSched, GPREEMPT, the
 LMCache local-disk backend, Expert Buffering, FineMoE, Hummingbird and
-POD-Attention, each labelled per port. Ports implement the **selected
-policy algorithms** of these systems, running native and gpubpf variants
-through the same executor on our hardware; this is not reproduction of the
-original systems — where an artifact runs unchanged we run it, otherwise we
-port the algorithm and say so. No equivalence or full-reproduction claim.
+POD-Attention, each labelled by scope. The seven policy ports implement
+**selected published algorithms**, running native and gpubpf variants
+through shared executors. LMCache supplies the disk-transport baseline;
+our additional storage-admission policies are not reimplementations of an
+LMCache paper algorithm. These comparisons do not establish original-system
+reproduction or equivalence; each report identifies reused artifacts and
+ported components.
 
 - **XSched** (46 cells): baseline/original/BPF LC p99
   76.8780/26.9784/27.2502 s; BE 10.2377/10.1497/10.1616 kernels/s. The
