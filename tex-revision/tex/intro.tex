@@ -100,10 +100,12 @@ We implement \sys{} on Linux by extending the NVIDIA open GPU OS kernel modules~
 % 我们在 Linux 上实现 \sys，扩展 NVIDIA 开源 GPU OS 内核模块，并为 GPU 设备提供 eBPF SIMT 验证器和 JIT 运行时。
 We evaluate \sys{} across LLM inference, GNN training, vector search, and multi-tenant scenarios.
 % 我们在 LLM 推理、GNN 训练、向量搜索和多租户场景下评估 \sys。
-\sys-based policies improve throughput by up to $4.8\times$ over framework offloading and $1.76\times$ over application-tuned baselines, and reduce tail latency by up to $2\times$, with low overhead and no application modifications or restarts.
-% 基于 \sys 的策略相比框架卸载最高提升 $4.8\times$ 吞吐量，相比应用调优的基线最高提升 $1.76\times$，并将尾延迟最多降低 $2\times$，同时开销很低，且无需修改或重启应用。
-These gains come from the policies, not from an intrinsic BPF speedup: expressing the same policy through \sys{} costs 0.7--3.3\% in mechanism overhead, and \sys{} reimplementations of seven published resource-management systems (including MoE-Infinity, XSched, and GPREEMPT) match the original ad-hoc implementations within a few percent (\S\ref{sec:policy-mechanism}).
-% 这些收益来自策略本身，而非 BPF 的固有加速：通过 \sys 表达同一策略的机制开销仅为 0.7--3.3\%，且 \sys 对七个已发表资源管理系统（包括 MoE-Infinity、XSched 和 GPREEMPT）的重实现与原有的临时实现相差仅在几个百分点以内（\S\ref{sec:policy-mechanism}）。
+\sys-based policies improve throughput by up to $4.8\times$ over framework offloading and $1.76\times$ over application-tuned baselines, and reduce tail latency by up to $2\times$, with no application modifications or restarts.
+% 基于 \sys 的策略相比框架卸载最高提升 $4.8\times$ 吞吐量，相比应用调优的基线最高提升 $1.76\times$，并将尾延迟最多降低 $2\times$，且无需修改或重启应用。
+These gains come from the policies, not from an intrinsic BPF speedup; we separately port selected policies from seven published systems (including MoE-Infinity, XSched, and GPREEMPT) and compare them with native implementations on shared executors.
+% 这些收益来自策略本身，而非 BPF 的固有加速；我们另行移植七个已发表系统（包括 MoE-Infinity、XSched 和 GPREEMPT）中的选定策略，并在共享执行器上与原生实现比较。
+Mechanism costs vary by workload and code path: 0.7\% for Expert Buffering, from a 0.44\% improvement to a 1.18\% cost in POD-Attention operator latency, 3.2\% on a UVM fault path, and mixed read-latency effects in storage-tier admission (\S\ref{sec:policy-mechanism}).
+% 机制代价随负载与代码路径变化：Expert Buffering 为 0.7\%，POD-Attention 的算子延迟介于 0.44\% 改善与 1.18\% 成本之间，UVM 缺页路径为 3.2\%，存储层准入的读取延迟效应有好有坏（\S\ref{sec:policy-mechanism}）。
 We show that \sys{} enforces safety by using AI agents to generate all of the 59 evaluated eBPF policies, including eviction ordering, prefetch strategies, scheduling logic, and device-side work-stealing.
 % 我们通过让 AI 智能体生成全部 59 个受测 eBPF 策略（包括逐出顺序、预取策略、调度逻辑和设备端工作窃取）来证明 \sys 的安全性。
 \sys{} ensured that there were zero OS kernel panics throughout this process.
