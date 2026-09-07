@@ -410,8 +410,8 @@ With hooks enabled but no policy attached, the overhead is less than 0.2\%.
 
 \paragraph{Device-side Overhead.}
 % 设备端开销。
-We evaluate device-side observability tools built on \sys (\Cref{tab:obs-overhead}) using llama.cpp prefill on two GPUs: the P40 (Llama 1B, sequence-mixed) and the RTX~5090 (TinyLlama-1.1B, ten randomized repetitions with paired custom NVBit adapters~\cite{villa2019nvbit}).
-% 我们在两块 GPU 上使用 llama.cpp 预填充评估基于 gpubpf 构建的设备端可观测工具（\Cref{tab:obs-overhead}）：P40（Llama 1B，序列混合）和 RTX~5090（TinyLlama-1.1B，十次随机重复，配对的定制 NVBit 适配器~\cite{villa2019nvbit}）。
+We evaluate device-side observability tools built on \sys (\Cref{fig:obs-overhead}) using llama.cpp prefill on two GPUs: the P40 (Llama 1B, sequence-mixed) and the RTX~5090 (TinyLlama-1.1B, ten randomized repetitions with paired custom NVBit adapters~\cite{villa2019nvbit}).
+% 我们在两块 GPU 上使用 llama.cpp 预填充评估基于 gpubpf 构建的设备端可观测工具（\Cref{fig:obs-overhead}）：P40（Llama 1B，序列混合）和 RTX~5090（TinyLlama-1.1B，十次随机重复，配对的定制 NVBit 适配器~\cite{villa2019nvbit}）。
 Tools include \texttt{kernel\-ret\-snoop} (per-block finish timestamps), \texttt{thread\-hist} (load imbalance detection), and \texttt{launch\-late} (GPU kernel launch latency).
 % 工具包括 \texttt{kernel\-ret\-snoop}（每块完成时间戳）、\texttt{thread\-hist}（负载不均衡检测）和 \texttt{launch\-late}（GPU 内核启动延迟）。
 Overhead is measured as token/s degradation during prefill.
@@ -440,25 +440,33 @@ Attaching to a running process requires no application restart.
 % \label{tab:obs-overhead}
 % \end{table}
 
-\begin{table}[t]
+% --- Merged overhead table (replaced by the bar figure below; retained for reference) ---
+% \begin{table}[t]
+% \centering
+% \small
+% \begin{tabularx}{\columnwidth}{@{} X l r r @{}}
+% \toprule
+% \textbf{Tool} & \textbf{GPU} & \textbf{\sys} & \textbf{NVBit} \\
+% \midrule
+% kernelretsnoop & P40 & 8\% & 85\% \\
+% threadhist & P40 & 3\% & 87\% \\
+% launchlate & P40 & 14\% & 93\% \\
+% kernelretsnoop & RTX~5090 & 90.705\% & 99.621\% \\
+% threadhist & RTX~5090 & 2.965\% & 10.350\% \\
+% launchlate & RTX~5090 & 0.221\% & 8.796\% \\
+% \bottomrule
+% \end{tabularx}
+% \caption{\sys device-side observability tools and overhead comparison with NVBit (lower is better).}
+% \label{tab:obs-overhead}
+% \end{table}
+
+\begin{figure*}[t]
 \centering
-\small
-\begin{tabularx}{\columnwidth}{@{} X l r r @{}}
-\toprule
-\textbf{Tool} & \textbf{GPU} & \textbf{\sys} & \textbf{NVBit} \\
-\midrule
-kernelretsnoop & P40 & 8\% & 85\% \\
-threadhist & P40 & 3\% & 87\% \\
-launchlate & P40 & 14\% & 93\% \\
-kernelretsnoop & RTX~5090 & 90.705\% & 99.621\% \\
-threadhist & RTX~5090 & 2.965\% & 10.350\% \\
-launchlate & RTX~5090 & 0.221\% & 8.796\% \\
-\bottomrule
-\end{tabularx}
-\caption{\sys device-side observability tools and overhead comparison with NVBit (lower is better).}
-% gpubpf 设备端可观测工具及与 NVBit 的开销对比（越低越好）。
-\label{tab:obs-overhead}
-\end{table}
+\includegraphics[width=\textwidth]{img/results-raw/revision/obs-overhead-bars.pdf}
+\caption{\sys device-side observability tools: llama.cpp prefill-throughput overhead versus matched NVBit instrumentation (lower is better, log scale). (a) P40 with Llama 1B, sequence-mixed. (b) RTX~5090 with TinyLlama-1.1B and custom paired NVBit adapters; bars show the mean of ten paired runs per tool.}
+% gpubpf 设备端可观测工具：与配对 NVBit 插桩相比的 llama.cpp 预填充吞吐开销（越低越好，对数坐标）。(a) P40，Llama 1B，序列混合。(b) RTX~5090，TinyLlama-1.1B，配定制配对 NVBit 适配器；柱形为每个工具十次配对运行的均值。
+\label{fig:obs-overhead}
+\end{figure*}
 
 \paragraph{Device-side Runtime Optimization.}
 % 设备端运行时优化。
