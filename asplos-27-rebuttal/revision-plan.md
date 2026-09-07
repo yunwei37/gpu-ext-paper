@@ -16,6 +16,23 @@ retains the old polling measurements and specifies a new, separate comparison.
 Historical statements below that the live-feedback wiring is unfinished are
 superseded by this update. No improvement for the new executor is claimed yet.
 
+The subsequent [GIL-handoff ablation](../../../workloads/lmcache-disk/results-575-gds-gil-handoff-20260907.md)
+is complete in `0d14fa1a`: 20 fresh-process measurements and 3,200 requests.
+Keeping the GIL around the same BPF ioctl does not produce a reliable gain:
+paired read-p99 changes against ordinary BPF range from -50.739% to +513.574%,
+and it is slower than native in four of five pairs. The option remains
+default-off. These measurements are retained, not repeated for the next
+executor experiment. The [bottleneck analysis](../../../workloads/lmcache-disk/gds-control/live-feedback-bottleneck-analysis-20260907.md)
+localizes the old latency difference after read dispatch, but cannot separate
+decision locking, Python scheduling and storage service. The event-driven
+executor therefore remains a hypothesis to measure, not an established fix.
+
+The separate [stale-state source forward-port](../../../workloads/stale-state-575/current-gds-compatibility-20260907.md)
+is published in `6aeebff6`; its patch applies to the current GDS driver source
+without dropping storage hooks. This is source preparation only: no driver
+reload or new stale-state measurements have occurred, and the formal campaign
+and exact restoration of the current GDS module remain pending.
+
 The LMCache native/BPF storage-policy implementations are now running on the
 575 driver. The [five-arm end-to-end comparison](../../../workloads/lmcache-disk/results-575-lmcache-gds-five-arm-20260906.md)
 completed 25 measurements: recompute, CPU cache, cuFile FIFO, native policy,
