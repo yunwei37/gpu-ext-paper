@@ -19,6 +19,16 @@ the repository; the [implementation follow-up](../../../workloads/lmcache-disk/g
 calls for fresh processes and separate scheduled-arrival/dispatch timestamps.
 This uses cuFile compatibility-mode storage, not established NVMe-to-GPU P2P.
 
+The subsequent [fresh-process comparison](../../../workloads/lmcache-disk/results-575-gds-mixed-fresh-process-20260906.md)
+completed all 15 measurements and 2,400 I/O requests, avoiding accumulated
+CUDA pools. FIFO/native/BPF call-to-completion read p99 medians are
+225.177/208.939/218.392 ms. A separate
+[zero-spacing burst comparison](../../../workloads/lmcache-disk/results-575-gds-mixed-burst-20260906.md)
+also completes all 15 measurements and 2,400 requests. Both show substantial
+paired variability despite real native/BPF write deferral; neither establishes
+a stable policy benefit. Live pending-demand feedback remains implementation
+work. No historical record is replaced by either follow-up.
+
 RTX 5090 Table 1 is complete for all three tools, as recorded below. The next
 device-tool task is a separately selectable GPU-local event-buffer and bulk
 readback optimization for `kernelretsnoop`, whose current gpubpf overhead is
