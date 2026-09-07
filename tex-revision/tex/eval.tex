@@ -477,13 +477,13 @@ Attaching to a running process requires no application restart.
 % \label{tab:obs-overhead}
 % \end{table}
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{img/results-raw/revision/obs-overhead-bars.pdf}
-\caption{\sys device-side observability tools: llama.cpp prefill-throughput overhead versus matched NVBit instrumentation (lower is better, log scale). (a) P40 with Llama 1B, sequence-mixed. (b) RTX~5090 with TinyLlama-1.1B and custom paired NVBit adapters; bars show the mean of ten paired runs per tool.}
-% gpubpf 设备端可观测工具：与配对 NVBit 插桩相比的 llama.cpp 预填充吞吐开销（越低越好，对数坐标）。(a) P40，Llama 1B，序列混合。(b) RTX~5090，TinyLlama-1.1B，配定制配对 NVBit 适配器；柱形为每个工具十次配对运行的均值。
+\includegraphics[width=\columnwidth]{img/results-raw/revision/obs-overhead-bars.pdf}
+\caption{\sys device-side observability overhead versus NVBit (log scale). (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B, ten paired runs.}
+% gpubpf 设备端可观测开销与 NVBit 对比（对数坐标）。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B，十次配对运行。
 \label{fig:obs-overhead}
-\end{figure*}
+\end{figure}
 
 \paragraph{Device-side Runtime Optimization.}
 % 设备端运行时优化。
