@@ -438,6 +438,12 @@ On the P40, \sys achieves 3--14\% overhead versus NVBit's 85--93\%, due to the w
 % 在 P40 上，得益于 warp 统一执行模型，gpubpf 的开销为 3--14\%，而 NVBit 为 85--93\%。
 On the RTX~5090, \sys has lower overhead than NVBit for all three tools: 90.71\% versus 99.62\% for the complete per-warp kernel-return stream, 2.97\% versus 10.35\% for the exit-count histogram, and 0.22\% versus 8.80\% for \texttt{launchlate}. The full record stream remains expensive even with warp-level recording.
 % 在 RTX~5090 上，gpubpf 在三个工具上的开销均低于 NVBit：完整的逐 warp 内核返回记录流为 90.71\% 对 99.62\%，退出计数直方图为 2.97\% 对 10.35\%，\texttt{launchlate} 为 0.22\% 对 8.80\%。即使按 warp 记录，完整记录流的开销仍然很高。
+A separate five-pair experiment buffers the complete kernel-return records in a GPU-local array, yielding mean prefill overhead of 5.57\% (range 4.02--6.70\%) while retaining all 720,896 records per run.
+% 另一组五次配对实验将完整的内核返回记录缓存在 GPU 本地数组中，平均预填充开销为 5.57\%（范围 4.02--6.70\%），每次运行保留全部 720,896 条记录。
+The final 23.2~MB readback averages 10.38~ms outside prefill timing; the finite buffer is sized for this pp512, serial-launch workload, not unbounded streaming.
+% 最终 23.2~MB 回读平均耗时 10.38~ms，不计入预填充计时；该有限缓冲区按本次 pp512、串行启动工作负载配置，并非无界流式记录。
+Like the RTX~5090 tool campaign, this variant uses warning-mode admission and provides performance evidence, not evidence of strict verifier acceptance.
+% 与 RTX~5090 工具实验相同，该变体使用警告模式准入，提供性能证据，而非严格验证器接受该程序的证据。
 Attaching to a running process requires no application restart.
 % 附加到正在运行的进程无需重启应用。
 
