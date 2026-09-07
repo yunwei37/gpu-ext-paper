@@ -1,1 +1,0 @@
-../../../img/results-raw/llama.cpp
