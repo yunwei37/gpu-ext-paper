@@ -41,6 +41,13 @@ Memory chunks move between host and device memory via eviction and prefetching.
 GPU kernels (launched tasks) and GPU thread-blocks (parallel execution units within kernels) transition among ready, running, and finished states through scheduling and preemption operations.
 % GPU 内核（已启动的任务）和 GPU 线程块（内核内的并行执行单元）通过调度和抢占操作在就绪、运行和完成状态之间转换。
 
+\paragraph{Storage and CXL tiers.}
+% 存储与 CXL 层级。
+Extending the state-machine model to storage offload would add storage-resident and transfer-in-progress states: policies would choose placement and transfer timing, while the storage backend would retain buffer ownership and completion handling.
+% 将状态机模型扩展到存储卸载，需要增加存储驻留与传输进行中的状态：策略选择放置位置和传输时机，存储后端则保留缓冲区所有权并处理完成事件。
+A CXL tier could similarly add placement states through host memory-management interfaces; both extensions would require backend-specific transition validation.
+% CXL 层级也可通过主机内存管理接口增加放置状态；两种扩展都需要针对后端的转移验证。
+
 \subsection{GPU-Specific Challenges for eBPF Extensibility}
 % eBPF 可扩展性的 GPU 特有挑战
 \label{sec:motivation-challenges}
@@ -89,15 +96,15 @@ Policies, as verified eBPF programs invoking OS kernel functions (\emph{kfuncs})
 % 策略是经过验证的 eBPF 程序，可调用 OS 内核函数（\emph{kfunc}），附加到驱动事件、用户态 uprobe 和设备端事件上。
 Each trigger asynchronously initiates multiple proactive or deferred state transitions across memory and scheduling domains without blocking, coordinated through eBPF workqueues.
 % 每个触发通过 eBPF 工作队列协调，异步地跨内存和调度领域发起多个主动或被延迟的状态转换，且不阻塞。
-For example, a uprobe on \texttt{cudaLaunchKernel} concurrently initiates a 6.6\,ms DMA prefetch based on device observations and preempts another tenant to free GPU memory.
-% 例如，\texttt{cudaLaunchKernel} 上的 uprobe 并发地基于设备观测发起一次 6.6\,ms 的 DMA 预取，并抢占另一租户以释放 GPU 内存。
+For example, an application launch event can trigger prefetching based on device observations while requesting preemption of a lower-priority tenant.
+% 例如，应用启动事件可以依据设备观测触发预取，同时请求抢占低优先级租户。
 
 \input{tex/fig_exec_model}
 
 To ensure OS kernel safety, verified kfuncs restrict policy actions to two dimensions: \emph{selection} (choosing resources, e.g., eviction order, tenant preemption priority) and \emph{timing} (when to act, e.g., proactive prefetch).
 % 为保证 OS 内核安全，经验证的 kfunc 将策略动作限制在两个维度：\emph{选择}（选择资源，如逐出顺序、租户抢占优先级）和\emph{时机}（何时行动，如主动预取）。
-The driver always controls underlying state machines; policies only select ordering and timing of driver-managed operations, cannot allocate memory or remove tasks, and revert to FIFO defaults under resource pressure or misconfiguration.
-% 驱动始终掌控底层状态机；策略只能选择驱动管理的操作的顺序和时机，不能分配内存或移除任务，并在资源压力或配置错误时回退到 FIFO 默认行为。
+The driver controls the underlying state machines; policies select the ordering and timing of permitted operations, with invalid requests handled by the transition rules in \S\ref{sec:verification}.
+% 驱动掌控底层状态机；策略选择允许操作的顺序和时机，非法请求由 \S\ref{sec:verification} 中的转移规则处理。
 Currently, a single policy program is loaded system-wide but may internally differentiate tenant treatment for priorities, similar to sched\_ext; per-tenant isolation is future work.
 % 目前，单个策略程序系统级加载，但可在内部按优先级区分对待租户，类似 sched\_ext；按租户隔离是未来工作。
 
@@ -105,41 +112,102 @@ Currently, a single policy program is loaded system-wide but may internally diff
 % 运行时验证与优化
 \label{sec:verification}
 
-\sys{}'s threat model mirrors standard eBPF: administrators are trusted, but policy code may be buggy or misconfigured.
-% \sys{} 的威胁模型与标准 eBPF 相同：管理员可信，但策略代码可能有 bug 或配置错误。
-The trusted computing base (TCB) includes the OS kernel and its verifier/JIT, \sys{} driver hooks and transition validators, the GPU driver/firmware and native actuators, and the device verifier, helper/map models, and GPU compilation toolchain.
-% 可信计算基（TCB）包括 OS 内核及其验证器/JIT、\sys{} 驱动钩子与转移验证器、GPU 驱动/固件及原生执行器，以及设备端验证器、helper/map 模型和 GPU 编译工具链。
-Host-side verification directly reuses the Linux eBPF verifier (\S\ref{sec:implementation}).
-% 主机端验证直接复用 Linux eBPF 验证器（\S\ref{sec:implementation}）。
+\sys{} trusts administrators to install policies, but treats policy code as potentially buggy or misconfigured.
+% \sys{} 信任管理员安装策略，但将策略代码视为可能存在错误或配置不当。
+Program verification constrains policy execution; transition validation checks each requested resource change against driver-owned state.
+% 程序验证约束策略执行；转移验证依据驱动持有的状态检查每次资源变更请求。
+\Cref{tab:safety-rules} summarizes the rules and their enforcement.
+% \Cref{tab:safety-rules} 汇总了这些规则及其执行方式。
 
-\sys{} enforces safety at two layers: \emph{program checks} restrict what policy code may execute, and \emph{transition checks} validate each requested resource change against driver-owned state before actuation.
-% \sys{} 在两个层面实施安全性：\emph{程序检查}限制策略代码可以执行的内容，\emph{转移检查}在驱动执行前，依据驱动持有的状态验证每一次资源变更请求。
-
-\subsubsection{Driver-owned Transition Validation}
+\subsubsection{Transition Validation}
 % 驱动持有的转移验证
 
-Policy callbacks never mutate resources directly.
-% 策略回调从不直接修改资源。
-Typed setters record a callback-local request; after the callback returns, driver code validates the recorded request against the current resource state and only then invokes its native actuator.
-% 类型化的 setter 记录回调本地的请求；回调返回后，驱动代码依据当前资源状态验证该请求，然后才调用原生执行器。
-An identical repeat request is idempotent, while a conflicting second request is latched and rejected.
-% 相同的重复请求是幂等的，而冲突的第二个请求会被锁存并拒绝。
+Policy callbacks submit requests through restricted interfaces; the driver retains exclusive authority to change resource state.
+% 策略回调通过受限接口提交请求；驱动保留修改资源状态的独占权限。
+Before applying a request, the driver checks resource ownership, whether the observed state is still current, and whether the requested transition is allowed.
+% 在应用请求前，驱动检查资源归属、观测状态是否仍然有效，以及请求的转移是否被允许。
+For mutable resources such as eviction queues, validation and the resulting state change share the driver's synchronization, preventing another operation from invalidating the checked state between these steps (\Cref{fig:transition-validation}).
+% 对于驱逐队列等可变资源，验证与后续状态变更使用驱动的同一同步机制，防止其他操作在这两步之间使已检查的状态失效（\Cref{fig:transition-validation}）。
+Long-running transfers remain asynchronous under the native driver's control.
+% 耗时较长的传输仍由原生驱动异步执行。
 
-For physical-memory-manager (PMM) reordering, validation checks the owning PMM, root identity, source list, and a generation counter under the existing list lock; only used/unused list heads and tails are valid destinations.
-% 对于物理内存管理器（PMM）的重排序，验证在现有列表锁下检查所属 PMM、根标识、来源列表和代际计数器；合法目标仅限 used/unused 列表的头部和尾部。
-Fallback is operation-specific: an invalid PMM request preserves entry state, while an invalid prefetch action or region falls back to native prefetch behavior.
-% 回退行为因操作而异：非法 PMM 请求保留原有状态，非法的预取动作或区域则回退到原生预取行为。
+Repeated identical requests are idempotent; conflicting requests within one callback are rejected.
+% 同一回调中的相同重复请求是幂等的，冲突请求则被拒绝。
+Fallback follows the operation's semantics: a rejected eviction-order request preserves the current state, whereas an invalid prefetch action or range uses native prefetch behavior.
+% 回退遵循操作本身的语义：被拒绝的驱逐顺序请求保留当前状态，非法的预取动作或范围则采用原生预取行为。
+
+\begin{figure}[t]
+\begin{minipage}{\columnwidth}
+\begin{lstlisting}[language={},xleftmargin=0pt,numbers=none,columns=fullflexible,keepspaces=true]
+apply(resource, observed, request):
+  with driver synchronization for resource:
+    current = resource state
+    if request is absent or conflicting:
+      return operation fallback(current)
+    if ownership or observed state is invalid:
+      return operation fallback(current)
+    if transition(request, current) is forbidden:
+      return operation fallback(current)
+    initiate native transition(request, current)
+\end{lstlisting}
+\caption{Transition validation. State checks and transition initiation share one protected step; transfer completion remains asynchronous.}
+% 转移验证。状态检查与转移发起共享一个受保护的步骤；传输完成仍为异步过程。
+\label{fig:transition-validation}
+\end{minipage}
+\end{figure}
 
 \subsubsection{SIMT-aware Verification}
 % SIMT 感知验证
 
-Device-side programs additionally pass a GPU verifier that applies PREVAIL~\cite{prevail-verifier} with GPU-specific helper and map models, followed by uniformity analysis and SIMT checks.
-% 设备端程序还需通过 GPU 验证器：先以带 GPU 特定 helper 和 map 模型的 PREVAIL~\cite{prevail-verifier} 检查，再进行一致性分析和 SIMT 检查。
-Forward dataflow tracks register values, stack bytes, pointer provenance, and map identity using \emph{unknown}, \emph{uniform}, and \emph{varying} tags; a worklist propagates instruction effects until stable, and a final pass checks every reachable instruction.
-% 前向数据流以\emph{未知}、\emph{一致}、\emph{可变}标记跟踪寄存器值、栈字节、指针来源和 map 标识；工作队列传播指令效果直至收敛，最后一遍检查每条可达指令。
+Device-side verification checks memory bounds and termination, then analyzes whether policy values are identical across the lanes of a warp.
+% 设备端验证检查内存边界与终止性，随后分析策略值在同一 warp 的各 lane 间是否相同。
+The analysis assigns values \emph{unknown}, \emph{uniform}, or \emph{varying} labels and propagates them through the control-flow graph.
+% 分析为值赋予\emph{未知}、\emph{一致}或\emph{可变}标签，并沿控制流图传播。
+Constants are uniform, while lane identifiers are varying; copies preserve labels, and arithmetic propagates lane variation from its operands.
+% 常量是一致值，lane 标识是可变值；复制保留标签，算术运算传播操作数中的 lane 差异。
+Loads and helper results use the uniformity of their source data and the declared helper semantics.
+% 加载操作与 helper 返回值依据源数据的一致性以及声明的 helper 语义确定标签。
+At control-flow joins, varying information dominates uniform information; propagation repeats until the labels stabilize, including across loop back edges.
+% 在控制流合并点，可变信息优先于一致信息；传播持续到标签稳定，并覆盖循环回边。
 
-The verifier enforces memory bounds and termination, and requires branch conditions, map keys, shared-map values, and atomic targets to be warp-uniform.
-% 验证器检查内存边界与终止性，并要求分支条件、map 键、共享 map 值及原子操作目标保持 warp 一致。
+The verifier then requires uniform branch conditions, map keys, shared-map values, and atomic target addresses; unknown values cannot satisfy these requirements.
+% 随后，验证器要求分支条件、map 键、共享 map 值与原子操作目标地址具有一致性；未知值无法满足这些要求。
+These restrictions let a warp follow one policy decision and apply consistent shared effects; a branch on lane ID or a shared-map update derived from it is rejected.
+% 这些约束使一个 warp 遵循同一策略决策，并产生一致的共享效果；基于 lane ID 的分支或由其派生的共享 map 更新会被拒绝。
+GPU-wide barriers and global synchronization are prohibited to keep policy execution bounded.
+% GPU 级屏障与全局同步被禁止，以保持策略执行有界。
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabularx}{\columnwidth}{@{} >{\hsize=1.2\hsize\raggedright\arraybackslash}X >{\hsize=1.0\hsize\raggedright\arraybackslash}X >{\hsize=0.8\hsize\raggedright\arraybackslash}X @{}}
+\toprule
+\textbf{Illegal behavior} & \textbf{Safety property} & \textbf{Handling} \\
+\midrule
+Out-of-bounds access or unbounded loop & Memory bounds; termination & Reject program \\
+Lane-dependent branch & Uniform control flow & Reject program \\
+Varying shared-map value or atomic target & Uniform shared effects & Reject program \\
+GPU-wide barrier & Bounded synchronization & Reject program \\
+Stale eviction request & Current resource state & Preserve state \\
+Conflicting requests & Request consistency & Operation fallback \\
+Invalid prefetch range & Valid migration range & Native prefetch \\
+\bottomrule
+\end{tabularx}
+\caption{Safety rules and representative rejected behaviors. Program rejection occurs before execution; resource requests are checked before actuation.}
+% 安全规则与典型拒绝行为。程序在执行前被拒绝；资源请求在执行操作前被检查。
+\label{tab:safety-rules}
+\end{table}
+
+\paragraph{Failure handling and trusted computing base.}
+% 失败处理与可信计算基。
+Program rejection prevents policy installation, while transition rejection invokes the operation-specific fallback.
+% 程序拒绝阻止策略安装，转移拒绝则调用相应操作的回退行为。
+A valid policy can still make poor resource-management decisions; it can be replaced at runtime, but verification does not guarantee performance.
+% 合法策略仍可能做出不良的资源管理决策；它可以在运行时被替换，但验证并不保证性能。
+The trusted computing base (TCB) comprises the host OS, GPU driver and firmware, policy verifiers and compilation toolchain, and \sys{}'s hooks, helpers, and transition validators.
+% 可信计算基（TCB）包括主机 OS、GPU 驱动与固件、策略验证器与编译工具链，以及 \sys{} 的钩子、helper 和转移验证器。
+Failures in these trusted components or GPU hardware lie outside the policy-safety guarantee.
+% 这些可信组件或 GPU 硬件中的故障不属于策略安全保证的覆盖范围。
 
 \subsubsection{Warp-level Execution Optimizations}
 % warp 级执行优化
