@@ -333,36 +333,36 @@ We evaluate whether \sys{} can express the policies of published state-of-the-ar
 
 \begin{table*}[t]
 \centering
-\caption{Published policies and their implementation through \sys{}, in the order of \Cref{fig:matched-ports}(a--g).}
-% 已发表策略及其通过 \sys{} 实现的方式，顺序对应 \Cref{fig:matched-ports}(a--g)。
+\caption{Prior policies, their underlying mechanisms, and the \sys{} implementations evaluated in \Cref{fig:matched-ports}(a--g).}
+% 既有策略、其底层机制以及 \Cref{fig:matched-ports}(a--g) 中评估的 \sys{} 实现。
 \label{tab:published-policies}
 \small
 \setlength{\tabcolsep}{4pt}
 \begin{tabularx}{\textwidth}{@{} >{\hsize=0.5\hsize\raggedright\arraybackslash}X >{\hsize=0.9\hsize\raggedright\arraybackslash}X >{\hsize=1.6\hsize\raggedright\arraybackslash}X @{}}
 \toprule
-System & Original policy & Execution location and \sys{} implementation \\
-% 系统；原有策略；执行位置与 gpubpf 实现。
+System & Original policy & Original mechanism and \sys{} implementation \\
+% 系统；原有策略；原有机制与 gpubpf 实现。
 \midrule
-MoE-Infinity~\cite{xue2025moeinfinity} & Match access predictions, rank expert prefetches, and select eviction victims. & Native user-space cache decisions become host-side \sys{} programs; the shared GPT-OSS-120B executor handles expert transfers and inference. \\
-% MoE-Infinity：匹配访问预测、排列专家预取顺序并选择驱逐对象；用户态原生缓存决策由主机侧 gpubpf 程序实现，共用的 GPT-OSS-120B 执行器负责专家传输与推理。
+MoE-Infinity~\cite{xue2025moeinfinity} & Match access predictions, rank expert prefetches, and select eviction victims. & A user-space runtime manages expert transfers; \sys{} implements cache decisions as host-side programs on the shared GPT-OSS-120B executor. \\
+% MoE-Infinity：匹配访问预测、排列专家预取顺序并选择驱逐对象；用户态运行时管理专家传输，gpubpf 通过主机侧程序在共用 GPT-OSS-120B 执行器上实现缓存决策。
 \addlinespace
-Expert Buffering~\cite{huang2023towards} & Admit experts to the cache and prioritize eviction of experts unused by the current batch. & Native user-space admission and eviction become host-side \sys{} decisions, applied by the shared cache executor. \\
-% Expert Buffering：决定专家缓存准入，优先驱逐当前批次不用的专家；用户态原生准入与驱逐决策由主机侧 gpubpf 程序实现，并由共用缓存执行器执行。
+Expert Buffering~\cite{huang2023towards} & Admit experts to the cache and prioritize eviction of experts unused by the current batch. & A user-space cache manages GPU buffers and CPU-to-GPU copies; \sys{} implements admission and eviction as host-side programs on the shared cache executor. \\
+% Expert Buffering：决定专家缓存准入，优先驱逐当前批次不用的专家；用户态缓存管理 GPU 缓冲区和 CPU 到 GPU 的复制，gpubpf 通过主机侧程序在共用缓存执行器上实现准入与驱逐。
 \addlinespace
-FineMoE~\cite{yu2026finemoe} & Select a dynamic set of experts for speculative prefetch. & Native user-space expert selection becomes a host-side \sys{} program; the shared inference executor performs transfers and computation. \\
-% FineMoE：动态选择推测预取的专家集合；用户态原生专家选择由主机侧 gpubpf 程序实现，共用推理执行器完成传输与计算。
+FineMoE~\cite{yu2026finemoe} & Select a dynamic set of experts for speculative prefetch. & A user-space cache uses CUDA runtime transfers; \sys{} implements dynamic expert selection as a host-side program on the shared inference executor. \\
+% FineMoE：动态选择推测预取的专家集合；用户态缓存通过 CUDA runtime 传输数据，gpubpf 通过主机侧程序在共用推理执行器上实现动态专家选择。
 \addlinespace
-Hummingbird~\cite{hu2026hummingbird} & Admit background work during foreground idle intervals. & Native user-space admission becomes a host-side \sys{} program; the shared DNN executor submits the admitted work. \\
-% Hummingbird：在前台空闲区间准入后台工作；用户态原生准入决策由主机侧 gpubpf 程序实现，共用 DNN 执行器提交获准的工作。
+Hummingbird~\cite{hu2026hummingbird} & Split background kernels to fill foreground idle intervals, with priority-aware memory management. & CUDA API interception and kernel splitting handle execution, while memory management modifies UVM; our host-side \sys{} port implements idle admission on the shared DNN executor. \\
+% Hummingbird：拆分后台 GPU 内核以填充前台空闲区间，并按优先级管理内存；CUDA API 拦截与内核拆分负责执行，内存管理修改 UVM，我们的主机侧 gpubpf 移植在共用 DNN 执行器上实现空闲准入。
 \addlinespace
 POD-Attention~\cite{kamath2025pod} & Proportionally select prefill or decode work for each SM. & Native selection inside the GPU kernel becomes a device-side \sys{} program; the fused attention kernel executes the selected work. \\
 % POD-Attention：按比例为各 SM 选择 prefill 或 decode 工作；GPU 内核中的原生选择逻辑由设备侧 gpubpf 程序实现，融合注意力内核执行所选工作。
 \addlinespace
-XSched~\cite{shen2025xsched} & Select the highest-priority task using inter-kernel preemption. & Native user-space task selection becomes a host-side \sys{} program; the original executor provides inter-kernel suspend/resume. \\
-% XSched：利用内核间抢占选择最高优先级任务；用户态原生任务选择由主机侧 gpubpf 程序实现，原始执行器提供内核间挂起与恢复。
+XSched~\cite{shen2025xsched} & Select the highest-priority task through preemptible command queues. & A user-space scheduler uses queue control and, at higher preemption levels, GPU instrumentation or driver interfaces; our host-side \sys{} port retains the original inter-kernel executor. \\
+% XSched：通过可抢占命令队列选择最高优先级任务；用户态调度器控制队列，较高抢占级别还使用 GPU 插桩或驱动接口，我们的主机侧 gpubpf 移植保留原始内核间抢占执行器。
 \addlinespace
-GPREEMPT~\cite{fan2025gpreempt} & Control task admission and assign timeslices by priority. & Native user-space blocking/release and driver timeslicing become host- and driver-side \sys{} decisions, applied by the original executor and GPU driver. \\
-% GPREEMPT：控制任务准入并按优先级分配时间片；用户态原生阻塞与释放决策以及驱动时间片决策，分别由主机侧和驱动侧 gpubpf 程序实现，原始执行器和 GPU 驱动负责执行。
+GPREEMPT~\cite{fan2025gpreempt} & Control task admission and assign timeslices by priority. & User-space blocking/release relies on a modified GPU driver for timeslices; \sys{} implements these decisions with host- and driver-side programs on the same executor. \\
+% GPREEMPT：控制任务准入并按优先级分配时间片；用户态阻塞与释放依赖修改后的 GPU 驱动控制时间片，gpubpf 通过主机侧和驱动侧程序在相同执行器上实现这些决策。
 \bottomrule
 \end{tabularx}
 \end{table*}
@@ -449,8 +449,8 @@ Attaching to a running process requires no application restart.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{tex-revision/img/results-raw/revision/obs-overhead-with-array.pdf}
-\caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B: ten baseline/tool pairs per configuration, except \sys kernelretsnoop (five independent pairs). Bars show means and whiskers show RTX~5090 run ranges; P40 uses original reported values. The axis is linear within $\pm1\%$ and logarithmic beyond. For \sys kernelretsnoop, records are collected after prefill (10.38\,ms, outside prefill timing).}
-% 相对未插桩基线的预填充吞吐下降。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B：每个配置十组基线/工具配对，gpubpf kernelretsnoop 使用另外独立测量的五组配对。柱形为均值，须线为 RTX~5090 的运行范围；P40 使用原文报告值。坐标轴在 ±1\% 内为线性，之外为对数。gpubpf kernelretsnoop 在预填充后收集记录（10.38 ms，不计入预填充计时）。
+\caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B: ten baseline/tool pairs per configuration, except \sys kernelretsnoop (five independent pairs). Bars show means and whiskers show RTX~5090 run ranges; P40 uses original reported values. For \sys kernelretsnoop, records are collected after prefill (10.38\,ms, outside prefill timing).}
+% 相对未插桩基线的预填充吞吐下降。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B：每个配置十组基线/工具配对，gpubpf kernelretsnoop 使用另外独立测量的五组配对。柱形为均值，须线为 RTX~5090 的运行范围；P40 使用原文报告值。gpubpf kernelretsnoop 在预填充后收集记录（10.38 ms，不计入预填充计时）。
 \label{fig:obs-overhead}
 \end{figure}
 

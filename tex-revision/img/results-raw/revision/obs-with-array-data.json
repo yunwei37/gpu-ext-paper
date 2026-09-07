@@ -1,7 +1,7 @@
 {
   "schema": "obs_overhead_with_array_v1",
   "metric": "prefill throughput loss, percent of the same-campaign baseline throughput (lower is better)",
-  "plot_note": "grouped mean bars with full-range whiskers; symlog axis linear between -1 and +1 retains the negative launchlate range",
+  "plot_note": "grouped mean bars with full-range whiskers; linear axis retains the negative launchlate range",
   "display_selection": {
     "rtx5090_gpubpf_kernelretsnoop": "rtx5090_gpu_array",
     "other_rtx5090_arms": "rtx5090_table1",

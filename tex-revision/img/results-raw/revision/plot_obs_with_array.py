@@ -6,7 +6,7 @@ P40 uses the submitted values. RTX 5090 uses the original ten paired blocks
 per tool, with gpubpf kernelretsnoop taken from the five independent
 GPU-buffer pairs. The earlier kernelretsnoop measurements stay in the data. Bars
 show means, and RTX 5090 whiskers show the complete observed range.
-The symlog axis includes zero and the negative launchlate range.
+The linear axis includes zero and the negative launchlate range.
 All measurements are prefill throughput loss relative to the baseline
 from the same campaign.
 
@@ -130,8 +130,8 @@ def build_data(p40: dict, old: dict, new: dict) -> dict:
         "schema": "obs_overhead_with_array_v1",
         "metric": "prefill throughput loss, percent of the same-campaign "
                   "baseline throughput (lower is better)",
-        "plot_note": "grouped mean bars with full-range whiskers; symlog axis "
-                     "linear between -1 and +1 retains the negative launchlate range",
+        "plot_note": "grouped mean bars with full-range whiskers; linear axis "
+                     "retains the negative launchlate range",
         "display_selection": {
             "rtx5090_gpubpf_kernelretsnoop": "rtx5090_gpu_array",
             "other_rtx5090_arms": "rtx5090_table1",
@@ -209,7 +209,7 @@ def _draw(data: dict, paths: list[Path]) -> None:
                           "xtick.labelsize": 7, "ytick.labelsize": 7,
                           "legend.fontsize": 7.5})
     with plt.rc_context(style):
-        figure, axes = plt.subplots(1, 2, figsize=(3.4, 2.0), sharey=True)
+        figure, axes = plt.subplots(1, 2, figsize=(3.4, 1.6), sharey=True)
         for column, axis in enumerate(axes):
             for index, tool in enumerate(TOOLS):
                 for system, offset in zip(SYSTEMS, (-.22, .22)):
@@ -226,9 +226,9 @@ def _draw(data: dict, paths: list[Path]) -> None:
                         high = campaign["max_overhead_pct"][arm]
                         axis.errorbar(center, mean, yerr=[[mean-low], [high-mean]],
                                       fmt="none", color=GRAY, capsize=1.5, linewidth=1)
-            axis.set_yscale("symlog", linthresh=1)
-            axis.set_ylim(-1, 200)
-            axis.set_yticks([-1, 0, 1, 10, 100], ["−1", "0", "1", "10", "100"])
+            axis.set_yscale("linear")
+            axis.set_ylim(-2, 105)
+            axis.set_yticks([0, 25, 50, 75, 100])
             axis.set_xticks(range(3), ["kernel-\nret-snoop", "thread-\nhist", "launch-\nlate"])
             axis.set_title(("(a) P40", "(b) RTX 5090")[column], fontsize=7.5, pad=4)
             axis.grid(axis="y", alpha=.25, linewidth=.6)
@@ -239,7 +239,7 @@ def _draw(data: dict, paths: list[Path]) -> None:
         figure.legend(handles=handles, loc="upper center", ncol=2, frameon=False,
                       bbox_to_anchor=(.5, 1.0), handlelength=1.1,
                       handletextpad=.4, columnspacing=.9)
-        figure.subplots_adjust(left=.17, right=.99, bottom=.23, top=.76, wspace=.20)
+        figure.subplots_adjust(left=.17, right=.99, bottom=.26, top=.76, wspace=.20)
         try:
             for path in paths:
                 figure.savefig(path, dpi=300)
