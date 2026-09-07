@@ -11,24 +11,6 @@ Typed setters record a callback-local request; after the callback returns, drive
 An identical repeat request is idempotent, while a conflicting second request is latched and rejected.
 % 相同的重复请求是幂等的，而冲突的第二个请求会被锁存并拒绝。
 
-\begin{lstlisting}[language={},xleftmargin=0pt,numbers=none]
-record(r, destination, position):
-  if not r.attempted: store first raw request
-  else if r.pair != (destination, position):
-    r.conflict = true
-
-finish_access(root, snapshot, request, action):
-  assert PMM list lock held
-  result = validate identity, current source,
-           generation, conflict, and request range
-  if action not in {DEFAULT, BYPASS}: preserve
-  else if result == APPLY:
-    revalidate; commit one checked native move
-  else if result == NO_REQUEST and action == DEFAULT:
-    perform native tail move
-  else: preserve entry state
-\end{lstlisting}
-
 For physical-memory-manager (PMM) reordering, validation checks the owning PMM, root identity, source list, and a generation counter under the existing list lock; only used/unused list heads and tails are valid destinations.
 % 对于物理内存管理器（PMM）的重排序，验证在现有列表锁下检查所属 PMM、根标识、来源列表和代际计数器；合法目标仅限 used/unused 列表的头部和尾部。
 Fallback is operation-specific: an invalid PMM request preserves entry state, while an invalid prefetch action or region falls back to native prefetch behavior.
@@ -43,22 +25,6 @@ Device-side programs additionally pass a GPU verifier that applies PREVAIL~\cite
 % 设备端程序还需通过 GPU 验证器：先以带 GPU 特定 helper 和 map 模型的 PREVAIL~\cite{prevail-verifier} 检查，再进行一致性分析和 SIMT 检查。
 Forward dataflow tracks register values, stack bytes, pointer provenance, and map identity using \emph{unknown}, \emph{uniform}, and \emph{varying} tags; a worklist propagates instruction effects until stable, and a final pass checks every reachable instruction.
 % 前向数据流以\emph{未知}、\emph{一致}、\emph{可变}标记跟踪寄存器值、栈字节、指针来源和 map 标识；工作队列传播指令效果直至收敛，最后一遍检查每条可达指令。
-
-\begin{lstlisting}[language={},xleftmargin=0pt,numbers=none]
-verify_gpu(program, maps):
-  reject malformed input or unsupported maps
-  require PREVAIL bounds/type/termination checks
-  initialize entry state and worklist
-  while worklist nonempty:
-    pc = pop(worklist)
-    out = transfer(program[pc], state[pc])
-    join out into successors; enqueue changed states
-  require uniform conditional-branch operands
-  require uniform atomic target addresses
-  require uniform map keys and update flags
-  require uniform shared-map values and checked outputs
-  reject prohibited helpers or unsafe bridge payloads
-\end{lstlisting}
 
 The verifier rejects, for example, an eight-byte stack write at offset $-520$, an unbounded helper-dependent loop, a branch on lane ID, lane-derived map keys and shared-map values, and an atomic whose target comes from a per-thread map; the warp-uniform counterparts of each case are admitted, so atomics on uniform targets remain available to policies.
 % 验证器会拒绝诸如偏移 $-520$ 处的 8 字节栈写、依赖 helper 的无界循环、基于 lane ID 的分支、lane 导出的 map 键与共享 map 值，以及目标来自每线程 map 的原子操作；每种情况的 warp 一致版本都会被接受，因此策略仍可使用一致目标上的原子操作。

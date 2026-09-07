@@ -285,21 +285,23 @@ We implement a preemption policy equivalent to GPREEMPT's~\cite{fan2025gpreempt}
 % 我们将等价于 GPREEMPT~\cite{fan2025gpreempt} 基于优先级的时间片调度的抢占策略实现为 gpubpf eBPF 程序（925 LOC），无需对驱动源码进行不安全的修改。
 \Cref{fig:scheduler-latency} shows that the \sys policy protects foreground latency under background contention: on the XSched workload it reduces LC submission-to-first-CTA p99 from 76.9~s (native CUDA) to 27.3~s, matching the original XSched implementation (27.0~s); on the GPREEMPT workload it reduces LC response p99 from 1.796~ms to 1.610~ms, matching the original C implementation (1.615~ms).
 % \Cref{fig:scheduler-latency} 显示，gpubpf 策略在后台竞争下保护了前台延迟：在 XSched 工作负载上将 LC 提交到首个 CTA 的 p99 从 76.9 秒（原生 CUDA）降至 27.3 秒，与 XSched 原始实现（27.0 秒）持平；在 GPREEMPT 工作负载上将 LC 响应 p99 从 1.796 毫秒降至 1.610 毫秒，与原始 C 实现（1.615 毫秒）持平。
+On the XSched workload, BE throughput stays within 1\% of native (10.2~kernels/s); on the GPreempt workload, the same LC protection costs about 9\% BE goodput (\S\ref{sec:policy-mechanism}).
+% 在 XSched 工作负载上，BE 吞吐量保持在原生的 1\% 以内（10.2 内核/秒）；在 GPreempt 工作负载上，同样的 LC 保护付出约 9\% 的 BE 有效吞吐代价（\S\ref{sec:policy-mechanism}）。
 \S\ref{sec:policy-mechanism} details the matched comparison, including the background-throughput cost of foreground protection.
 % \S\ref{sec:policy-mechanism} 给出了匹配对比的细节，包括前台保护对后台吞吐量的代价。
 With differentiated timeslices (LC: 1~s, BE: 200~$\mu$s), the same \sys{} policy reduces LC P99 launch latency by 96\% (1188~$\mu$s $\to$ 53~$\mu$s) while BE throughput remains unchanged (\Cref{fig:scheduler-throughput}).
 % 采用差异化时间片（LC：1 秒、BE：200 微秒）时，同一 gpubpf 策略将 LC 的 P99 启动延迟降低 96%（1188 微秒降至 53 微秒），BE 吞吐量保持不变（\Cref{fig:scheduler-throughput}）。
 
-\begin{figure*}[t]
+\begin{figure}
 \centering
-\includegraphics[width=\textwidth]{img/results-raw/revision/scheduling-comparison-1x4-bars.pdf}
+\includegraphics[width=\columnwidth]{img/results-raw/revision/scheduling-comparison-lc-bars.pdf}
 
-\caption{Matched scheduling policies on RTX~5090. (a,b) XSched workload, two LC and four BE processes: (a) LC queue-entry p99; (b) BE kernels/s. (c,d) VGG19 LC at 100 requests/s against three ResNet152 BE loads: (c) arrival-to-verified-response p99; (d) in-window BE goodput. Bars show medians (XSched: ten paired repetitions; GPreempt: five per load).}
-% RTX 5090 上的匹配调度策略。(a,b) XSched 工作负载，两个 LC 和四个 BE 进程：(a) LC 入队 p99；(b) BE 内核数/秒。(c,d) VGG19 LC 每秒 100 请求、对应三种 ResNet152 BE 负载：(c) 到已验证响应的 p99；(d) 窗口内 BE 有效吞吐。柱形为中位数（XSched：十次配对重复；GPreempt：每种负载五次）。
+\caption{Matched scheduling policies on RTX~5090, LC latency: (a) XSched workload, two LC and four BE processes, LC queue-entry p99; (b) VGG19 LC at 100 requests/s against three ResNet152 BE loads, arrival-to-verified-response p99. Bars show medians (XSched: ten paired repetitions; GPreempt: five per load); background throughput and goodput are in \S\ref{sec:policy-mechanism}.}
+% RTX 5090 上的匹配调度策略，LC 延迟：(a) XSched 工作负载，两个 LC 和四个 BE 进程，LC 入队 p99；(b) VGG19 LC 每秒 100 请求、对应三种 ResNet152 BE 负载，到已验证响应的 p99。柱形为中位数（XSched：十次配对重复；GPreempt：每种负载五次）；后台吞吐与有效吞吐见 \S\ref{sec:policy-mechanism}。
 \label{fig:scheduler-latency}
 \label{fig:matched-scheduling}
-\end{figure*}
-% --- Earlier 2x2 point/median version of this figure: retained at img/results-raw/revision/scheduling-comparison-2x2.pdf ---
+\end{figure}
+% --- Earlier full-width versions of this figure retained: img/results-raw/revision/scheduling-comparison-1x4-bars.pdf and scheduling-comparison-2x2.pdf ---
 
 \begin{figure}
 \centering

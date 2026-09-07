@@ -4,29 +4,20 @@
 
 We evaluate whether \sys{} can express the policies of published state-of-the-art systems, and what the general mechanism costs when it runs the same policy as an ad-hoc implementation.
 % 我们评估 \sys{} 能否表达已发表最先进系统的策略，以及通用机制在运行与临时实现相同的策略时代价几何。
-\Cref{tab:policy-expressibility} maps each policy class to its feasibility in user space, with driver modifications, and in \sys{}.
-% \Cref{tab:policy-expressibility} 将每个策略类别映射到其在用户态、驱动修改和 \sys{} 下的可行性。
+\Cref{fig:matched-ports} summarizes the seven matched reimplementations: each panel pairs the original implementation with a \sys{} port of the same policy on the same workload and executor.
+% \Cref{fig:matched-ports} 汇总了七个匹配重实现：每个子图在相同工作负载和执行器上，将原始实现与同一策略的 \sys{} 移植版配对。
+Across the decision classes these systems span, host-JIT \sys{} selectors express expert prediction/prefetch and priority queue admission; kernel-BPF programs driving native actuators express TSG timeslices, fault-time prefetch, and UVM eviction-list ordering with validated used/unused heads and tails rather than arbitrary victims; and a device-BPF selector expresses SM-local task selection.
+% 这些系统覆盖的决策类别与 \sys{} 各层的对应关系为：主机 JIT 的 \sys{} 选择器可表达专家预测/预取与优先级队列准入；驱动原生执行器的内核 BPF 程序可表达 TSG 时间片、缺页时预取和 UVM 驱逐列表排序（仅限经验证的 used/unused 头尾，而非任意 victim）；设备端 BPF 选择器可表达 SM 本地任务选择。
+Disk/CXL placement has no general \sys{} backend.
+% 磁盘/CXL 放置尚无通用的 \sys{} 后端。
 
-\begin{table*}[t]
+\begin{figure*}[t]
 \centering
-\small
-\begin{tabularx}{\textwidth}{@{}p{0.20\textwidth}XXX@{}}
-\toprule
-Decision class & User space & Driver changes & \sys{} path \\
-\midrule
-Expert prediction/prefetch & Framework routing/transfers & Unneeded for application-owned transfers & Host-JIT selectors; semantic adapters \\
-Priority queue admission & Cooperative XSched queue & Unneeded & Host-JIT HPF; original suspend/resume \\
-TSG timeslices & Scoped custom C API & Required API/hooks & Kernel BPF; native GSP actuator \\
-Fault-time prefetch & Explicit prefetch is not fault handling & Expose fault decisions & Kernel BPF; bounded current-VA-block selection \\
-UVM eviction-list order & Ordinary hints lack this control & Expose PMM lists & Kernel BPF; validated used/unused head/tail, not arbitrary victims \\
-SM-local task selection & Cooperating fused kernel & Unneeded for its task queue & Device-BPF POD selector; explicit context/launch bridge \\
-Disk/CXL placement & Framework-controlled I/O & Destination/lifetime/completion interfaces & No general storage/CXL backend \\
-\bottomrule
-\end{tabularx}
-\caption{Policy expressibility by decision class. The available observations and actuators determine what each layer can express.}
-% 按决策类别划分的策略可表达性。可用的观测与执行器决定了每一层能表达什么。
-\label{tab:policy-expressibility}
-\end{table*}
+\includegraphics[width=\textwidth]{img/results-raw/revision/matched-port-panels.pdf}
+\caption{Matched reimplementations of published policies on RTX~5090: (a)--(g) pair the original implementation with the \sys{} port of the same policy on the same workload and executor; (h) summarizes the measured mechanism cost of running the same policy through \sys{}. Higher is better for token/s, lower for latency and overhead.}
+% RTX~5090 上对已发表策略的匹配重实现：(a)--(g) 在相同工作负载和执行器上将原始实现与同一策略的 \sys{} 移植版配对；(h) 汇总通过 \sys{} 执行同一策略的实测机制代价。token/s 越高越好，延迟与开销越低越好。
+\label{fig:matched-ports}
+\end{figure*}
 
 \paragraph{Methodology}
 % 方法
@@ -83,7 +74,7 @@ A device-BPF selector preserves POD-Attention's~\cite{kamath2025pod} proportiona
 Across the matched ports, executing the same policy through \sys{} costs 0.7--3.3\%: 0.7\% for Expert Buffering, 1.8\% for POD-Attention's device selector, and 3.2\% for a kernel-verified UVM no-prefetch policy measured over fifteen paired fault-path runs.
 % 在所有匹配移植中，通过 \sys{} 执行相同策略的代价为 0.7--3.3\%：Expert Buffering 为 0.7\%，POD-Attention 设备端选择器为 1.8\%，经内核验证的 UVM 无预取策略在十五次配对缺页路径运行上测得 3.2\%。
 The headline improvements in RQ1 are therefore policy gains, obtainable through a safe, dynamic, and full-stack mechanism at single-digit cost.
-% 因此，RQ1--RQ3 中的头条提升是策略收益，可以通过一个安全、动态、全栈的机制以个位数的代价获得。
+% 因此，RQ1 中的头条提升是策略收益，可以通过一个安全、动态、全栈的机制以个位数的代价获得。
 
 \paragraph{Agent-discovered policies}
 % 智能体发现的策略
