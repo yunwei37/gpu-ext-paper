@@ -269,24 +269,28 @@ Each experiment runs two concurrent processes competing for GPU memory.
 % 每个实验运行两个并发进程竞争 GPU 内存。
 Policy labels use priority values 0--100 (lower = higher priority): \texttt{Prefetch(lo,hi)} prefetches pages for processes in that range, while \texttt{Evict(lo,hi)} selects eviction victims accordingly.
 % 策略标签使用 0--100 的优先级数值（数值越低优先级越高）：\texttt{Prefetch(lo,hi)} 为处于该范围的进程预取页面，\texttt{Evict(lo,hi)} 则据此选择驱逐对象。
-We compare against: (1)~no-policy execution, (2)~single-process runtime (Single~1$\times$), and (3)~theoretical optimum (2$\times$Single~1$\times$).
-% 我们对比：(1) 无策略执行，(2) 单进程运行时（Single 1×），以及 (3) 理论最优（2×Single 1×）。
+We compare against no-policy execution and retain single-process runtime (Single~1$\times$) and twice that runtime as sequential references, not proven concurrent lower bounds.
+% 我们与无策略执行对比，并保留单进程运行时（Single 1×）及其两倍作为顺序执行参考，而非已证明的并发下界。
 
-\Cref{fig:all-kernels-priority} shows that without policies, both processes degrade severely due to memory thrashing.
-% \Cref{fig:all-kernels-priority} 显示，没有策略时，两个进程都因内存抖动而严重退化。
-With \sys memory priority policies, total completion time improves by 55--92\%, and high-priority processes complete 6--19\% faster.
-% 使用 gpubpf 内存优先级策略后，总完成时间改善 55--92\%，高优先级进程完成速度加快 6--19\%。
-Critically, for these \emph{memory-bound} workloads, GPREEMPT-style~\cite{fan2025gpreempt} scheduler timeslice policies are \emph{ineffective} (<1\% improvement) because the bottleneck is UVM page faults and PCIe bandwidth, not GPU compute time.
-% 关键在于，对于这些\emph{内存密集型}工作负载，GPREEMPT 式~\cite{fan2025gpreempt}调度器时间片策略\emph{无效}（改善不足 1\%），因为瓶颈是 UVM 缺页和 PCIe 带宽，而非 GPU 计算时间。
-The scheduling results in \S\ref{sec:policy-mechanism} show the complementary case: timeslice policies improve latency when GPU compute is the bottleneck.
-% \S\ref{sec:policy-mechanism} 的调度结果展示了互补情形：当 GPU 计算是瓶颈时，时间片策略能改善延迟。
+The historical single-round records in \Cref{fig:all-kernels-priority} show memory-policy completion-time proxies 55--92\% below no-policy execution.
+% \Cref{fig:all-kernels-priority} 中的历史单轮记录显示，内存策略的完成时间代理指标比无策略执行低 55--92\%。
+The recorded scheduler differences below 1\% do not establish ineffectiveness: those runs did not confirm policy engagement or independently timestamp both tenant exits.
+% 其中不足 1\% 的调度差异不能证明策略无效：这些运行没有确认策略实际执行，也没有独立记录两个租户的退出时间。
+% Retained historical draft number: high-priority processes complete 6--19\% faster; the earlier source and raw records remain in the artifact, without promoting this to an independently timed repeated result.
+In a fresh five-block HotSpot comparison, high/low process-duration medians are 56.55/56.60 s without policy, 25.16/26.85 s with memory policy, 3.94/6.08 s with timeslicing, and 3.55/6.46 s with both.
+% 在新的五组 HotSpot 对比中，高/低优先级进程耗时中位数为：无策略 56.55/56.60 秒、内存策略 25.16/26.85 秒、时间片策略 3.94/6.08 秒、组合策略 3.55/6.46 秒。
+These independently measured durations include initialization, warmup and teardown; every scheduling-bearing run records 12 policy hits and timeslice modifications.
+% 这些独立测得的耗时包含初始化、预热和清理；每个包含调度策略的运行均记录了 12 次策略命中和时间片修改。
+Adding memory policy to timeslicing reduces high-priority duration by a paired median 10.2\% but increases low-priority duration by 6.3\%: composition exposes a priority tradeoff, not an all-workloads or all-metrics advantage of the mechanism.
+% 在时间片策略上叠加内存策略，使高优先级耗时的配对中位数降低 10.2\%，但低优先级耗时增加 6.3\%：组合揭示了优先级取舍，而非机制在所有负载或指标上的优势。
+% Evidence: gpu_ext 10994d21; workloads/fig13-fast/results-performance-575-20260907.md. Historical files and sub-1\% observations are retained.
 
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/all_kernels_stacked.pdf}
 
-\caption{Multi-tenant memory priority differentiation. Single 1$\times$: single-process time; 2$\times$Single 1$\times$: theoretical lower bound.}
-% 多租户内存优先级区分。Single 1×：单进程时间；2×Single 1×：理论下界。
+\caption{Historical single-round memory-priority records. Bar heights are completion-time proxies, not reconstructed overlap; scheduler engagement was unconfirmed. Single 1$\times$ and 2$\times$Single are single and sequential references, not concurrent lower bounds.}
+% 历史单轮内存优先级记录。柱高是完成时间代理指标，而非重建的重叠时间；调度策略是否实际执行未确认。Single 1× 与 2×Single 分别为单进程及顺序参考，而非并发下界。
 \label{fig:all-kernels-priority}
 \end{figure}
 
