@@ -5,9 +5,9 @@ TEX=main.tex
 PDF=main.pdf
 RESUB_TEX=resubmission-changes.tex
 RESUB_PDF=resubmission-changes.pdf
-TEX_SRCS=$(wildcard tex/*.tex) $(TEX)
-IMG_SRCS=$(wildcard img/*)
-BIB=cite.bib
+TEX_SRCS=$(wildcard tex-revision/*.tex) $(TEX)
+IMG_SRCS=$(wildcard img/*.pdf img/*.png img/pattern/*.pdf img/pattern/vector_add/*.pdf img/results-raw/*/*.pdf tex-revision/img/results-raw/revision/*.pdf)
+BIB=tex-revision/cite.bib
 
 # SVG processing
 SVGS=$(wildcard img/*.svg)
@@ -57,7 +57,7 @@ img/%.pdf: img/%.html
 $(RESUB_PDF): $(RESUB_TEX)
 	$(LATEX) $(LATEXFLAGS) $(RESUB_TEX)
 
-$(PDF): $(TEX_SRCS) $(IMG_SRCS) $(BIB) $(SVG_PDFS) $(HTML_PDFS)
+$(PDF): $(TEX_SRCS) $(IMG_SRCS) $(BIB)
 	$(LATEX) $(LATEXFLAGS) $(TEX)
 	$(BIBTEX) main || true
 	$(LATEX) $(LATEXFLAGS) $(TEX)

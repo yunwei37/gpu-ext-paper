@@ -333,7 +333,7 @@ The ports span host-side expert caching and queue admission, driver-side timesli
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=\textwidth]{img/results-raw/revision/matched-policy-panels.pdf}
+\includegraphics[width=\textwidth]{tex-revision/img/results-raw/revision/matched-policy-panels.pdf}
 \caption{Policy comparisons on RTX~5090: workload baseline, native policy, and \sys on the same executor. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) prefetching all positively predicted experts, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. TTFT measures first-visible-text latency; panel (e) uses Llama decode batch 128. Bars show medians over five blocks, except (e) means and (f) ten blocks; whiskers in (b,f,g) show full ranges. Panel (d) uses idle admission; (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s, or continuous load.}
 % RTX~5090 上的策略比较：相同执行器上的工作负载基线、原生策略与 gpubpf。基线为关闭预测的专家缓存（a）、固定 K 的 FIFO（b）、预取所有预测会用到的专家（c）、默认调度（d、g）、双流 FlashAttention（e）和原生 CUDA（f）。TTFT 表示首个可见文本延迟；面板（e）使用 Llama 解码批量 128。柱形为五组实验的中位数，但（e）为均值、（f）使用十组；（b、f、g）的须线表示完整范围。（d）使用空闲准入；（g）为每秒 100 个 VGG19 LC 请求，对应 ResNet152 BE 每秒 100、200 请求或连续负载。
 \label{fig:matched-ports}
@@ -440,7 +440,7 @@ Attaching to a running process requires no application restart.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{img/results-raw/revision/obs-overhead-with-array.pdf}
+\includegraphics[width=\columnwidth]{tex-revision/img/results-raw/revision/obs-overhead-with-array.pdf}
 \caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B: ten baseline/tool pairs per arm, except \sys kernelretsnoop, which uses five independently measured pairs. Bars show means and whiskers show RTX~5090 run ranges; P40 uses original reported values. The axis is linear within $\pm1\%$ and logarithmic beyond. For \sys kernelretsnoop, records are collected after prefill (10.38\,ms, outside prefill timing).}
 % 相对未插桩基线的预填充吞吐下降。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B：每个配置十组基线/工具配对，gpubpf kernelretsnoop 使用另外独立测量的五组配对。柱形为均值，须线为 RTX~5090 的运行范围；P40 使用原文报告值。坐标轴在 ±1\% 内为线性，之外为对数。gpubpf kernelretsnoop 在预填充后收集记录（10.38 ms，不计入预填充计时）。
 \label{fig:obs-overhead}

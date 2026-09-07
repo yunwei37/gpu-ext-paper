@@ -99,7 +99,7 @@ Each trigger asynchronously initiates multiple proactive or deferred state trans
 For example, an application launch event can trigger prefetching based on device observations while requesting preemption of a lower-priority tenant.
 % 例如，应用启动事件可以依据设备观测触发预取，同时请求抢占低优先级租户。
 
-\input{tex/fig_exec_model}
+\input{tex-revision/fig_exec_model}
 
 To ensure OS kernel safety, verified kfuncs restrict policy actions to two dimensions: \emph{selection} (choosing resources, e.g., eviction order, tenant preemption priority) and \emph{timing} (when to act, e.g., proactive prefetch).
 % 为保证 OS 内核安全，经验证的 kfunc 将策略动作限制在两个维度：\emph{选择}（选择资源，如逐出顺序、租户抢占优先级）和\emph{时机}（何时行动，如主动预取）。

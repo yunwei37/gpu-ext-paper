@@ -24,8 +24,10 @@ make distclean  # Remove auxiliary files and the PDF
 ## Repository Structure
 
 ```
-main.tex          # Main document entry point
-tex/              # Section source files
+main.tex          # Shared entry point; old abstract and section inputs commented out
+tex/              # Original section files, retained unchanged
+tex-revision/     # Active revised abstract and section files
+  abstract.tex
   intro.tex
   background.tex
   design.tex
@@ -33,8 +35,10 @@ tex/              # Section source files
   eval.tex
   discussion.tex
   conclusion.tex
-img/              # Figures and diagrams
-cite.bib          # Bibliography
+img/              # Original figures and diagrams
+tex-revision/img/ # Revision figures and supporting data
+cite.bib          # Original bibliography, retained unchanged
+tex-revision/cite.bib # Active revision bibliography
 usenix.sty        # USENIX style file
 Makefile           # Build rules
 ```
