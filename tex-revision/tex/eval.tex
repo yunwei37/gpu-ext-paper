@@ -238,8 +238,28 @@ Only 2 of 8 policies yielded positive results.
 We evaluate \sys on multi-tenant GPU workloads, comparing per-tenant policies against global and framework-managed approaches.
 % 我们在多租户 GPU 工作负载上评估 gpubpf，将每租户策略与全局策略和框架管理的方法进行对比。
 
-Compute-bound scheduling results are reported with the XSched and GPREEMPT policy ports in \S\ref{sec:policy-mechanism}.
-% 计算密集型调度结果与 XSched 和 GPREEMPT 策略移植一并在 \S\ref{sec:policy-mechanism} 报告。
+\paragraph{Compute-bound Scheduler (LC + BE).}
+% 计算密集型调度器（LC + BE）。
+We evaluate \sys's eBPF struct\_ops scheduling policies on \emph{compute-bound} (SM-limited) multi-tenant workloads, without memory oversubscription.
+% 我们在\emph{计算密集型}（SM 受限）的多租户工作负载上评估 gpubpf 基于 eBPF 的 struct\_ops 调度策略，不涉及内存超订。
+2 latency-critical (LC) processes and 4 best-effort (BE) processes run concurrently, each with 4 CUDA streams submitting 50 compute kernels.
+% 2 个延迟关键（LC）进程与 4 个尽力型（BE）进程并发运行，每个进程通过 4 条 CUDA 流提交 50 个计算内核。
+We compare the native scheduler against \sys with differentiated timeslices (LC: 1s, BE: 200$\mu$s) using a preemption policy equivalent to GPREEMPT's~\cite{fan2025gpreempt} priority-based timeslice scheduling, implemented as a \sys eBPF program.
+% 我们将原生调度器与采用差异化时间片的 gpubpf（LC：1 秒，BE：200$\mu$秒）对比，其抢占策略等价于 GPREEMPT~\cite{fan2025gpreempt} 的基于优先级的时间片调度，以 gpubpf eBPF 程序实现。
+\Cref{fig:scheduler-latency} shows that \sys reduces LC P99 launch latency by 96\% (1188$\mu$s $\to$ 53$\mu$s).
+% \Cref{fig:scheduler-latency} 显示，gpubpf 将 LC 的 P99 启动延迟降低 96\%（1188$\mu$秒 $\to$ 53$\mu$秒）。
+BE throughput remains unchanged.
+% BE 吞吐量保持不变。
+
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/scheduler_latency_throughput.pdf}
+
+\caption{Multi-tenant GPU scheduling with \sys{} (LC: latency-critical, BE: best-effort).}
+% 使用 gpubpf 的多租户 GPU 调度（LC：延迟关键型，BE：尽力型）。
+\label{fig:scheduler-latency}
+% \vspace{-1.5em}
+\end{figure}
 
 \paragraph{Memory-bound Priority Differentiation.}
 % 内存密集型优先级区分。
