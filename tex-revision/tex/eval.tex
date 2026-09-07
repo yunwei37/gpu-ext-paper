@@ -278,13 +278,14 @@ We implement a preemption policy equivalent to GPREEMPT's~\cite{fan2025gpreempt}
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=\textwidth]{img/results-raw/revision/scheduling-comparison-2x2.pdf}
+\includegraphics[width=\textwidth]{img/results-raw/revision/scheduling-comparison-1x4-bars.pdf}
 
-\caption{Matched scheduling policies on RTX 5090. Left: XSched workload, two LC and four BE processes; (a) LC queue-entry p99; (c) BE kernels/s. Right: VGG19 LC at 100 requests/s against three ResNet152 BE loads; (b) arrival-to-verified-response p99; (d) in-window BE goodput. Points show individual cells; horizontal bars show medians.}
-% RTX 5090 上的匹配调度策略。左：XSched 工作负载，两个 LC 和四个 BE 进程；(a) LC 入队 p99；(c) BE 内核数/秒。右：VGG19 LC 每秒 100 请求，对应三种 ResNet152 BE 负载；(b) 到已验证响应的 p99；(d) 窗口内 BE 有效吞吐。点为各个单元，横线为中位数。
+\caption{Matched scheduling policies on RTX~5090. (a,b) XSched workload, two LC and four BE processes: (a) LC queue-entry p99; (b) BE kernels/s. (c,d) VGG19 LC at 100 requests/s against three ResNet152 BE loads: (c) arrival-to-verified-response p99; (d) in-window BE goodput. Bars show medians (XSched: ten paired repetitions; GPreempt: five per load).}
+% RTX 5090 上的匹配调度策略。(a,b) XSched 工作负载，两个 LC 和四个 BE 进程：(a) LC 入队 p99；(b) BE 内核数/秒。(c,d) VGG19 LC 每秒 100 请求、对应三种 ResNet152 BE 负载：(c) 到已验证响应的 p99；(d) 窗口内 BE 有效吞吐。柱形为中位数（XSched：十次配对重复；GPreempt：每种负载五次）。
 \label{fig:scheduler-latency}
 \label{fig:matched-scheduling}
 \end{figure*}
+% --- Earlier 2x2 point/median version of this figure: retained at img/results-raw/revision/scheduling-comparison-2x2.pdf ---
 
 % --- Submitted version's figure (superseded by the matched comparison above; retained for reference) ---
 % \begin{figure}
