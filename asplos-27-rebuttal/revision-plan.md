@@ -2,6 +2,14 @@
 
 ## Active follow-up — 2026-09-07 UTC
 
+The [LMCache admission-stage diagnostic](../../../workloads/lmcache-disk/results-575-gds-admission-timing-20260907.md)
+is complete in main `37299d27`: 15 cells and 2,400 storage requests. Median
+native/BPF demand-read admission is 11.973/30.140 us, while end-to-end reads
+take hundreds of milliseconds. These instrumented measurements identify
+decision overhead but do not establish it as the sole bottleneck. A shared
+native/BPF write-delay-budget experiment is the next optimization; the old
+10 ms results remain, and read gains must be reported with write costs.
+
 The [event-driven LMCache follow-up](../../../workloads/lmcache-disk/results-575-gds-live-event-driven-20260907.md)
 now completes all 15 cells / 2,400 requests and is published in main
 `f7412aa4` (implementation `c2ecedcb`). FIFO/native/BPF read-p99 medians are
@@ -14,12 +22,13 @@ The old polling and GIL-ablation records remain. This closes the event-driven
 implementation and measurement listed as future work below; it does not
 close the remaining paper-wide commitments.
 
-The GDS-compatible stale-state source now builds successfully and is pushed
-in driver `a2b40efd`; the direct performance runner without historical
-preflight is in main `e88e1265`. Neither the new module nor a new stale-state
-GPU campaign has been run. The saved current GDS module is recorded in the
-[build report](../../../workloads/stale-state-575/current-gds-compatibility-20260907.md)
-for restoration after the upcoming module experiment.
+The [GDS-compatible stale-state campaign](../../../workloads/stale-state-575/results-performance-gds-20260907.md)
+now completes all 21 cells and restoration of the saved GDS module in main
+`bc0ff88a` (driver `a2b40efd`, runner `e88e1265`). Fresh native/BPF throughput
+medians are 272832.196/271397.413 checked words/s. Delaying state by 1000 ms
+reduces paired throughput by median 23.192%/22.684%, respectively. The raw
+traces and lifecycle logs are retained; phase-aligned decision-age and UVM
+analysis remains in progress, without repeating completed GPU cells.
 
 Latest update: the live-feedback provider, executor, runner and
 [five-block performance comparison](../../../workloads/lmcache-disk/results-575-gds-mixed-live-feedback-20260907.md)
