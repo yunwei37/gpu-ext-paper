@@ -2,14 +2,16 @@
 
 ## Active follow-up — 2026-09-07 UTC
 
-The [PTX-free application-injection follow-up](../../experiment/sass-existing-application-next-20260907.md)
-now has a built BPF device-function exporter (main `08e1692e`), preserving
-the real compiler-generated function rather than launching a companion
-kernel. The four-instruction input exports a 316-byte two-parameter PTX
-function; merged wrapper/BPF code assembles into sm_120 tools-patch SASS.
-Local OpenCode Qwen and GLM are completing tool embedding. Live execution
-inside the existing application's EXIT remains unfinished, and successful
-assembly alone does not establish it. The
+The [PTX-free application-injection result](../../../workloads/sass-kretprobe/results/sass-exit-575-20260907-01/results.md)
+is now live and published in main `9d823ede`, using the BPF device-function
+exporter in `08e1692e`. NVBit inserts the compiler-generated BPF function
+at two EXIT sites in an existing cubin-only vector-add application; all
+100,352 launched threads write their BPF outputs, and both baseline and
+instrumented processes return zero with the expected application output.
+This is in-body execution, not a companion kernel. The implementation
+paragraph now reports this bounded result: one context, one selected kernel,
+eight-byte per-thread outputs, no claim of general helpers/maps, late attach
+or performance parity. The draft builds in 17 pages. The
 [recovered branch evidence](../../experiment/revision-sass-aot-readiness-20260904.md)
 also retains bpftime `8e4e64d`'s older five-run companion interposition
 measurement (5.1375/32.1015 us steady total), without treating that separate
