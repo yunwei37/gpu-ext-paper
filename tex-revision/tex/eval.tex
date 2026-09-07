@@ -406,6 +406,11 @@ A host-JIT \sys{} program implements Hummingbird's~\cite{hu2026hummingbird} idle
 % 主机 JIT 的 \sys{} 程序实现 Hummingbird~\cite{hu2026hummingbird} 的空闲准入规则，决定后台工作何时可进入前台空闲区间，由共用的 DNN 执行器提交获准的工作。
 Across periodic and BurstGPT arrivals, \sys{} lowers LC response p99 by 5.9--9.1\% relative to default scheduling, compared with 7.5--8.2\% for C.
 % 在周期性和 BurstGPT 到达模式下，相对默认调度，\sys{} 将 LC 响应 p99 降低 5.9--9.1\%，C 实现降低 7.5--8.2\%。
+Both ports pay for this foreground protection with background throughput: BE goodput medians fall from 179.2333/179.1500 req/s under native CUDA admission to 133.2167/133.1667 req/s with the C port and 133.0500/132.8167 req/s with the BPF port under periodic/BurstGPT arrivals.
+% 两个移植以前台保护换取后台吞吐：周期/BurstGPT 到达下，BE 良吞吐中位数从原生 CUDA 准入的 179.2333/179.1500 req/s 降至 C 移植的 133.2167/133.1667 req/s 与 BPF 移植的 133.0500/132.8167 req/s。
+Relative to fixed GPreempt admission, both ports lose about 19--20\% of this goodput in paired comparisons, a foreground/background tradeoff of this conservative compatibility port on the GPreempt DNN frontend rather than a measured property of the original Hummingbird scheduling policy.
+% 相对固定 GPreempt 准入，两个移植在配对比较中损失约 19--20\% 的该良吞吐；此前台/后台权衡描述的是 GPreempt DNN 前端上保守兼容移植的属性，而非实测的原版 Hummingbird 调度策略属性。
+% Evidence: workloads/hummingbird/results-575-20260903.md; all 50 cells accepted; no rerun.
 
 \paragraph{POD-Attention (device-side selection)}
 % POD-Attention（设备端选择）
@@ -420,17 +425,21 @@ For Llama decode batch 128, operator latency falls from 5.360~ms with two-stream
 % 机制代价
 The matched comparisons separate policy benefit from the cost of executing the same decisions through \sys{}.
 % 匹配对比区分策略收益与通过 \sys{} 执行相同决策的代价。
-Expert Buffering incurs 0.7\% overhead; POD's paired operator-latency effects range from a 0.44\% reduction to a 1.18\% increase across ten shapes; a kernel-verified UVM no-prefetch policy incurs 3.2\% overhead over fifteen paired fault-path runs.
-% Expert Buffering 的开销为 0.7\%；POD 在十种形状上的配对算子延迟效应从降低 0.44\% 到增加 1.18\%；经内核验证的 UVM 无预取策略在十五次配对缺页路径运行中的开销为 3.2\%。
+These costs are operation-specific examples from particular workloads and hooks rather than a universal overhead bound: Expert Buffering incurs 0.7\% overhead; POD's paired operator-latency effects range from a 0.44\% reduction to a 1.18\% increase across ten shapes; a kernel-verified UVM no-prefetch policy incurs 3.2\% overhead over fifteen paired fault-path runs.
+% 这些代价是特定工作负载与钩子下的操作级示例，而非通用的开销界限：Expert Buffering 的开销为 0.7\%；POD 在十种形状上的配对算子延迟效应从降低 0.44\% 到增加 1.18\%；经内核验证的 UVM 无预取策略在十五次配对缺页路径运行中的开销为 3.2\%。
+Storage measurements also limit this attribution: BPF/native paired p99 differences in the LMCache port (\S\ref{sec:rq1-agent}) range from $-39.7\%$ to $+33.8\%$ across five blocks of the same workload, so this variability precludes a tight estimate of mechanism overhead.
+% 存储测量也限制了这种归因：在 LMCache 移植（\S\ref{sec:rq1-agent}）的同一工作负载五个组内，BPF 相对原生的配对 p99 差异从 -39.7\% 到 +33.8\%，这种变动使得机制开销无法得到精确估计。
 
 \paragraph{Agent-discovered policies}
 % 智能体发现的策略
-Beyond reproducing published policies, the mechanism enables policies that no existing system implements.
-% 除了复现已发表的策略，该机制还使能了任何现有系统都未实现的策略。
+Beyond reproducing published policies, our study also included agent-discovered combinations of cross-layer observations and controls.
+% 除了复现已发表的策略，我们的研究还包含智能体发现的跨层观测与控制组合。
 In the MoE study (\S\ref{sec:eval}), device-side tracing led the agent to a stride-prefetch policy aligned with per-layer expert weight layout combined with LFU eviction that protects shared layers; in the KV-cache study, the agent differentiated prefetch by region type (stride for weights, sequential for KV-cache) under a PCIe-utilization budget, avoiding the mutual thrashing that a uniform policy causes.
 % 在 MoE 研究（\S\ref{sec:eval}）中，设备端追踪引导智能体得出与每层专家权重布局对齐的步长预取策略，并结合保护共享层的 LFU 驱逐；在 KV-cache 研究中，智能体在 PCIe 利用率预算下按区域类型区分预取（权重用步长、KV-cache 用顺序），避免了统一策略导致的相互抖动。
-These policies depend on cross-layer observations---device-side access patterns driving host-side migration---that framework-level mechanisms cannot express.
-% 这些策略依赖跨层观测——由设备端访问模式驱动主机端迁移——这是框架层机制无法表达的。
+Both combinations couple device-side observation with host-side action---device-traced access patterns driving host-side cache and migration decisions---and share the tradeoff that migration spends transfer bandwidth that demand traffic also needs.
+% 两种组合都将设备端观测与主机端动作耦合——由设备端追踪到的访问模式驱动主机端的缓存与迁移决策——并共有一个权衡：迁移会占用需求流量所需的传输带宽。
+Other systems may implement similar algorithms, but they would need their own observation and enforcement integration to couple device-side observations with migration and admission controls.
+% 其他系统可以实现类似的算法，但需要自身的观测与执行集成，才能将设备端观测与迁移和准入控制耦合起来。
 
 \subsection{RQ2: Mechanism Cost}
 % RQ2：机制代价

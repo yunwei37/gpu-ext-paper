@@ -47,6 +47,10 @@ Extending the state-machine model to storage offload would add storage-resident 
 % 将状态机模型扩展到存储卸载，需要增加存储驻留与传输进行中的状态：策略选择放置位置和传输时机，存储后端则保留缓冲区所有权并处理完成事件。
 A CXL tier could similarly add placement states through host memory-management interfaces; both extensions would require backend-specific transition validation.
 % CXL 层级也可通过主机内存管理接口增加放置状态；两种扩展都需要针对后端的转移验证。
+Our LMCache experiment (\S\ref{sec:rq1-agent}) evaluates the narrower storage-admission interface: BPF chooses submission or deferral, while LMCache owns disk I/O and completion.
+% 我们的 LMCache 实验（\S\ref{sec:rq1-agent}）评估范围更窄的存储准入接口：BPF 选择提交或延迟，LMCache 负责磁盘 I/O 与完成处理。
+It does not implement a complete storage-residency state machine or establish direct NVMe-to-GPU transfers.
+% 它并未实现完整的存储驻留状态机，也未证明 NVMe 到 GPU 的直接传输。
 
 \subsection{GPU-Specific Challenges for eBPF Extensibility}
 % eBPF 可扩展性的 GPU 特有挑战
@@ -107,6 +111,8 @@ The driver controls the underlying state machines; policies select the ordering 
 % 驱动掌控底层状态机；策略选择允许操作的顺序和时机，非法请求由 \S\ref{sec:verification} 中的转移规则处理。
 Currently, a single policy program is loaded system-wide but may internally differentiate tenant treatment for priorities, similar to sched\_ext; per-tenant isolation is future work.
 % 目前，单个策略程序系统级加载，但可在内部按优先级区分对待租户，类似 sched\_ext；按租户隔离是未来工作。
+Independent tenant policies would require per-cgroup attachment, verifier/runtime-enforced map namespaces, per-tenant hook budgets, and resource-ownership and permission checks; these are proposed extensions, not implemented isolation guarantees.
+% 独立租户策略需要按 cgroup 附加、由验证器和运行时强制的 map 命名空间、按租户分配的钩子预算，以及资源所有权与权限检查；这些是拟议扩展，而非已实现的隔离保证。
 
 \subsection{Runtime Verification and Optimizations}
 % 运行时验证与优化
