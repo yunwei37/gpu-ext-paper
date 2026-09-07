@@ -371,8 +371,8 @@ Under continuous background load, this policy reduces LC response p99 from 1.796
 
 \paragraph{Expert Buffering (expert residency)}
 % Expert Buffering（专家驻留）
-A host-side \sys{} program implements Expert Buffering's~\cite{huang2023towards} inactive-first expert admission and eviction decisions, which the shared cache executor applies.
-% 主机侧 \sys{} 程序实现 Expert Buffering~\cite{huang2023towards} 非活跃优先的专家准入与驱逐决策，由共用的缓存执行器执行。
+A host-side \sys{} program implements Expert Buffering's~\cite{huang2023towards} expert admission and eviction policy, prioritizing eviction of experts unused by the current batch; the shared cache executor applies its decisions.
+% 主机侧 \sys{} 程序实现 Expert Buffering~\cite{huang2023towards} 专家准入与驱逐策略，优先驱逐当前批次不用的专家；共用的缓存执行器执行这些决策。
 At the same cache capacity, both the native policy and \sys{} reduce whole-expert loads by 12.85\% relative to fixed-$K$ FIFO (\Cref{fig:matched-ports}(b)).
 % 在相同缓存容量下，原生策略与 gpubpf 均相对固定 K 的 FIFO 将完整专家加载次数减少 12.85\%（\Cref{fig:matched-ports}(b)）。
 
@@ -401,8 +401,10 @@ For Llama decode batch 128, operator latency falls from 5.360~ms with two-stream
 
 \paragraph{Mechanism cost}
 % 机制代价
-Expert Buffering incurs 0.7\% overhead; POD's operator latency changes in paired runs range from a 0.44\% reduction to a 1.18\% increase across ten shapes; a kernel-verified UVM no-prefetch policy incurs 3.2\% overhead over fifteen paired fault-path runs.
-% Expert Buffering 的开销为 0.7\%；POD 在十种形状上的配对运行中的算子延迟变化从降低 0.44\% 到增加 1.18\%；经内核验证的 UVM 无预取策略在十五次配对缺页路径运行中的开销为 3.2\%。
+Expert Buffering incurs 0.7\% overhead; across ten shapes, POD's operator latency in paired runs decreases by up to 0.44\% or increases by up to 1.18\%.
+% Expert Buffering 的开销为 0.7\%；在十种形状的配对运行中，POD 的算子延迟最多降低 0.44\% 或增加 1.18\%。
+A UVM policy verified by the kernel incurs 3.2\% overhead with prefetch disabled in fifteen paired runs measuring page-fault handling.
+% 在测量缺页处理的十五次配对运行中，通过内核验证的 UVM 策略在禁用预取时开销为 3.2\%。
 
 \subsection{RQ2: Mechanism Cost}
 % RQ2：机制代价
@@ -441,7 +443,7 @@ Attaching to a running process requires no application restart.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{tex-revision/img/results-raw/revision/obs-overhead-with-array.pdf}
-\caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B: ten baseline/tool pairs per arm, except \sys kernelretsnoop, which uses five independently measured pairs. Bars show means and whiskers show RTX~5090 run ranges; P40 uses original reported values. The axis is linear within $\pm1\%$ and logarithmic beyond. For \sys kernelretsnoop, records are collected after prefill (10.38\,ms, outside prefill timing).}
+\caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B: ten baseline/tool pairs per configuration, except \sys kernelretsnoop (five independent pairs). Bars show means and whiskers show RTX~5090 run ranges; P40 uses original reported values. The axis is linear within $\pm1\%$ and logarithmic beyond. For \sys kernelretsnoop, records are collected after prefill (10.38\,ms, outside prefill timing).}
 % 相对未插桩基线的预填充吞吐下降。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B：每个配置十组基线/工具配对，gpubpf kernelretsnoop 使用另外独立测量的五组配对。柱形为均值，须线为 RTX~5090 的运行范围；P40 使用原文报告值。坐标轴在 ±1\% 内为线性，之外为对数。gpubpf kernelretsnoop 在预填充后收集记录（10.38 ms，不计入预填充计时）。
 \label{fig:obs-overhead}
 \end{figure}
