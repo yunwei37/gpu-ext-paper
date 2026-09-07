@@ -28,8 +28,8 @@ The matched comparisons in \S\ref{sec:policy-mechanism} additionally evaluate po
 % \S\ref{sec:policy-mechanism} 进一步评估 MoE-Infinity、XSched、GPREEMPT、Expert Buffering、FineMoE、Hummingbird 和 POD-Attention 等已发表系统的策略；每组配对原生策略实现和 \sys{} 移植版。
 We use PyTorch (version 2.9.0) and vLLM (version 0.11.0) with custom allocators, llama.cpp (version 7101), and Faiss (version 1.13.0) with UVM build config.
 % 我们使用 PyTorch（版本 2.9.0）和 vLLM（版本 0.11.0，配自定义分配器）、llama.cpp（版本 7101）以及采用 UVM 构建配置的 Faiss（版本 1.13.0）。
-All tests with \sys policies require no application modifications.
-% 所有使用 gpubpf 策略的测试均无需修改应用。
+Driver-attached \sys{} policies can operate without application-source changes; the matched research-policy ports and storage-tier comparison use the adapters and shared executors described below.
+% 驱动挂接的 \sys{} 策略可以无需修改应用源码运行；匹配的研究策略移植和存储层对比则使用下文说明的适配器与共享执行器。
 
 \begin{figure}
 \centering

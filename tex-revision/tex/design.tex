@@ -232,8 +232,8 @@ This model suffices as policies rely on approximate statistics; occasional stale
 
 When access patterns change faster than the synchronization interval, policies can issue synchronization operations more frequently, trading overhead for freshness, while transition validation (\S\ref{sec:verification}) prevents stale requests from corrupting driver state.
 % 当访问模式变化快于同步周期时，策略可以提高同步频率，以开销换取新鲜度；同时转移验证（\S\ref{sec:verification}）防止过期请求破坏驱动状态。
-A controlled 21-cell RTX 5090 UVM study delays driver-owned phase snapshots while holding the native/BPF policy fixed: a 1 s publication delay reduces paired throughput by median 23.2\%/22.7\%, respectively.
-% 一个受控的 RTX 5090 UVM 实验包含 21 个配置，保持原生/BPF 策略不变并延迟驱动持有的阶段快照：1 秒发布延迟使两者的配对吞吐中位数分别下降 23.2\%/22.7\%。
+A controlled RTX 5090 UVM study repeats seven configurations three times, delaying driver-owned phase snapshots while holding the native/BPF policy fixed: a 1 s publication delay reduces paired throughput by median 23.2\%/22.7\%, respectively.
+% 一个受控的 RTX 5090 UVM 实验对七个配置各重复三次，保持原生/BPF 策略不变并延迟驱动持有的阶段快照：1 秒发布延迟使两者的配对吞吐中位数分别下降 23.2\%/22.7\%。
 About 89\% of decisions then use a snapshot from the wrong dense/sparse phase; this is a decision-weighted fraction, not time spent with stale state.
 % 此时约 89\% 的决策使用了与实际稠密/稀疏阶段不符的快照；这是按决策次数计算的比例，不是状态陈旧的时间比例。
 The driver reports no thrashing events in this study, so the evidence establishes a performance sensitivity to delayed state, not observed driver-classified thrashing or a tested adaptive mitigation.
