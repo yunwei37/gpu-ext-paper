@@ -48,7 +48,9 @@ performance evidence or a claim that every selected policy beats no policy.
 
 `obs-overhead-with-array.pdf` extends the revision observability comparison
 with the completed five-pair GPU-local-buffer campaign. Original P40 values
-and all ten-pair RTX 5090 measurements are retained. The five new pairs use
+are unchanged; the RTX 5090 gpubpf kernelretsnoop bar uses the five-pair
+result (5.572554%). All earlier ten-pair measurements remain in the JSON and
+the previous figure, including the superseded kernelretsnoop result. The five pairs use
 their own uninstrumented baseline; they were measured separately from the
 NVBit and original gpubpf campaign. Only prefill throughput is plotted; final
 collection averages 10.379343 ms and is outside that timing window.
@@ -64,7 +66,8 @@ python tex-revision/img/results-raw/revision/plot_obs_with_array.py --output-pre
 
 The plot retains the earlier two-panel grouped-bar layout. Bars show means;
 whiskers show the full RTX 5090 run ranges, including the launchlate range
-below zero. GPU buffering uses an additional hatched bar for kernelretsnoop.
+below zero. Only gpubpf and NVBit appear in the legend; the selected
+kernelretsnoop measurement uses GPU buffering without a separate series.
 P40 retains the original reported values. The single-column vector canvas is
 3.4 inches wide with 7--7.5 pt text. The previous `obs-overhead-bars.pdf` is kept.
 

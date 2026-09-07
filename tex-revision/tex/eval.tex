@@ -425,26 +425,24 @@ With hooks enabled but no policy attached, the overhead is less than 0.2\%.
 
 \paragraph{Device-side Overhead.}
 % 设备端开销。
-We evaluate device-side observability tools built on \sys (\Cref{fig:obs-overhead}) using llama.cpp prefill on two GPUs: the P40 (Llama 1B, sequence-mixed) and the RTX~5090 (TinyLlama-1.1B, ten randomized repetitions with paired custom NVBit adapters~\cite{villa2019nvbit}).
-% 我们在两块 GPU 上使用 llama.cpp 预填充评估基于 gpubpf 构建的设备端可观测工具（\Cref{fig:obs-overhead}）：P40（Llama 1B，序列混合）和 RTX~5090（TinyLlama-1.1B，十次随机重复，配对的定制 NVBit 适配器~\cite{villa2019nvbit}）。
+We evaluate device-side observability tools built on \sys (\Cref{fig:obs-overhead}) using llama.cpp prefill on two GPUs: the P40 (Llama 1B, sequence-mixed) and the RTX~5090 (TinyLlama-1.1B, 512-token prefill with custom NVBit adapters~\cite{villa2019nvbit}).
+% 我们在两块 GPU 上使用 llama.cpp 预填充评估基于 gpubpf 构建的设备端可观测工具（\Cref{fig:obs-overhead}）：P40（Llama 1B，序列混合）和 RTX~5090（TinyLlama-1.1B，512-token 预填充，定制 NVBit 适配器~\cite{villa2019nvbit}）。
 Tools include \texttt{kernel\-ret\-snoop} (per-block finish timestamps), \texttt{thread\-hist} (load imbalance detection), and \texttt{launch\-late} (GPU kernel launch latency).
 % 工具包括 \texttt{kernel\-ret\-snoop}（每块完成时间戳）、\texttt{thread\-hist}（负载不均衡检测）和 \texttt{launch\-late}（GPU 内核启动延迟）。
 Overhead is measured as token/s degradation during prefill.
 % 开销以预填充期间 token/s 的下降来衡量。
 On the P40, \sys achieves 3--14\% overhead versus NVBit's 85--93\%, due to the warp-uniform execution model.
 % 在 P40 上，得益于 warp 统一执行模型，gpubpf 的开销为 3--14\%，而 NVBit 为 85--93\%。
-On the RTX~5090, \sys has lower overhead than NVBit for all three tools: 90.71\% versus 99.62\% for the complete per-warp kernel-return stream, 2.97\% versus 10.35\% for the exit-count histogram, and 0.22\% versus 8.80\% for \texttt{launchlate}.
-% 在 RTX~5090 上，gpubpf 在三个工具上的开销均低于 NVBit：完整的逐 warp 内核返回记录流为 90.71\% 对 99.62\%，退出计数直方图为 2.97\% 对 10.35\%，\texttt{launchlate} 为 0.22\% 对 8.80\%。
-For 512-token prefill on the RTX~5090, buffering the complete per-warp return records in GPU memory reduces prefill overhead to 5.57\% across five additional baseline/tool pairs, with records collected after prefill.
-% 在 RTX~5090 的 512-token 预填充中，将完整的逐 warp 返回记录缓存在 GPU 内存中，并在预填充后收集，使另外五组基线/工具配对测量的预填充开销降至 5.57\%。
+On the RTX~5090, \sys has lower overhead than NVBit for all three tools: 5.57\% versus 99.62\% for per-warp kernel-return logging, 2.97\% versus 10.35\% for the exit-count histogram, and 0.22\% versus 8.80\% for \texttt{launchlate}.
+% 在 RTX~5090 上，gpubpf 在三个工具上的开销均低于 NVBit：逐 warp 内核返回记录为 5.57\% 对 99.62\%，退出计数直方图为 2.97\% 对 10.35\%，\texttt{launchlate} 为 0.22\% 对 8.80\%。
 Attaching to a running process requires no application restart.
 % 附加到正在运行的进程无需重启应用。
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{img/results-raw/revision/obs-overhead-with-array.pdf}
-\caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B: ten pairs per tool, plus five independent pairs for \sys GPU buffering. Bars show means, with whiskers for the RTX~5090 run ranges; P40 shows original reported values. The axis is linear within $\pm1\%$ and logarithmic beyond. GPU buffering yields 5.57\% prefill overhead; its final collection (10.38\,ms) occurs outside prefill timing.}
-% 相对未插桩基线的预填充吞吐下降。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B：每个工具十组配对，另加 gpubpf GPU 缓冲的五组独立配对。柱形表示均值，须线表示 RTX~5090 各次运行的范围；P40 使用原文报告值。坐标轴在 ±1\% 内为线性，之外为对数。预填充计时不含最终收集（GPU 缓冲为 10.38 ms）；GPU 缓冲的预填充开销为 5.57\%。
+\caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B: ten baseline/tool pairs per arm, except \sys kernelretsnoop, which uses five independently measured pairs. Bars show means and whiskers show RTX~5090 run ranges; P40 uses original reported values. The axis is linear within $\pm1\%$ and logarithmic beyond. For \sys kernelretsnoop, records are collected after prefill (10.38\,ms, outside prefill timing).}
+% 相对未插桩基线的预填充吞吐下降。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B：每个配置十组基线/工具配对，gpubpf kernelretsnoop 使用另外独立测量的五组配对。柱形为均值，须线为 RTX~5090 的运行范围；P40 使用原文报告值。坐标轴在 ±1\% 内为线性，之外为对数。gpubpf kernelretsnoop 在预填充后收集记录（10.38 ms，不计入预填充计时）。
 \label{fig:obs-overhead}
 \end{figure}
 

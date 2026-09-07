@@ -3,7 +3,8 @@
 
 Two side-by-side grouped-bar panels preserve the earlier figure's layout.
 P40 uses the submitted values. RTX 5090 uses the original ten paired blocks
-per tool plus five independent GPU-buffer pairs for kernelretsnoop. Bars
+per tool, with gpubpf kernelretsnoop taken from the five independent
+GPU-buffer pairs. The earlier kernelretsnoop measurements stay in the data. Bars
 show means, and RTX 5090 whiskers show the complete observed range.
 The symlog axis includes zero and the negative launchlate range.
 All measurements are prefill throughput loss relative to the baseline
@@ -131,6 +132,11 @@ def build_data(p40: dict, old: dict, new: dict) -> dict:
                   "baseline throughput (lower is better)",
         "plot_note": "grouped mean bars with full-range whiskers; symlog axis "
                      "linear between -1 and +1 retains the negative launchlate range",
+        "display_selection": {
+            "rtx5090_gpubpf_kernelretsnoop": "rtx5090_gpu_array",
+            "other_rtx5090_arms": "rtx5090_table1",
+            "historical_kernelretsnoop": "retained in data, superseded in current plot"
+        },
         "campaigns": {
             "p40_submitted": {
                 "gpu": "P40",
@@ -208,19 +214,16 @@ def _draw(data: dict, paths: list[Path]) -> None:
             for index, tool in enumerate(TOOLS):
                 for system, offset in zip(SYSTEMS, (-.22, .22)):
                     arm = f"{system}_{tool}"
-                    mean = p40[arm] if column == 0 else old["mean_overhead_pct"][arm]
-                    # Leave room for the additional buffered gpubpf result.
+                    campaign = new if arm == "gpubpf_kernelretsnoop" else old
+                    mean = p40[arm] if column == 0 else campaign["mean_overhead_pct"][arm]
                     center = index + offset
                     width = .36
-                    if column == 1 and index == 0:
-                        center = index + (-.29 if system == "gpubpf" else 0)
-                        width = .25
                     axis.bar(center, mean, width=width, color=ARM_COLORS[system],
                              edgecolor="#333333", linewidth=.3,
                              hatch="//" if system == "nvbit" else None)
                     if column == 1:
-                        low = old["min_overhead_pct"][arm]
-                        high = old["max_overhead_pct"][arm]
+                        low = campaign["min_overhead_pct"][arm]
+                        high = campaign["max_overhead_pct"][arm]
                         axis.errorbar(center, mean, yerr=[[mean-low], [high-mean]],
                                       fmt="none", color=GRAY, capsize=1.5, linewidth=1)
             axis.set_yscale("symlog", linthresh=1)
@@ -230,19 +233,10 @@ def _draw(data: dict, paths: list[Path]) -> None:
             axis.set_title(("(a) P40", "(b) RTX 5090")[column], fontsize=7.5, pad=4)
             axis.grid(axis="y", alpha=.25, linewidth=.6)
             axis.axhline(0, color="#555555", linewidth=.6)
-        arm = "gpubpf_kernelretsnoop"
-        mean = new["mean_overhead_pct"][arm]
-        low, high = new["min_overhead_pct"][arm], new["max_overhead_pct"][arm]
-        axes[1].bar(.29, mean, width=.25, facecolor="white",
-                    edgecolor=ARM_COLORS["gpubpf"], hatch="xxxx", linewidth=.7)
-        axes[1].errorbar(.29, mean, yerr=[[mean-low], [high-mean]],
-                         fmt="none", color=GRAY, capsize=1.5, linewidth=1)
         axes[0].set_ylabel("Prefill throughput loss (%)")
         handles = [Patch(facecolor=ARM_COLORS["gpubpf"], label="gpubpf"),
-                   Patch(facecolor=ARM_COLORS["nvbit"], hatch="//", label="NVBit"),
-                   Patch(facecolor="white", edgecolor=ARM_COLORS["gpubpf"],
-                         hatch="xxxx", label="GPU buffer")]
-        figure.legend(handles=handles, loc="upper center", ncol=3, frameon=False,
+                   Patch(facecolor=ARM_COLORS["nvbit"], hatch="//", label="NVBit")]
+        figure.legend(handles=handles, loc="upper center", ncol=2, frameon=False,
                       bbox_to_anchor=(.5, 1.0), handlelength=1.1,
                       handletextpad=.4, columnspacing=.9)
         figure.subplots_adjust(left=.17, right=.99, bottom=.23, top=.76, wspace=.20)
