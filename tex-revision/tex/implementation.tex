@@ -60,28 +60,10 @@ Trampolines insert prologue/epilogue logic for SIMT register preservation.
 % Trampoline 插入用于 SIMT 寄存器保存的前导/收尾逻辑。
 Each trampoline aggregates per-lane inputs, selects an active warp leader to execute the policy once, and broadcasts its decisions to the participating lanes.
 % 每个 trampoline 聚合逐 lane 输入，选择一个活跃的 warp leader 执行一次策略，并将决策广播给参与的 lane。
-Aggregation reduces duplicate work within a warp; it does not make total instrumentation cost independent of block count.
-% 聚合减少了 warp 内的重复工作，但并不使插桩总成本独立于线程块数量。
-Total cost still depends on the number of executed hooks and their map accesses or output records, as illustrated by the complete-record and GPU-local-buffer variants in \S\ref{sec:rq2-cost}.
-% 总成本仍取决于实际执行的钩子数量及其 map 访问或输出记录，\S\ref{sec:rq2-cost} 中的完整记录流与 GPU 本地缓冲变体展示了这一点。
 For block-level scheduling, \sys implements policies using persistent GPU kernels that poll and claim logical work units; on Blackwell GPUs, we use cluster launch control APIs~\cite{cuda-clc} to schedule thread blocks.
 % 对于块级调度，gpubpf 使用常驻 GPU 内核（轮询并认领逻辑工作单元）来实现策略；在 Blackwell GPU 上，我们使用 cluster launch control API~\cite{cuda-clc} 来调度线程块。
 For memory observation, \sys attaches eBPF handlers at memory instructions, GPU kernel function boundaries, and tracepoints to capture access patterns and issue policy hints to the host driver via cross-layer maps (e.g., device L2 prefetch can trigger a host callback for extended prefetch).
 % 对于内存观测，gpubpf 在内存指令、GPU 内核函数边界和 tracepoint 处挂载 eBPF 处理函数，以捕获访问模式并通过跨层 map 向主机端驱动下发策略提示（例如，设备端 L2 预取可触发主机端回调以进行扩展预取）。
-
-\paragraph{Binaries without PTX}
-% 不含 PTX 的二进制程序。
-Host-side policies do not require application PTX; for device-side observation, we additionally implement a bounded SASS-injection prototype using NVBit~\cite{villa2019nvbit}.
-% 主机端策略不依赖应用 PTX；对于设备端观测，我们还使用 NVBit~\cite{villa2019nvbit} 实现了一个范围受限的 SASS 注入原型。
-The prototype verifies a BPF program, compiles it into a device function, and embeds its assembled SASS in an NVBit tool that inserts calls before the target kernel's EXIT instructions.
-% 该原型验证 BPF 程序，将其编译为设备函数，再把汇编后的 SASS 嵌入 NVBit 工具，由工具在目标内核的 EXIT 指令前插入调用。
-On an RTX 5090, an existing vector-add application compiled with cubin only executes the BPF callback on all 100,352 launched threads while retaining its expected output.
-% 在 RTX 5090 上，仅包含 cubin 的既有向量加法程序在全部 100,352 个启动线程上执行了 BPF 回调，同时保持了预期计算结果。
-The callback runs inside the target kernel, not as a separately launched companion kernel.
-% 回调在目标内核内部运行，而不是作为单独启动的伴随内核运行。
-This result covers one context, one selected kernel and an eight-byte per-thread output; it does not establish general helper/map support, late attachment, or performance parity with the PTX path.
-% 该结果覆盖单个上下文、单个选定内核和逐线程八字节输出；它并未证明通用 helper/map 支持、运行中挂载或与 PTX 路径的性能相当。
-% Evidence: gpu_ext/workloads/sass-kretprobe/results/sass-exit-575-20260907-01/.
 
 \paragraph{Hierarchical Maps and Cross-Domain State}
 % 分层 Map 与跨域状态

@@ -10,8 +10,8 @@ Recent research shows their substantial impact on Unified Virtual Memory (UVM) p
 For instance, optimal eviction and prefetch policies can improve performance by up to 73\% under memory oversubscription~\cite{park2025helm,kehne2019etc,ganguly2019interplay}.
 % 例如，在内存超配下，最优的逐出与预取策略可将性能提升多达 73\%。
 
-Finding an optimal GPU resource management policy is challenging.
-% 寻找最优的 GPU 资源管理策略颇具挑战。
+Unfortunately, finding an optimal GPU resource management policy is challenging.
+% 遗憾的是，寻找最优的 GPU 资源管理策略颇具挑战。
 The optimal memory and scheduling policies vary significantly across workloads, hardware, and deployment contexts~\cite{kwon2023efficient,agrawal2024taming,lin2024towards,wang2016gunrock,shoeybi2019megatron,rasley2020deepspeed,pan2024survey,cao2023gpu}, with no one policy dominating the others.
 % 最优的内存与调度策略随负载、硬件和部署环境的不同而差异显著，不存在一个策略在所有场景下都占优。
 For example, aggressive memory prefetching improves latency for LLM MoE inference by reducing memory stalls~\cite{park2025helm,ganguly2019interplay}, but increases the latency of graph analytics queries because it over-saturates memory bandwidth~\cite{ganguly2019interplay}.
@@ -20,16 +20,20 @@ Additionally, throughput-oriented scheduling improves average latency of vector 
 % 此外，面向吞吐量的调度改善了向量搜索的平均延迟，却恶化了交互式推理的尾延迟。
 
 %\arq{I don't love this sentence structure.}
-AI-driven exploration offers a promising way to automatically optimize programmable GPU resource management policies, as it can handle the vast, workload-specific policy space that makes manual tuning challenging.
-% AI 驱动的探索为自动优化可编程 GPU 资源管理策略提供了有前景的途径，因为它能够应对庞大且随负载而异的策略空间，而这正是手动调优的难点。
+We argue that the community should employ AI agents to automatically optimize programmable GPU resource management policies.
+% 我们认为，社区应当利用 AI 智能体来自动优化可编程的 GPU 资源管理策略。
+AI-driven exploration can handle the vast, workload-specific policy space that makes manual tuning challenging.
+% AI 驱动的探索能够应对庞大且随负载而异的策略空间，而这正是手动调优的难点。
 % Vast, workload-specific policy space make manual tuning costly but suitable for AI-driven exploration. 
 Agents can now generate complex code and optimize policies in domains such as compiler heuristics~\cite{alphaevolve2025}, datacenter scheduling, LLM serving~\cite{hamadanian2025glia,cheng2025barbarians}, training strategies~\cite{ding2025asap}, and CPU scheduling~\cite{dwivedula2025policysmith,zheng2025schedcp}.
 % 如今，智能体已能生成复杂代码，并在编译器启发式、数据中心调度、LLM 服务、训练策略和 CPU 调度等领域优化策略。
 In these use-cases, agents are generating fully fledged policy programs rather than simply tuning configuration parameters.
 % 在这些场景中，智能体生成的是完整的策略程序，而非简单地调节配置参数。
 
-We derive three requirements: systems should support programmable policy interfaces that are safe, dynamic, and full-stack, so that AI agents can optimize these policies effectively without sacrificing system health.
-% 我们提炼出三项要求：系统应支持安全、动态且全栈的可编程策略接口，使 AI 智能体能够在不损害系统健康的前提下有效优化这些策略。
+We derive three properties that systems should provide to enable AI agents to optimize programmable GPU resource management policies effectively without sacrificing system health.
+% 我们提炼出系统应提供的三项特性，使 AI 智能体能够在不损害系统健康的前提下有效优化可编程的 GPU 资源管理策略。
+Namely, a system should support programmable policy interfaces that are safe, dynamic, and full-stack.
+% 具体而言，系统应支持安全、动态且全栈的可编程策略接口。
 A policy interface is safe if it ensures that new policies cannot cause the system to crash; dynamic if it supports policy updates without requiring the system and applications to be restarted; and full-stack if it supports cross-application and device-internal visibility, as well as low-level hardware control.
 % 所谓安全，是指保证新策略不会导致系统崩溃；所谓动态，是指支持策略更新而无需重启系统和应用；所谓全栈，是指既支持跨应用和设备内部的可见性，又支持底层硬件控制。
 
@@ -41,8 +45,8 @@ Other approaches modify the OS kernel driver~\cite{kato2011timegraph,kato2012gde
 % 另一些方案修改 OS 内核驱动，也无法同时满足这三项要求。
 %full-stack at the host level but neither safe nor dynamic, and still lacks GPU-internal observability.
 
-We propose \sys, a new system that provides an OS interface for GPU resource management policy that is safe, dynamic, and full-stack.
-% 我们提出 \sys，一个提供安全、动态且全栈的 GPU 资源管理策略 OS 接口的新系统。
+In this paper, we propose \sys, a new system that provides an OS interface for GPU resource management policy that is safe, dynamic, and full-stack.
+% 本文提出 \sys，一个提供安全、动态且全栈的 GPU 资源管理策略 OS 接口的新系统。
 Similar to prior work on resource management~\cite{schedext-docs, zussman2025cache_ext, bachl2021flow}, \sys{} supports eBPF-based policies.
 % 与以往的资源管理工作类似，\sys 支持基于 eBPF 的策略。
 Users write callback functions that manage system resources and are called on user-defined events (e.g., when the system reaches a specific code location, or periodically).
@@ -80,6 +84,8 @@ Traditional eBPF does not allow such callbacks to modify OS state required to im
 % \sys 通过一种面向基于 eBPF 的资源管理的新型执行模型来应对这些挑战，将回调的效果与其触发事件解耦。
 Unlike prior eBPF-based systems (e.g., sched\_ext~\cite{schedext-docs}, cache\_ext~\cite{zussman2025cache_ext}, and XDP~\cite{bachl2021flow}), where each callback makes a single synchronous decision at a fixed event, \sys{} allows callbacks that asynchronously transition resources at user-defined events.
 % 不同于以往的 eBPF 系统（如 sched\_ext、cache\_ext 和 XDP），它们的每个回调在固定事件处做出单一的同步决策，\sys 允许回调在用户自定义事件处异步地转移资源。
+In particular, \sys callbacks invoke transitions when a given event occurs, and the system asynchronously transitions the resource between states.
+% 具体而言，\sys 回调在给定事件发生时被触发，系统随后异步地在状态之间转移资源。
 \sys{} callbacks can initiate multiple state transitions within a single event.
 % \sys 回调可以在单个事件中发起多次状态转移。
 Finally, \sys{} supports user-defined events that can execute policy code from anywhere in the GPU stack (application, OS kernel driver, or GPU device).
@@ -94,16 +100,14 @@ We implement \sys{} on Linux by extending the NVIDIA open GPU OS kernel modules~
 % 我们在 Linux 上实现 \sys，扩展 NVIDIA 开源 GPU OS 内核模块，并为 GPU 设备提供 eBPF SIMT 验证器和 JIT 运行时。
 We evaluate \sys{} across LLM inference, GNN training, vector search, and multi-tenant scenarios.
 % 我们在 LLM 推理、GNN 训练、向量搜索和多租户场景下评估 \sys。
-\sys-based policies improve throughput by up to $4.8\times$ over framework offloading and $1.76\times$ over application-tuned baselines, and reduce tail latency by up to $2\times$, with no application modifications or restarts.
-% 基于 \sys 的策略相比框架卸载最高提升 $4.8\times$ 吞吐量，相比应用调优的基线最高提升 $1.76\times$，并将尾延迟最多降低 $2\times$，且无需修改或重启应用。
-These gains come from the policies, not from an intrinsic BPF speedup; we separately port selected policies from seven published systems (including MoE-Infinity, XSched, and GPREEMPT) and compare them with native implementations on shared executors.
-% 这些收益来自策略本身，而非 BPF 的固有加速；我们另行移植七个已发表系统（包括 MoE-Infinity、XSched 和 GPREEMPT）中的选定策略，并在共享执行器上与原生实现比较。
-Mechanism costs vary by workload and code path: 0.7\% for Expert Buffering, from a 0.44\% improvement to a 1.18\% cost in POD-Attention operator latency, 3.2\% on a UVM fault path, and mixed read-latency effects in storage-tier admission (\S\ref{sec:policy-mechanism}).
-% 机制代价随负载与代码路径变化：Expert Buffering 为 0.7\%，POD-Attention 的算子延迟介于 0.44\% 改善与 1.18\% 成本之间，UVM 缺页路径为 3.2\%，存储层准入的读取延迟效应有好有坏（\S\ref{sec:policy-mechanism}）。
-In a historical agent study, AI agents generated all 59 evaluated eBPF policies, including eviction ordering, prefetch strategies, scheduling logic, and device-side work-stealing.
-% 在一项历史性的智能体研究中，AI 智能体生成了全部 59 个受测 eBPF 策略（包括逐出顺序、预取策略、调度逻辑和设备端工作窃取）。
-No OS kernel panics were observed throughout this process; this is deployment experience, not a proof or guarantee of safety.
-% 整个过程中未观察到任何 OS 内核恐慌；这是部署经验，而非对安全性的证明或保证。
+\sys-based policies improve throughput by up to $4.8\times$ over framework offloading and $1.76\times$ over application-tuned baselines, and reduce tail latency by up to $2\times$, with low overhead and no application modifications or restarts.
+% 基于 \sys 的策略相比框架卸载最高提升 $4.8\times$ 吞吐量，相比应用调优的基线最高提升 $1.76\times$，并将尾延迟最多降低 $2\times$，同时开销很低，且无需修改或重启应用。
+These gains come from the policies, not from an intrinsic BPF speedup: expressing the same policy through \sys{} costs 0.7--3.3\% in mechanism overhead, and \sys{} reimplementations of seven published resource-management systems (including MoE-Infinity, XSched, and GPREEMPT) match the original ad-hoc implementations within a few percent (\S\ref{sec:policy-mechanism}).
+% 这些收益来自策略本身，而非 BPF 的固有加速：通过 \sys 表达同一策略的机制开销仅为 0.7--3.3\%，且 \sys 对七个已发表资源管理系统（包括 MoE-Infinity、XSched 和 GPREEMPT）的重实现与原有的临时实现相差仅在几个百分点以内（\S\ref{sec:policy-mechanism}）。
+We show that \sys{} enforces safety by using AI agents to generate all of the 59 evaluated eBPF policies, including eviction ordering, prefetch strategies, scheduling logic, and device-side work-stealing.
+% 我们通过让 AI 智能体生成全部 59 个受测 eBPF 策略（包括逐出顺序、预取策略、调度逻辑和设备端工作窃取）来证明 \sys 的安全性。
+\sys{} ensured that there were zero OS kernel panics throughout this process.
+% 在整个过程中，\sys 保证了零次 OS 内核恐慌。
 In summary, our contributions are:
 % 总而言之，我们的贡献如下：
 

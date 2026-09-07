@@ -1,19 +1,5 @@
 # Matched scheduling figure
 
-## Device observability update (2026-09-07)
-
-`obs-overhead-with-array.pdf` is the current device-observability figure.
-`plot_obs_with_array.py` reads the original Table 1 cells and the separate
-five-pair GPU-array campaign; `obs-with-array-data.json` retains every plotted
-pair. The [caption and reproduction instructions](obs-with-array.caption.md)
-identify the independent baselines and final readback outside prefill.
-The historical P40 points and all ten-pair RTX 5090 results remain visible,
-including negative launchlate overhead samples. `obs-overhead-bars.pdf`
-remains unchanged as the previous rendering. This is an existing-data plot
-update, not a new performance campaign.
-
-## Scheduling renderings
-
 `scheduling-comparison-lc-bars.pdf` is the current figure: a single-column
 two-panel rendering of LC latency (XSched and GPreempt workloads), rendered
 by `workloads/gpreempt/plot_scheduling_comparison_lc.py` from the published
@@ -46,13 +32,3 @@ Regenerate with `python plot_port_panels.py --output-prefix /tmp/matched-ports`.
 `port-panels.json` names each source report in gpu_ext and retains the plotted
 values. FineMoE uses all-positive prefetch as its comparison baseline;
 POD uses the Llama decode batch-128 case, not a ten-shape average.
-
-2026-09-07 layout follow-up: grouped bars no longer overlap across the two
-Hummingbird arrival patterns; baseline bars have a grayscale hatch. The
-canvas is 7.0 inches wide to match the current paper's full text width and
-retain 7 pt labels. Plotted values and the current baseline selection are
-unchanged. The earlier figures remain in gpu_ext's `workloads/matched-ports/figures/`;
-the current dated version is `matched-port-panels-baselines-20260907-print`.
-Two `pdflatex` passes complete at 16 pages with no undefined references or
-citations; this figure appears on page 12. This is a rendering fix, not new
-performance evidence or a claim that every selected policy beats no policy.
