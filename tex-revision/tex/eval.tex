@@ -97,8 +97,6 @@ We compare five configurations: framework-managed CPU offloading (\texttt{ncmoe=
 % \Cref{fig:llama-expert-offload} 给出了预填充与解码吞吐量。
 For decode (memory-bound), \sys achieves \textbf{1.76$\times$ speedup} over application-tuned UVM hints (\texttt{cuda\-Mem\-Advise}) and 4.8$\times$ over framework offloading (\texttt{ncmoe=64}).
 % 对于解码（内存受限），gpubpf 相比经应用调优的 UVM 提示（\texttt{cuda\-Mem\-Advise}）取得 \textbf{1.76× 加速}，相比框架卸载（\texttt{ncmoe=64}）取得 4.8× 加速。
-This is a policy gain over baseline policies; \S\ref{sec:policy-mechanism} separately measures the cost of executing the same policy through \sys{}.
-% 这是相对基线策略的策略收益；\S\ref{sec:policy-mechanism} 单独测量了通过 gpubpf 执行同一策略的代价。
 These hints improve decode over default UVM but require application modification and degrade prefill by 40\%; \sys outperforms hints on decode while preserving prefill within 4\% of default UVM, without application changes.
 % 这些提示相比默认 UVM 改善了解码，但需要修改应用，并使预填充性能下降 40\%；gpubpf 在解码上优于提示，同时将预填充保持在默认 UVM 的 4\% 以内，且无需修改应用。
 For prefill (compute-bound), framework offloading (\texttt{ncmoe=32}) achieves 13\% higher prefill throughput than \sys{}, but decode dominates end-to-end latency, so the decode improvement outweighs the prefill gap.%\arq{I don't understand the final data point. what has 13\% higher throughput? The graphed performance of UVM eBPF looks like it has worse performance compared to the alternatives. BTW---its very weird that none of the bars in Figure 8 are labeled "\sys"--I think that UVM eBPF is supposed to be that configuration but it does not make a lot of sense.}
@@ -283,8 +281,8 @@ We compare default UVM (driver FIFO/LRU) against \sys per-tenant memory and sche
 This shows \sys reduces contention for both workloads rather than favoring one over the other.
 % 这说明 gpubpf 减轻了两种工作负载之间的竞争，而非偏袒其中一方。
 
-Our multi-tenant setting is software co-location on an unpartitioned GPU, complementary to static partitioning: SemiAnalysis's critique~\cite{semianalysis2025partitioning} targets fixed MIG subdevices for large-model inference, not software policies that rebalance resources at runtime.
-% 我们的多租户场景是未分区 GPU 上的软件共置，与静态分区互补：SemiAnalysis 的批评~\cite{semianalysis2025partitioning} 针对的是大模型推理下固定的 MIG 子设备，而非运行时动态再平衡资源的软件策略。
+The tenants share an unpartitioned GPU managed by a system-wide policy.
+% 租户共享一块由系统级策略管理的未分区 GPU。
 
 \begin{figure}
 \centering
@@ -310,8 +308,6 @@ Our multi-tenant setting is software co-location on an unpartitioned GPU, comple
 
 We evaluate whether \sys{} can express the policies of published state-of-the-art systems, and what the general mechanism costs when it runs the same policy as an ad-hoc implementation.
 % 我们评估 \sys{} 能否表达已发表最先进系统的策略，以及通用机制在运行与临时实现相同的策略时代价几何。
-\Cref{fig:matched-ports} separates two comparisons: a workload baseline versus a native policy implementation measures policy benefit, while native versus \sys{} on the same executor measures the port's cost; XSched and GPREEMPT appear in \Cref{fig:scheduler-latency}.
-% \Cref{fig:matched-ports} 区分两层比较：工作负载基线与原生策略实现比较策略收益，相同执行器上的原生实现与 \sys{} 比较移植代价；XSched 和 GPREEMPT 见 \Cref{fig:scheduler-latency}。
 The ports span host-side expert caching and queue admission, driver-side timeslicing and memory migration, and device-side task selection.
 % 这些移植覆盖主机侧的专家缓存与队列准入、驱动侧的时间片与内存迁移，以及设备侧的任务选择。
 
@@ -325,6 +321,8 @@ The ports span host-side expert caching and queue admission, driver-side timesli
 
 \paragraph{Methodology}
 % 方法
+\Cref{fig:matched-ports} separates two comparisons: a workload baseline versus a native policy implementation measures policy benefit, while native versus \sys{} on the same executor measures the port's cost; XSched and GPREEMPT appear in \Cref{fig:scheduler-latency}.
+% \Cref{fig:matched-ports} 区分两层比较：工作负载基线与原生策略实现比较策略收益，相同执行器上的原生实现与 \sys{} 比较移植代价；XSched 和 GPREEMPT 见 \Cref{fig:scheduler-latency}。
 Each comparison pairs a native implementation with a \sys{} port of the same policy on the same workload and executor, on RTX~5090 (driver 575.57.08) with exclusive GPU access and repeated randomized trials.
 % 每组对比在相同工作负载和执行器上，将原生实现与同一策略的 \sys{} 移植版配对，在 RTX~5090（驱动 575.57.08）上以独占 GPU 和重复随机试验运行。
 Unless stated otherwise, we report medians with paired bootstrap intervals; POD's operator plot uses the mean of five per-run means.
@@ -393,19 +391,8 @@ For Llama decode batch 128, operator latency falls from 5.360~ms with two-stream
 
 \paragraph{Mechanism cost}
 % 机制代价
-The matched comparisons separate policy benefit from the cost of executing the same decisions through \sys{}.
-% 匹配对比区分策略收益与通过 \sys{} 执行相同决策的代价。
 Expert Buffering incurs 0.7\% overhead; POD's paired operator-latency effects range from a 0.44\% reduction to a 1.18\% increase across ten shapes; a kernel-verified UVM no-prefetch policy incurs 3.2\% overhead over fifteen paired fault-path runs.
 % Expert Buffering 的开销为 0.7\%；POD 在十种形状上的配对算子延迟效应从降低 0.44\% 到增加 1.18\%；经内核验证的 UVM 无预取策略在十五次配对缺页路径运行中的开销为 3.2\%。
-
-\paragraph{Agent-discovered policies}
-% 智能体发现的策略
-Beyond reproducing published policies, the mechanism enables policies that no existing system implements.
-% 除了复现已发表的策略，该机制还使能了任何现有系统都未实现的策略。
-In the MoE study (\S\ref{sec:eval}), device-side tracing led the agent to a stride-prefetch policy aligned with per-layer expert weight layout combined with LFU eviction that protects shared layers; in the KV-cache study, the agent differentiated prefetch by region type (stride for weights, sequential for KV-cache) under a PCIe-utilization budget, avoiding the mutual thrashing that a uniform policy causes.
-% 在 MoE 研究（\S\ref{sec:eval}）中，设备端追踪引导智能体得出与每层专家权重布局对齐的步长预取策略，并结合保护共享层的 LFU 驱逐；在 KV-cache 研究中，智能体在 PCIe 利用率预算下按区域类型区分预取（权重用步长、KV-cache 用顺序），避免了统一策略导致的相互抖动。
-These policies depend on cross-layer observations---device-side access patterns driving host-side migration---that framework-level mechanisms cannot express.
-% 这些策略依赖跨层观测——由设备端访问模式驱动主机端迁移——这是框架层机制无法表达的。
 
 \subsection{RQ2: Mechanism Cost}
 % RQ2：机制代价
@@ -416,8 +403,8 @@ We measure hook, observability, and map-placement overheads below; \S\ref{sec:po
 
 \paragraph{Verification Overhead.}
 % 验证开销。
-Load-time verification takes 141~ms for \texttt{kernelretsnoop} and 12~ms for \texttt{threadhist}; steady-state throughput with strict verification is statistically indistinguishable from unverified execution for both tools.
-% 加载时验证对 \texttt{kernelretsnoop} 耗时 141~ms，对 \texttt{threadhist} 耗时 12~ms；两个工具在严格验证下的稳态吞吐量与未验证执行在统计上不可区分。
+Load-time verification takes 141~ms for \texttt{kernelretsnoop} and 12~ms for \texttt{threadhist}.
+% 加载时验证对 \texttt{kernelretsnoop} 耗时 141~ms，对 \texttt{threadhist} 耗时 12~ms。
 
 \paragraph{Host Runtime Overhead.}
 % 主机运行时开销。
@@ -436,14 +423,8 @@ Overhead is measured as token/s degradation during prefill.
 % 开销以预填充期间 token/s 的下降来衡量。
 On the P40, \sys achieves 3--14\% overhead versus NVBit's 85--93\%, due to the warp-uniform execution model.
 % 在 P40 上，得益于 warp 统一执行模型，gpubpf 的开销为 3--14\%，而 NVBit 为 85--93\%。
-On the RTX~5090, \sys has lower overhead than NVBit for all three tools: 90.71\% versus 99.62\% for the complete per-warp kernel-return stream, 2.97\% versus 10.35\% for the exit-count histogram, and 0.22\% versus 8.80\% for \texttt{launchlate}. The full record stream remains expensive even with warp-level recording.
-% 在 RTX~5090 上，gpubpf 在三个工具上的开销均低于 NVBit：完整的逐 warp 内核返回记录流为 90.71\% 对 99.62\%，退出计数直方图为 2.97\% 对 10.35\%，\texttt{launchlate} 为 0.22\% 对 8.80\%。即使按 warp 记录，完整记录流的开销仍然很高。
-A separate five-pair experiment buffers the complete kernel-return records in a GPU-local array, yielding mean prefill overhead of 5.57\% (range 4.02--6.70\%) while retaining all 720,896 records per run.
-% 另一组五次配对实验将完整的内核返回记录缓存在 GPU 本地数组中，平均预填充开销为 5.57\%（范围 4.02--6.70\%），每次运行保留全部 720,896 条记录。
-The final 23.2~MB readback averages 10.38~ms outside prefill timing; the finite buffer is sized for this pp512, serial-launch workload, not unbounded streaming.
-% 最终 23.2~MB 回读平均耗时 10.38~ms，不计入预填充计时；该有限缓冲区按本次 pp512、串行启动工作负载配置，并非无界流式记录。
-Like the RTX~5090 tool campaign, this variant uses warning-mode admission and provides performance evidence, not evidence of strict verifier acceptance.
-% 与 RTX~5090 工具实验相同，该变体使用警告模式准入，提供性能证据，而非严格验证器接受该程序的证据。
+On the RTX~5090, \sys has lower overhead than NVBit for all three tools: 90.71\% versus 99.62\% for the complete per-warp kernel-return stream, 2.97\% versus 10.35\% for the exit-count histogram, and 0.22\% versus 8.80\% for \texttt{launchlate}.
+% 在 RTX~5090 上，gpubpf 在三个工具上的开销均低于 NVBit：完整的逐 warp 内核返回记录流为 90.71\% 对 99.62\%，退出计数直方图为 2.97\% 对 10.35\%，\texttt{launchlate} 为 0.22\% 对 8.80\%。
 Attaching to a running process requires no application restart.
 % 附加到正在运行的进程无需重启应用。
 
