@@ -12,8 +12,13 @@ a consistent priority tradeoff, not an all-metrics win. All ten scheduling
 cells record 12 hits/modifications and zero setter errors. The revision text
 now distinguishes these repeated independent timings from the retained
 historical single-round records; it no longer infers scheduler ineffectiveness
-from the old sub-1% differences. A new visual panel remains to be integrated;
-this completed GPU matrix must not repeat.
+from the old sub-1% differences. The expanded four-panel figure now retains
+the three historical panels and adds the repeated HotSpot comparison, with
+median bars and full min--max ranges. The root inspected its compiled page 12;
+the draft builds in 17 pages including references, with the conclusion on
+page 14. The reusable local OpenCode/GLM analyzer is published in `8a6c51dc`
+and reproduces all existing per-arm and paired summary numbers. This completed
+GPU matrix must not repeat.
 
 The [matched live write-budget comparison](../../../workloads/lmcache-disk/results-575-gds-write-budget-20260907.md)
 is now complete in main `a451db6a`: five balanced blocks, 25 cells, 4,000

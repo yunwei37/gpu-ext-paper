@@ -272,27 +272,27 @@ Policy labels use priority values 0--100 (lower = higher priority): \texttt{Pref
 We compare against no-policy execution and retain single-process runtime (Single~1$\times$) and twice that runtime as sequential references, not proven concurrent lower bounds.
 % 我们与无策略执行对比，并保留单进程运行时（Single 1×）及其两倍作为顺序执行参考，而非已证明的并发下界。
 
-The historical single-round records in \Cref{fig:all-kernels-priority} show memory-policy completion-time proxies 55--92\% below no-policy execution.
-% \Cref{fig:all-kernels-priority} 中的历史单轮记录显示，内存策略的完成时间代理指标比无策略执行低 55--92\%。
+The historical single-round records in \Cref{fig:all-kernels-priority}(a--c) show memory-policy completion-time proxies 55--92\% below no-policy execution.
+% \Cref{fig:all-kernels-priority}(a--c) 中的历史单轮记录显示，内存策略的完成时间代理指标比无策略执行低 55--92\%。
 The recorded scheduler differences below 1\% do not establish ineffectiveness: those runs did not confirm policy engagement or independently timestamp both tenant exits.
 % 其中不足 1\% 的调度差异不能证明策略无效：这些运行没有确认策略实际执行，也没有独立记录两个租户的退出时间。
 % Retained historical draft number: high-priority processes complete 6--19\% faster; the earlier source and raw records remain in the artifact, without promoting this to an independently timed repeated result.
-In a fresh five-block HotSpot comparison, high/low process-duration medians are 56.55/56.60 s without policy, 25.16/26.85 s with memory policy, 3.94/6.08 s with timeslicing, and 3.55/6.46 s with both.
-% 在新的五组 HotSpot 对比中，高/低优先级进程耗时中位数为：无策略 56.55/56.60 秒、内存策略 25.16/26.85 秒、时间片策略 3.94/6.08 秒、组合策略 3.55/6.46 秒。
+In the fresh five-block HotSpot comparison in \Cref{fig:all-kernels-priority}(d), high/low process-duration medians are 56.55/56.60 s without policy, 25.16/26.85 s with memory policy, 3.94/6.08 s with timeslicing, and 3.55/6.46 s with both.
+% 在 \Cref{fig:all-kernels-priority}(d) 的新五组 HotSpot 对比中，高/低优先级进程耗时中位数为：无策略 56.55/56.60 秒、内存策略 25.16/26.85 秒、时间片策略 3.94/6.08 秒、组合策略 3.55/6.46 秒。
 These independently measured durations include initialization, warmup and teardown; every scheduling-bearing run records 12 policy hits and timeslice modifications.
 % 这些独立测得的耗时包含初始化、预热和清理；每个包含调度策略的运行均记录了 12 次策略命中和时间片修改。
 Adding memory policy to timeslicing reduces high-priority duration by a paired median 10.2\% but increases low-priority duration by 6.3\%: composition exposes a priority tradeoff, not an all-workloads or all-metrics advantage of the mechanism.
 % 在时间片策略上叠加内存策略，使高优先级耗时的配对中位数降低 10.2\%，但低优先级耗时增加 6.3\%：组合揭示了优先级取舍，而非机制在所有负载或指标上的优势。
 % Evidence: gpu_ext 10994d21; workloads/fig13-fast/results-performance-575-20260907.md. Historical files and sub-1\% observations are retained.
 
-\begin{figure}
+\begin{figure*}[t]
 \centering
-\includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/all_kernels_stacked.pdf}
+\includegraphics[width=\textwidth]{img/results-raw/multi-tenant/fig13_expanded.pdf}
 
-\caption{Historical single-round memory-priority records. Bar heights are completion-time proxies, not reconstructed overlap; scheduler engagement was unconfirmed. Single 1$\times$ and 2$\times$Single are single and sequential references, not concurrent lower bounds.}
-% 历史单轮内存优先级记录。柱高是完成时间代理指标，而非重建的重叠时间；调度策略是否实际执行未确认。Single 1× 与 2×Single 分别为单进程及顺序参考，而非并发下界。
+\caption{Memory and scheduling policies under UVM oversubscription. (a--c) Historical single-round records: stacked minimum and absolute difference of recorded tenant durations give completion-time proxies, not reconstructed overlap. Scheduler* engagement was unconfirmed; 1$\times$ single and 2$\times$ sequential lines are references, not concurrent lower bounds. (d) Fresh HotSpot process durations, measured independently including initialization and warmup: medians and full min--max ranges over five interleaved blocks. Combining memory and scheduling favors the high-priority tenant at a cost to the low-priority tenant.}
+% UVM 超订下的内存与调度策略。(a--c) 历史单轮记录：两个租户记录耗时的最小值与绝对差堆叠形成完成时间代理指标，而非重建的重叠时间。Scheduler* 未确认实际执行；单进程及两倍顺序执行虚线仅为参考，并非并发下界。(d) 新 HotSpot 进程耗时，独立测量且包含初始化与预热：五个交错组的中位数及完整最小至最大范围。组合策略以低优先级租户的代价改善高优先级租户。
 \label{fig:all-kernels-priority}
-\end{figure}
+\end{figure*}
 
 \paragraph{Two-Tenant: High-Priority LLM Inference + Background Training.}
 % 双租户：高优先级 LLM 推理 + 后台训练。
