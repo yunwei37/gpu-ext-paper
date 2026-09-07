@@ -15,7 +15,6 @@ Our evaluation addresses two research questions:
 We answer RQ1 in \S\ref{sec:rq1} through policy microbenchmarks, agent-driven case studies on realistic workloads, multi-tenant settings, and matched reimplementations of published policies. \S\ref{sec:rq2-cost} answers RQ2.
 % 我们在 \S\ref{sec:rq1} 通过策略微基准、真实负载上的智能体驱动案例研究、多租户场景，以及对已发表策略的匹配重实现回答 RQ1；\S\ref{sec:rq2-cost} 回答 RQ2。
 
-
 \subsection{Methodology and Setup}
 % 方法论与实验设置
 
@@ -25,15 +24,14 @@ Unless otherwise specified, experiments run on Server~A, averaging 10 trials usi
 % 除非另有说明，实验均在服务器 A 上进行，每项结果取 10 次试验的几何平均值。
 We compare \sys{} against three classes of baselines: (1) driver defaults (UVM LRU/FIFO eviction, native GPU scheduler), (2) application-level hints (\texttt{cudaMemAdvise}), and (3) framework-managed policies (e.g., llama.cpp \texttt{ncmoe}, vLLM CPU offload, LMCache) where applicable.
 % 我们将 gpubpf 与三类基线对比：(1) 驱动默认行为（UVM LRU/FIFO 驱逐、原生 GPU 调度器），(2) 应用层提示（\texttt{cudaMemAdvise}），以及 (3) 框架管理的策略（如 llama.cpp 的 \texttt{ncmoe}、vLLM CPU offload、LMCache，在适用处）。
-The matched comparisons in \S\ref{sec:policy-mechanism} additionally evaluate policies from published research systems: MoE-Infinity~\cite{xue2025moeinfinity}, XSched~\cite{shen2025xsched}, GPREEMPT~\cite{fan2025gpreempt}, Expert Buffering~\cite{huang2023towards}, FineMoE~\cite{yu2026finemoe}, Hummingbird~\cite{hu2026hummingbird}, and POD-Attention~\cite{kamath2025pod}; each pairs a native policy implementation with a \sys{} port, distinguishing upstream artifacts from component reimplementations and retaining workload baselines to expose policy benefits and costs.
-% \S\ref{sec:policy-mechanism} 进一步评估 MoE-Infinity、XSched、GPREEMPT、Expert Buffering、FineMoE、Hummingbird 和 POD-Attention 等已发表系统的策略；每组配对原生策略实现和 \sys{} 移植版，区分上游工件与组件重实现，并保留工作负载基线以展示策略的收益与代价。
+The matched comparisons in \S\ref{sec:policy-mechanism} additionally evaluate policies from published research systems: MoE-Infinity~\cite{xue2025moeinfinity}, XSched~\cite{shen2025xsched}, GPREEMPT~\cite{fan2025gpreempt}, Expert Buffering~\cite{huang2023towards}, FineMoE~\cite{yu2026finemoe}, Hummingbird~\cite{hu2026hummingbird}, and POD-Attention~\cite{kamath2025pod}; each pairs a native policy implementation with a \sys{} port.
+% \S\ref{sec:policy-mechanism} 进一步评估 MoE-Infinity、XSched、GPREEMPT、Expert Buffering、FineMoE、Hummingbird 和 POD-Attention 等已发表系统的策略；每组配对原生策略实现和 \sys{} 移植版。
 We use PyTorch (version 2.9.0) and vLLM (version 0.11.0) with custom allocators, llama.cpp (version 7101), and Faiss (version 1.13.0) with UVM build config.
 % 我们使用 PyTorch（版本 2.9.0）和 vLLM（版本 0.11.0，配自定义分配器）、llama.cpp（版本 7101）以及采用 UVM 构建配置的 Faiss（版本 1.13.0）。
 All tests with \sys policies require no application modifications.
 % 所有使用 gpubpf 策略的测试均无需修改应用。
 We release the agent prompts, benchmark harnesses, and policy sources used in the policy-exploration study.
 % 我们公开发布策略探索研究中使用的智能体提示词、基准测试工具和策略源码。
-
 
 % \arq{Add lines of code throughout each of the experiments}
 
@@ -125,7 +123,6 @@ For eviction, the agent tested FIFO ordering before converging on LFU, which ret
 The final policy combines device-side access observation (45~LOC), host-side stride prefetch (472~LOC), and LFU eviction (304~LOC), totaling $\sim$820~LOC (\S\ref{sec:design-interfaces}).
 % 最终策略结合了设备端访问观测（45 LOC）、主机端步长预取（472 LOC）和 LFU 驱逐（304 LOC），共约 820 LOC（\S\ref{sec:design-interfaces}）。
 
-
 % \xiangyu{Are those hints easy to find in many scenarios? Maybe we should clarify it. Otherwise, it seems that \sys{} uses some tricks to win the competition.}
 
 \begin{figure}
@@ -173,28 +170,6 @@ The resulting policy (totaling $\sim$880~LOC) effectively prevents thrashing see
 \label{fig:vllm-kv-offload}
 
 \end{figure}
-
-The same asynchronous state-machine model extends to slower tiers: storage-tier offload adds states and transitions whose millisecond transfers fit the model, with \sys{} supplying placement policy complementary to transport solutions such as Weka, VAST, or NVIDIA CMX; CXL tiers map to new states atop HMM/\texttt{migrate\_vma}.
-% 同样的异步状态机模型可扩展到更慢的层级：存储层卸载增加新的状态与转移，其毫秒级传输契合该模型，\sys{} 提供放置策略，与 Weka、VAST 或 NVIDIA CMX 等传输方案互补；CXL 层级则映射为 HMM/\texttt{migrate\_vma} 之上的新状态。
-This case also shows how \sys{} handles application heuristics that conflict with a policy: the agent updates the policy at runtime to accommodate vLLM's behavior, while the driver's native thrashing mitigation continues to apply underneath.
-% 该案例还展示了 \sys{} 如何应对与策略冲突的应用启发式：智能体在运行时更新策略以适应 vLLM 的行为，而驱动的原生抖动缓解在底层持续生效。
-
-\paragraph{Local-storage control.}
-% 本地存储控制。
-In five rotated LMCache/cuFile blocks on the RTX~5090, recompute/CPU/FIFO/native/BPF output throughput is 31.01/29.76/37.41/37.47/38.37~token/s, with TTFT 66.89/74.41/78.08/78.45/77.44~ms.
-% RTX~5090 上五组轮换 LMCache/cuFile 实验中，重算/CPU/FIFO/原生/BPF 吞吐为 31.01/29.76/37.41/37.47/38.37~token/s，TTFT 为 66.89/74.41/78.08/78.45/77.44~ms。
-Default inputs make all storage decisions submit immediately: the paired BPF/native throughput difference has median $+0.28\%$ (range $-3.42\%$ to $+5.17\%$), measuring admission cost.
-% 默认输入使存储决策均为立即提交：BPF/原生配对吞吐差异中位数为 $+0.28\%$（范围 $-3.42\%$ 至 $+5.17\%$），衡量准入代价。
-LMCache owns transfers and buffers; cuFile uses compatibility mode here.
-% LMCache 管理传输和缓冲区；cuFile 在此使用兼容模式。
-To exercise policy behavior separately, five further rotated blocks overlap 64 demand reads with 96 background writes of 24~MiB objects, comparing FIFO with identical native/BPF 10~ms write deferral under controlled pressure inputs, not live HBM telemetry.
-% 为单独衡量策略行为，另五组轮换实验重叠执行 64 次按需读取与 96 次后台写入，对象大小为 24~MiB；比较 FIFO 与相同的原生/BPF 10~ms 写入延迟策略，使用受控压力输入而非实时 HBM 遥测。
-FIFO/native/BPF scheduled-arrival read p99 medians are 298.22/265.30/247.93~ms; each run's nearest-rank p99 is the maximum of its 64 reads, not application TTFT.
-% FIFO/原生/BPF 从计划到达时刻计量的读 p99 中位数为 298.22/265.30/247.93~ms；每次运行按最近秩计算的 p99 即 64 次读取中的最大值，不是应用 TTFT。
-BPF lowers paired read p99 by a median 12.44\% versus FIFO, but its paired completed-write throughput change has median $-1.67\%$, while read p50 medians rise from 44.88~ms to 181.31/159.26~ms for native/BPF.
-% BPF 相对 FIFO 的配对读 p99 降幅中位数为 12.44\%，但完成写入的配对吞吐变化中位数为 $-1.67\%$；读 p50 中位数则从 44.88~ms 增至原生/BPF 的 181.31/159.26~ms。
-This is a tail-versus-median and bandwidth tradeoff; BPF/native paired p99 changes have median $+0.54\%$ and range $-15.88\%$ to $+6.32\%$, not a tight mechanism-overhead bound.
-% 这是尾延迟与中位延迟、带宽之间的取舍；BPF/原生配对 p99 变化中位数为 $+0.54\%$，范围为 $-15.88\%$ 至 $+6.32\%$，并非紧确的机制开销界限。
 
 \paragraph{Graph Neural Networks (GNN Training).}
 % 图神经网络（GNN 训练）。
@@ -375,15 +350,111 @@ Our multi-tenant setting is software co-location on an unpartitioned GPU, comple
 \label{fig:microbench}
 \end{figure*}
 
-\input{tex/revision_comparisons}
+\subsubsection{Policy Expressibility and Matched Implementations}
+% 策略可表达性与匹配实现
+\label{sec:policy-mechanism}
+
+We evaluate whether \sys{} can express the policies of published state-of-the-art systems, and what the general mechanism costs when it runs the same policy as an ad-hoc implementation.
+% 我们评估 \sys{} 能否表达已发表最先进系统的策略，以及通用机制在运行与临时实现相同的策略时代价几何。
+\Cref{fig:matched-ports} separates two comparisons: a workload baseline versus a native policy implementation measures policy benefit, while native versus \sys{} on the same executor measures the port's cost; XSched and GPREEMPT appear in \Cref{fig:scheduler-latency}.
+% \Cref{fig:matched-ports} 区分两层比较：工作负载基线与原生策略实现比较策略收益，相同执行器上的原生实现与 \sys{} 比较移植代价；XSched 和 GPREEMPT 见 \Cref{fig:scheduler-latency}。
+Across the decision classes these systems span, host-JIT \sys{} selectors express expert prediction/prefetch and priority queue admission; kernel-BPF programs driving native actuators express TSG timeslices, fault-time prefetch, and UVM eviction-list ordering with validated used/unused heads and tails rather than arbitrary victims; and a device-BPF selector expresses SM-local task selection.
+% 这些系统覆盖的决策类别与 \sys{} 各层的对应关系为：主机 JIT 的 \sys{} 选择器可表达专家预测/预取与优先级队列准入；驱动原生执行器的内核 BPF 程序可表达 TSG 时间片、缺页时预取和 UVM 驱逐列表排序（仅限经验证的 used/unused 头尾，而非任意 victim）；设备端 BPF 选择器可表达 SM 本地任务选择。
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{img/results-raw/revision/matched-port-panels.pdf}
+\caption{Matched reimplementations of published policies on RTX~5090: each panel pairs the original implementation with the \sys{} port of the same policy. Higher is better for token/s, lower for latency.}
+% RTX~5090 上对已发表策略的匹配重实现：每个子图将原始实现与同一策略的 \sys{} 移植版配对。token/s 越高越好，延迟越低越好。
+\label{fig:matched-ports}
+\end{figure*}
+
+\paragraph{Methodology}
+% 方法
+Each comparison pairs a native implementation with a \sys{} port of the same policy on the same workload and executor, on RTX~5090 (driver 575.57.08) with exclusive GPU access and repeated randomized trials.
+% 每组对比在相同工作负载和执行器上，将原生实现与同一策略的 \sys{} 移植版配对，在 RTX~5090（驱动 575.57.08）上以独占 GPU 和重复随机试验运行。
+We report medians with paired bootstrap intervals.
+% 我们报告中位数及配对 bootstrap 区间。
+
+\paragraph{MoE-Infinity (expert offloading)}
+% MoE-Infinity（专家卸载）
+We port MoE-Infinity's~\cite{xue2025moeinfinity} activation-aware prediction, prefetch ranking, and score-based eviction to host-JIT \sys{} selectors sharing the same GPT-OSS-120B frontend.
+% 我们将 MoE-Infinity~\cite{xue2025moeinfinity} 的激活感知预测、预取排序和基于分数的驱逐移植到共享同一 GPT-OSS-120B 前端的 \sys{} 主机 JIT 选择器。
+Across five repeated runs, baseline, native, and \sys{} achieve 11.90, 11.22, and 11.19 tokens/s: the \sys{} port tracks the native policy within 0.4\% while cutting first-visible-text latency by 22.5\% relative to baseline.
+% 五次重复试验下，基线、原生实现和 \sys{} 分别达到 11.90、11.22 和 11.19 token/s：\sys{} 移植版与原生策略的差距在 0.4\% 以内，同时相对基线将首个可见文本延迟降低 22.5\%。
+
+\paragraph{XSched (preemptive scheduling)}
+% XSched（抢占式调度）
+We port XSched's~\cite{shen2025xsched} inter-kernel preemption: a host-JIT \sys{} program makes the bounded highest-priority-first decision while the original executor performs suspend/resume.
+% 我们移植 XSched~\cite{shen2025xsched} 的内核间抢占：主机 JIT 的 \sys{} 程序做出有界的最高优先级优先决策，由原始执行器执行挂起/恢复。
+LC submission-to-first-CTA p99 is 76.9~s native, 27.0~s with XSched, and 27.3~s with the \sys{} port (paired difference $+0.29$~s, CI $[-0.11,+0.64]$), with BE throughput unchanged.
+% LC 提交到首个 CTA 的 p99：原生 76.9 秒，XSched 27.0 秒，\sys{} 移植版 27.3 秒（配对差 $+0.29$ 秒，CI $[-0.11,+0.64]$），BE 吞吐量不变。
+
+\paragraph{GPREEMPT (priority timeslicing)}
+% GPREEMPT（优先级时间片）
+Under continuous background load, the GPREEMPT~\cite{fan2025gpreempt} policy reduces LC response p99 from 1.796~ms (native) to 1.615~ms (original C) and 1.610~ms (\sys{}), at about 9\% background-throughput cost in both implementations; the \sys{} port differs from the original C by $-1.3\%$ (CI $[-4.2\%,+0.5\%]$).
+% 在连续后台负载下，GPREEMPT~\cite{fan2025gpreempt} 策略将 LC 响应 p99 从 1.796 毫秒（原生）降至 1.615 毫秒（原始 C 实现）和 1.610 毫秒（\sys{}），两种实现都付出约 9\% 的后台吞吐量代价；\sys{} 移植版与原始 C 的差异为 $-1.3\%$（CI $[-4.2\%,+0.5\%]$）。
+
+\paragraph{Expert Buffering (expert residency)}
+% Expert Buffering（专家驻留）
+Porting Expert Buffering's~\cite{huang2023towards} inactive-first hot-expert residency to the same executor improves throughput over a fixed-$K$ FIFO baseline by 2.6\% (native) and 1.8\% (\sys{}), with identical residency decisions and 12.9\% less copy payload; the \sys{} path costs 0.7\% relative to the native policy.
+% 将 Expert Buffering~\cite{huang2023towards} 的非活跃优先热专家驻留策略移植到同一执行器，相比固定 $K$ FIFO 基线吞吐量提升 2.6\%（原生）和 1.8\%（\sys{}），驻留决策完全一致且拷贝负载减少 12.9\%；\sys{} 路径相对原生策略的代价为 0.7\%。
+
+\paragraph{FineMoE (dynamic expert sets)}
+% FineMoE（动态专家集）
+For FineMoE's~\cite{yu2026finemoe} dynamic expert-set selection, the demand-only baseline disables speculative prefetch; the all-positive ablation instead prefetches every positive prediction.
+% 对 FineMoE~\cite{yu2026finemoe} 的动态专家集选择，按需基线关闭推测预取；全正例消融则预取所有正预测。
+Across five blocks, demand-only, all-positive, native C, and \sys{} achieve median throughput of 5.171, 3.623, 4.499, and 4.514 tokens/s.
+% 五组实验中，按需、全正例、原生 C 和 \sys{} 的吞吐中位数分别为 5.171、3.623、4.499 和 4.514 token/s。
+The \sys{} policy reduces evicted-unused speculative payload by 60.4\% and improves paired throughput by 24.6\% over all-positive, but loses 12.6\% throughput against demand-only: less waste does not guarantee a net prefetch benefit.
+% \sys{} 策略相对全正例减少了 60.4\% 的未使用即被驱逐的推测负载，配对吞吐提高 24.6\%，但相对按需基线吞吐下降 12.6\%：浪费减少不保证预取的净收益。
+The BPF/native paired throughput difference is $+0.21\%$ (95\% CI $[-0.17\%,+0.52\%]$), with no detected directional mechanism effect.
+% BPF/原生的配对吞吐差异为 $+0.21\%$（95\% CI $[-0.17\%,+0.52\%]$），未检测到明确方向的机制效应。
+
+\paragraph{Hummingbird (idle admission)}
+% Hummingbird（空闲准入）
+We port Hummingbird's~\cite{hu2026hummingbird} idle-interval admission component to both a C implementation and a host-JIT \sys{} program on the same DNN frontend, under periodic and BurstGPT arrivals.
+% 我们将 Hummingbird~\cite{hu2026hummingbird} 的空闲区间准入组件在同一 DNN 前端上分别实现为 C 版本和主机 JIT 的 \sys{} 程序，覆盖周期性和 BurstGPT 两种到达模式。
+Relative to default scheduling, idle admission lowers median LC response p99 from 1.980 to 1.831/1.864~ms (C/\sys{}) for periodic arrivals, and from 5.436 to 4.989/4.940~ms for BurstGPT arrivals.
+% 相比默认调度，空闲准入将周期性到达的 LC 响应 p99 中位数从 1.980 降至 1.831/1.864 毫秒（C/\sys{}），将 BurstGPT 到达的相应值从 5.436 降至 4.989/4.940 毫秒。
+This foreground benefit costs background throughput: both ports deliver about 133 requests/s versus 179 for default scheduling, and lose 19--20\% to the fixed-GPREEMPT control in paired comparisons.
+% 这一前台收益付出了后台吞吐代价：两个移植版约为每秒 133 个请求，默认调度约为 179；相对固定 GPREEMPT 对照，配对吞吐下降 19--20\%。
+These are conservative reimplementations of the idle-admission component, not the authors' complete scheduler; similar C/BPF goodput does not establish identical foreground protection.
+% 这些是空闲准入组件的保守重实现，而非作者的完整调度器；相近的 C/BPF 有效吞吐不能证明前台保护相同。
+
+\paragraph{POD-Attention (device-side selection)}
+% POD-Attention（设备端选择）
+A device-BPF selector implements POD-Attention's~\cite{kamath2025pod} proportional SM-local task choice; the five-arm comparison includes non-fused FlashAttention serial and two-stream baselines, upstream POD inline selection, a CUDA adapter, and the BPF adapter across ten shapes and five blocks.
+% 设备端 BPF 选择器实现 POD-Attention~\cite{kamath2025pod} 按比例的 SM 本地任务选择；五臂比较覆盖未融合的 FlashAttention 串行和双流基线、上游 POD 内联选择、CUDA 适配器和 BPF 适配器，共十种形状、五组实验。
+BPF beats the two-stream baseline in seven shapes, not all: for Llama decode batch 128, baseline/CUDA/BPF operator latency is 5.360/4.322/4.344~ms, whereas batch 32 gives 3.303/3.460/3.494~ms.
+% BPF 在七种而非全部形状上优于双流基线：Llama 解码批量 128 时基线/CUDA/BPF 算子延迟为 5.360/4.322/4.344 毫秒，批量 32 时则为 3.303/3.460/3.494 毫秒。
+Fusion gains belong to POD's policy/operator; the BPF/CUDA paired latency cost is 0.51--1.18\% in nine shapes, with a 0.44\% reduction in the remaining shape.
+% 融合收益来自 POD 的策略/算子；九种形状中 BPF/CUDA 配对延迟代价为 0.51--1.18\%，剩余一种降低 0.44\%。
+The separate batch-32 setup-decomposition study measures a 1.78\% operator cost, not a ten-shape average, and reports 271~s of BPF startup before the first Python statement, outside operator timing.
+% 独立的批量 32 启动分解实验测得 1.78\% 算子代价，而非十种形状的平均值，并记录了首条 Python 语句之前 271 秒的 BPF 启动时间，不计入算子计时。
+
+\paragraph{Mechanism cost}
+% 机制代价
+Across the matched ports, executing the same policy through \sys{} costs 0.7--3.3\%: 0.7\% for Expert Buffering, 1.8\% for POD-Attention's device selector, and 3.2\% for a kernel-verified UVM no-prefetch policy measured over fifteen paired fault-path runs.
+% 在所有匹配移植中，通过 \sys{} 执行相同策略的代价为 0.7--3.3\%：Expert Buffering 为 0.7\%，POD-Attention 设备端选择器为 1.8\%，经内核验证的 UVM 无预取策略在十五次配对缺页路径运行上测得 3.2\%。
+The headline improvements in RQ1 are therefore policy gains, obtainable through a safe, dynamic, and full-stack mechanism at single-digit cost.
+% 因此，RQ1 中的头条提升是策略收益，可以通过一个安全、动态、全栈的机制以个位数的代价获得。
+
+\paragraph{Agent-discovered policies}
+% 智能体发现的策略
+Beyond reproducing published policies, the mechanism enables policies that no existing system implements.
+% 除了复现已发表的策略，该机制还使能了任何现有系统都未实现的策略。
+In the MoE study (\S\ref{sec:eval}), device-side tracing led the agent to a stride-prefetch policy aligned with per-layer expert weight layout combined with LFU eviction that protects shared layers; in the KV-cache study, the agent differentiated prefetch by region type (stride for weights, sequential for KV-cache) under a PCIe-utilization budget, avoiding the mutual thrashing that a uniform policy causes.
+% 在 MoE 研究（\S\ref{sec:eval}）中，设备端追踪引导智能体得出与每层专家权重布局对齐的步长预取策略，并结合保护共享层的 LFU 驱逐；在 KV-cache 研究中，智能体在 PCIe 利用率预算下按区域类型区分预取（权重用步长、KV-cache 用顺序），避免了统一策略导致的相互抖动。
+These policies depend on cross-layer observations---device-side access patterns driving host-side migration---that framework-level mechanisms cannot express.
+% 这些策略依赖跨层观测——由设备端访问模式驱动主机端迁移——这是框架层机制无法表达的。
 
 \subsection{RQ2: Mechanism Cost}
 % RQ2：机制代价
 \label{sec:rq2-cost}
 
-We quantify what the general mechanism costs: the same-policy execution cost measured by the matched ports in \S\ref{sec:policy-mechanism} is 0.7--3.3\%, and the verifier's one-time admission cost is 141~ms for the 60-instruction \texttt{kernelretsnoop} and 12~ms for the 13-instruction \texttt{threadhist} (\S\ref{sec:verification}); below we measure hook, observability, and map-placement overheads.
-% 我们量化通用机制的代价：\S\ref{sec:policy-mechanism} 中匹配移植测得的同策略执行代价为 0.7--3.3\%，验证器的一次性准入开销为 60 指令的 \texttt{kernelretsnoop} 141~ms、13 指令的 \texttt{threadhist} 12~ms（\S\ref{sec:verification}）；下文测量钩子、可观测性和 map 放置开销。
-
+We measure hook, observability, and map-placement overheads below; \S\ref{sec:policy-mechanism} reports the execution costs of matched policy ports.
+% 下文测量钩子、可观测性和 map 放置开销；\S\ref{sec:policy-mechanism} 报告匹配策略移植的执行代价。
 
 %\paragraph{Policy Building Blocks.}
 %\Cref{tab:support-matrix} shows policy building blocks with lines of code and execution domain. These components can be composed to construct policies; for example, the multi-tenant benchmark in RQ3 combines Quota LRU, Priority Tree Prefetch, and Dynamic Timeslice. All policies attach to unmodified frameworks via runtime instrumentation, requiring only tens to hundreds of lines.
@@ -416,6 +487,11 @@ LatencyBudget (CLC) & Scheduling Block & Device & 19 \\
 \end{table}
 \end{comment}
 
+\paragraph{Verification Overhead.}
+% 验证开销。
+Load-time verification takes 141~ms for \texttt{kernelretsnoop} and 12~ms for \texttt{threadhist}; steady-state throughput with strict verification is statistically indistinguishable from unverified execution for both tools.
+% 加载时验证对 \texttt{kernelretsnoop} 耗时 141~ms，对 \texttt{threadhist} 耗时 12~ms；两个工具在严格验证下的稳态吞吐量与未验证执行在统计上不可区分。
+
 \paragraph{Host Runtime Overhead.}
 % 主机运行时开销。
 We quantify the overhead of the \sys driver runtime independent of policy logic using GEMM from PolyBench~\cite{grauer2012auto} and HotSpot~\cite{che2009rodinia} (1.1$\times$ oversubscription, 35~GB working set) on RTX 5090.
@@ -423,7 +499,6 @@ We quantify the overhead of the \sys driver runtime independent of policy logic 
 With hooks enabled but no policy attached, the overhead is less than 0.2\%.
 % 启用钩子但不附加策略时，开销小于 0.2\%。
 
-% \paragraph{Device Verification.} Across 18 GPU programs, the SIMT-aware verifier accepts 13 and correctly rejects 5 unsafe cases (lane-varying branches, non-uniform atomics, varying map-update keys).  
 
 \paragraph{Device-side Overhead.}
 % 设备端开销。
@@ -495,11 +570,5 @@ The baseline incurs overhead due to per-thread execution and uncoalesced memory 
 % 基线因每线程执行和未合并的内存访问产生开销，而 gpubpf 的 warp 统一执行与合并 map 访问将开销降低 60--80\%。
 \Cref{fig:microbench}(b) compares CPU map access via PCIe against GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU.
 % \Cref{fig:microbench}(b) 对比了经 PCIe 的 CPU map 访问与 GPU 端操作，这促使 gpubpf 采用将热状态保留在 GPU 上的分层 map 设计。
-An operation-matched measurement on RTX~5090 (16 balanced repetitions, 128 fresh processes) finds that direct host mapping costs 9.43$\times$ the device-resident latency for map updates and 1.09$\times$ for lookups, so the placement benefit is largest for write-heavy policies.
-% RTX~5090 上一项操作匹配的测量（16 次均衡重复、128 个全新进程）发现，直接主机映射的 map 更新延迟是设备驻留的 9.43 倍，查找为 1.09 倍，因此放置收益对写密集型策略最大。
-Trampoline hooks are injected per warp with shuffle-based broadcast, so their cost is constant in the block count; on RTX~5090, a no-op hook adds 0.3--1.9\,$\mu$s across five block organizations.
-% Trampoline 钩子按 warp 注入并通过 shuffle 广播，因此其代价与块数量无关；在 RTX~5090 上，空操作钩子在五种块组织下增加 0.3--1.9 微秒。
-Device-side injection supports both ptrace attach for running processes and \texttt{LD\_PRELOAD} for process-start initialization, the latter avoiding ptrace for security-compliant deployments.
-% 设备端注入既支持对运行中进程的 ptrace 附加，也支持进程启动时的 \texttt{LD\_PRELOAD} 初始化，后者可在注重安全合规的部署中避免 ptrace。
 We do not compare policy-level performance against the prior workshop version or Neutrino because they are limited to read-only observability (\S\ref{sec:background}). %\arq{Do we need this experimentation?  I guess you're wanting to show that this current version of the system is better than the workshop version, but I wonder if that is entirely surprising.}
 % 我们不在策略层面与先前的工作坊版本或 Neutrino 比较，因为它们仅限于只读可观测性（\S\ref{sec:background}）。

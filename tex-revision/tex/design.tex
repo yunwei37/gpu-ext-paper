@@ -107,12 +107,39 @@ Currently, a single policy program is loaded system-wide but may internally diff
 
 \sys{}'s threat model mirrors standard eBPF: administrators are trusted, but policy code may be buggy or misconfigured.
 % \sys{} 的威胁模型与标准 eBPF 相同：管理员可信，但策略代码可能有 bug 或配置错误。
-The trusted computing base (TCB) includes the OS kernel, \sys driver module, GPU compiler backend, and GPU driver/firmware.
-% 可信计算基（TCB）包括 OS 内核、\sys 驱动模块、GPU 编译器后端以及 GPU 驱动/固件。
+The trusted computing base (TCB) includes the OS kernel and its verifier/JIT, \sys{} driver hooks and transition validators, the GPU driver/firmware and native actuators, and the device verifier, helper/map models, and GPU compilation toolchain.
+% 可信计算基（TCB）包括 OS 内核及其验证器/JIT、\sys{} 驱动钩子与转移验证器、GPU 驱动/固件及原生执行器，以及设备端验证器、helper/map 模型和 GPU 编译工具链。
 Host-side verification directly reuses the Linux eBPF verifier (\S\ref{sec:implementation}).
 % 主机端验证直接复用 Linux eBPF 验证器（\S\ref{sec:implementation}）。
 
-\input{tex/revision_safety}
+\sys{} enforces safety at two layers: \emph{program checks} restrict what policy code may execute, and \emph{transition checks} validate each requested resource change against driver-owned state before actuation.
+% \sys{} 在两个层面实施安全性：\emph{程序检查}限制策略代码可以执行的内容，\emph{转移检查}在驱动执行前，依据驱动持有的状态验证每一次资源变更请求。
+
+\subsubsection{Driver-owned Transition Validation}
+% 驱动持有的转移验证
+
+Policy callbacks never mutate resources directly.
+% 策略回调从不直接修改资源。
+Typed setters record a callback-local request; after the callback returns, driver code validates the recorded request against the current resource state and only then invokes its native actuator.
+% 类型化的 setter 记录回调本地的请求；回调返回后，驱动代码依据当前资源状态验证该请求，然后才调用原生执行器。
+An identical repeat request is idempotent, while a conflicting second request is latched and rejected.
+% 相同的重复请求是幂等的，而冲突的第二个请求会被锁存并拒绝。
+
+For physical-memory-manager (PMM) reordering, validation checks the owning PMM, root identity, source list, and a generation counter under the existing list lock; only used/unused list heads and tails are valid destinations.
+% 对于物理内存管理器（PMM）的重排序，验证在现有列表锁下检查所属 PMM、根标识、来源列表和代际计数器；合法目标仅限 used/unused 列表的头部和尾部。
+Fallback is operation-specific: an invalid PMM request preserves entry state, while an invalid prefetch action or region falls back to native prefetch behavior.
+% 回退行为因操作而异：非法 PMM 请求保留原有状态，非法的预取动作或区域则回退到原生预取行为。
+
+\subsubsection{SIMT-aware Verification}
+% SIMT 感知验证
+
+Device-side programs additionally pass a GPU verifier that applies PREVAIL~\cite{prevail-verifier} with GPU-specific helper and map models, followed by uniformity analysis and SIMT checks.
+% 设备端程序还需通过 GPU 验证器：先以带 GPU 特定 helper 和 map 模型的 PREVAIL~\cite{prevail-verifier} 检查，再进行一致性分析和 SIMT 检查。
+Forward dataflow tracks register values, stack bytes, pointer provenance, and map identity using \emph{unknown}, \emph{uniform}, and \emph{varying} tags; a worklist propagates instruction effects until stable, and a final pass checks every reachable instruction.
+% 前向数据流以\emph{未知}、\emph{一致}、\emph{可变}标记跟踪寄存器值、栈字节、指针来源和 map 标识；工作队列传播指令效果直至收敛，最后一遍检查每条可达指令。
+
+The verifier enforces memory bounds and termination, and requires branch conditions, map keys, shared-map values, and atomic targets to be warp-uniform.
+% 验证器检查内存边界与终止性，并要求分支条件、map 键、共享 map 值及原子操作目标保持 warp 一致。
 
 \subsubsection{Warp-level Execution Optimizations}
 % warp 级执行优化
@@ -121,7 +148,6 @@ Even after SIMT verification, scalar per-thread eBPF execution incurs overhead (
 % 即使通过 SIMT 验证，逐线程标量执行 eBPF 仍有开销（\eg 重复的 map 更新）。
 To resolve this, \sys{} introduces warp-level aggregated execution: lanes compute local results without affecting control flow or shared state; these results are aggregated warp-wide, and a warp leader executes the policy once, broadcasting decisions back (\S\ref{sec:implementation}).
 % 为解决此问题，\sys{} 引入 warp 级聚合执行：各 lane 计算局部结果而不影响控制流或共享状态；结果被 warp 级聚合，由 warp leader 执行一次策略，并将决策广播回去（\S\ref{sec:implementation}）。
-
 
 \subsubsection{Hierarchical Cross-layer Maps for State Coordination}
 % 用于状态协调的分层跨层 map
@@ -138,8 +164,8 @@ This model suffices as policies rely on approximate statistics; occasional stale
 
 When access patterns change faster than the synchronization interval, policies can issue synchronization operations more frequently, trading overhead for freshness, while transition validation (\S\ref{sec:verification}) prevents stale requests from corrupting driver state.
 % 当访问模式变化快于同步周期时，策略可以提高同步频率，以开销换取新鲜度；同时转移验证（\S\ref{sec:verification}）防止过期请求破坏驱动状态。
-Associative counters merge cleanly across shards, while eviction-list order or unique ownership cannot be reconstructed from merged snapshots and keeps a single authority; a dedicated experiment confirms bounded raw device-to-host readback beyond reducible summaries, recovering 34{,}560 per-thread tuples exactly and detecting all 2{,}560 deliberate-overflow drops.
-% 关联计数器可以跨分片干净地合并，而驱逐列表顺序或唯一所有权无法从合并的快照中重建，需保持单一权威；一项专项实验证实了超出可聚合摘要的有界原始设备到主机读回能力——精确恢复 34,560 个每线程元组，并检出全部 2,560 个故意溢出丢弃。
+Associative counters can be merged across shards; eviction-list order and unique ownership require a single authority.
+% 关联计数器可以跨分片合并；驱逐列表顺序与唯一所有权需要单一权威。
 
 \subsection{Example: MoE Expert Offloading}
 % 示例：MoE 专家卸载
@@ -166,7 +192,6 @@ Unlike framework-level offloading that often migrates experts as atomic units, \
 % 与通常以专家为原子单位迁移的框架级卸载不同，\sys{} 以页面粒度操作，实现更细粒度的计算-传输重叠。
 Each eBPF program captures partial state at different layers; cross-layer maps unify this fragmented visibility to orchestrate state transitions across host and GPU.
 % 每个 eBPF 程序在不同层捕获部分状态；跨层 map 统一这些碎片化的可见性，以编排跨主机和 GPU 的状态转换。
-
 
 \begin{figure}[t]
 \begin{lstlisting}[xleftmargin=0pt,numbers=none]
