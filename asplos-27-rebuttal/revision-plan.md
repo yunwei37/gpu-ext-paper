@@ -19,9 +19,9 @@ The [LMCache admission-stage diagnostic](../../../workloads/lmcache-disk/results
 is complete in main `37299d27`: 15 cells and 2,400 storage requests. Median
 native/BPF demand-read admission is 11.973/30.140 us, while end-to-end reads
 take hundreds of milliseconds. These instrumented measurements identify
-decision overhead but do not establish it as the sole bottleneck. A shared
-native/BPF write-delay-budget experiment is the next optimization; the old
-10 ms results remain, and read gains must be reported with write costs.
+decision overhead but do not establish it as the sole bottleneck. The subsequent
+shared native/BPF write-delay-budget experiment is complete above; the old
+10 ms results remain, and read gains are reported with write throughput.
 
 The [event-driven LMCache follow-up](../../../workloads/lmcache-disk/results-575-gds-live-event-driven-20260907.md)
 now completes all 15 cells / 2,400 requests and is published in main
@@ -49,19 +49,25 @@ counters are zero. The revision's map-consistency discussion now states the
 measured performance sensitivity without claiming observed driver-classified
 thrashing or an evaluated adaptive mitigation. No completed GPU cells repeat.
 
-Latest update: the live-feedback provider, executor, runner and
+## Historical execution sequence — retained results
+
+The dated steps below preserve the earlier measurements and their limitations.
+Their then-pending tasks are superseded by the completed studies above; they
+are not instructions to repeat cells or a current queue of unfinished work.
+
+The live-feedback provider, executor, runner and
 [five-block performance comparison](../../../workloads/lmcache-disk/results-575-gds-mixed-live-feedback-20260907.md)
 are complete and pushed in main `674bf3d2`. All 15 cells and 2,400 requests
 complete. FIFO/native/BPF scheduled read-p99 medians are
 1070.424/473.147/806.274 ms; BPF/native paired change is +23.601% at the median
 and adverse in all five blocks. In each native/BPF cell, 95/96 writes exhaust
-the 10 ms deferral budget. The next implementation is an opt-in event-driven
+the 10 ms deferral budget. The subsequent implementation was an opt-in event-driven
 executor shared by native and BPF, replacing periodic re-evaluation with
 wakeup on demand completion or budget expiry. The
 [experiment plan](../../../workloads/lmcache-disk/gds-control/event-driven-experiment-20260907.md)
 retains the old polling measurements and specifies a new, separate comparison.
-Historical statements below that the live-feedback wiring is unfinished are
-superseded by this update. No improvement for the new executor is claimed yet.
+The completed event-driven and budget comparisons above report their own
+results; this earlier polling campaign remains unchanged.
 
 The subsequent [GIL-handoff ablation](../../../workloads/lmcache-disk/results-575-gds-gil-handoff-20260907.md)
 is complete in `0d14fa1a`: 20 fresh-process measurements and 3,200 requests.
@@ -71,14 +77,14 @@ and it is slower than native in four of five pairs. The option remains
 default-off. These measurements are retained, not repeated for the next
 executor experiment. The [bottleneck analysis](../../../workloads/lmcache-disk/gds-control/live-feedback-bottleneck-analysis-20260907.md)
 localizes the old latency difference after read dispatch, but cannot separate
-decision locking, Python scheduling and storage service. The event-driven
-executor therefore remains a hypothesis to measure, not an established fix.
+decision locking, Python scheduling and storage service. At that stage the
+event-driven executor was a hypothesis, subsequently measured above.
 
 The separate [stale-state source forward-port](../../../workloads/stale-state-575/current-gds-compatibility-20260907.md)
 is published in `6aeebff6`; its patch applies to the current GDS driver source
-without dropping storage hooks. This is source preparation only: no driver
-reload or new stale-state measurements have occurred, and the formal campaign
-and exact restoration of the current GDS module remain pending.
+without dropping storage hooks. That commit was source preparation only;
+the later 21-cell campaign, analysis and saved-GDS-module restoration are
+complete in `bc0ff88a` and `1ea66808` above.
 
 The LMCache native/BPF storage-policy implementations are now running on the
 575 driver. The [five-arm end-to-end comparison](../../../workloads/lmcache-disk/results-575-lmcache-gds-five-arm-20260906.md)
@@ -88,7 +94,7 @@ also completed 25 measurements. Its BPF/full-native paired throughput change
 has median -0.185%; the cold-then-warm workload does not overlap background
 writes with demand reads, so it does not measure contention relief.
 
-The ongoing [mixed-storage experiment](../../../workloads/lmcache-disk/gds-control/next-policy-experiment.md)
+The initial [mixed-storage experiment](../../../workloads/lmcache-disk/gds-control/next-policy-experiment.md)
 does overlap real cuFile reads and writes. One 64-read/96-write comparison
 completed all 480 requests and exercised native/BPF write deferral. The first
 five-repeat attempt retained GPU staging allocations across measurements and
@@ -104,8 +110,9 @@ CUDA pools. FIFO/native/BPF call-to-completion read p99 medians are
 [zero-spacing burst comparison](../../../workloads/lmcache-disk/results-575-gds-mixed-burst-20260906.md)
 also completes all 15 measurements and 2,400 requests. Both show substantial
 paired variability despite real native/BPF write deferral; neither establishes
-a stable policy benefit. Live pending-demand feedback remains implementation
-work. No historical record is replaced by either follow-up.
+a stable policy benefit. Live pending-demand feedback was not yet implemented
+in these campaigns; its later measurements appear above. No historical record
+is replaced by either follow-up.
 
 The runner fixes and the subsequent
 [scheduled-arrival comparison](../../../workloads/lmcache-disk/results-575-gds-mixed-scheduled-20260907.md)
@@ -118,12 +125,10 @@ tradeoff, not an across-the-board improvement: read p50 medians rise from
 throughput has paired median change -1.673%. BPF/native p99 changes have
 median +0.538% but range from -15.884% to +6.322%, not a tight overhead bound.
 These are storage-request latencies, not vLLM TTFT. The policy uses controlled
-pressure and one 10 ms write deferral; live pending-demand feedback remains
-unfinished beyond its matching native/BPF decision branch, which is built
-and now attached on the same 575 driver. The live counter/executor and
-opt-in runner wiring are in parallel local-model implementation; no feedback
-performance is claimed. Fresh-process isolation and separate scheduled/dispatch
-timestamps are no longer pending implementation tasks.
+pressure and one 10 ms write deferral, not the later live-feedback executor.
+The live counter/executor and opt-in runner wiring were implemented by local
+OpenCode models and measured in the subsequent studies above. Fresh-process
+isolation and separate scheduled/dispatch timestamps are complete.
 
 RTX 5090 Table 1 is complete for all three tools, as recorded below. The
 [GPU-local event-array follow-up](../../../workloads/llama.cpp/observability_overhead/revision-rq4/results-onevalue-array-bootstrap-575-20260907/README.md)
@@ -138,8 +143,9 @@ reports map-pointer verifier warnings, so the result is performance evidence,
 not strict-admission evidence. The original 90.7051% gpubpf / 99.6210% NVBit
 campaign and all prior RTX 5090/P40 numbers remain retained. Source and data
 are pushed in main commits `99b66423` and `7911b79a`; no completed cells need
-repeating. Local OpenCode models now complete the remaining LMCache wiring;
-the root reviews, measures and publishes.
+repeating. Local OpenCode models completed the LMCache wiring above; the root
+reviewed, measured and published it. Fresh Fig. 13 measurement and the remaining
+paper-wide commitments are tracked separately from these completed campaigns.
 
 ## Current execution record — 2026-09-04
 
