@@ -187,6 +187,14 @@ Default inputs make all storage decisions submit immediately: the paired BPF/nat
 % 默认输入使存储决策均为立即提交：BPF/原生配对吞吐差异中位数为 $+0.28\%$（范围 $-3.42\%$ 至 $+5.17\%$），衡量准入代价，尚未确立调度收益。
 LMCache owns transfers and buffers; cuFile uses compatibility mode here, without demonstrated direct NVMe-to-GPU DMA.
 % LMCache 管理传输和缓冲区；cuFile 在此使用兼容模式，尚未证明 NVMe 到 GPU 的直接 DMA。
+To exercise policy behavior separately, five further rotated blocks overlap 64 demand reads with 96 background writes of 24~MiB objects, comparing FIFO with identical native/BPF 10~ms write deferral under controlled pressure inputs, not live HBM telemetry.
+% 为单独衡量策略行为，另五组轮换实验重叠执行 64 次按需读取与 96 次后台写入，对象大小为 24~MiB；比较 FIFO 与相同的原生/BPF 10~ms 写入延迟策略，使用受控压力输入而非实时 HBM 遥测。
+FIFO/native/BPF scheduled-arrival read p99 medians are 298.22/265.30/247.93~ms; each run's nearest-rank p99 is the maximum of its 64 reads, not application TTFT.
+% FIFO/原生/BPF 从计划到达时刻计量的读 p99 中位数为 298.22/265.30/247.93~ms；每次运行按最近秩计算的 p99 即 64 次读取中的最大值，不是应用 TTFT。
+BPF lowers paired read p99 by a median 12.44\% versus FIFO, but its paired completed-write throughput change has median $-1.67\%$, while read p50 medians rise from 44.88~ms to 181.31/159.26~ms for native/BPF.
+% BPF 相对 FIFO 的配对读 p99 降幅中位数为 12.44\%，但完成写入的配对吞吐变化中位数为 $-1.67\%$；读 p50 中位数则从 44.88~ms 增至原生/BPF 的 181.31/159.26~ms。
+This is a tail-versus-median and bandwidth tradeoff; BPF/native paired p99 changes have median $+0.54\%$ and range $-15.88\%$ to $+6.32\%$, not a tight mechanism-overhead bound.
+% 这是尾延迟与中位延迟、带宽之间的取舍；BPF/原生配对 p99 变化中位数为 $+0.54\%$，范围为 $-15.88\%$ 至 $+6.32\%$，并非紧确的机制开销界限。
 
 \paragraph{Graph Neural Networks (GNN Training).}
 % 图神经网络（GNN 训练）。
