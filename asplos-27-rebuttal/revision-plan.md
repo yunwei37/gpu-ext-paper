@@ -2,6 +2,20 @@
 
 ## Active follow-up — 2026-09-07 UTC
 
+Latest update: the live-feedback provider, executor, runner and
+[five-block performance comparison](../../../workloads/lmcache-disk/results-575-gds-mixed-live-feedback-20260907.md)
+are complete and pushed in main `674bf3d2`. All 15 cells and 2,400 requests
+complete. FIFO/native/BPF scheduled read-p99 medians are
+1070.424/473.147/806.274 ms; BPF/native paired change is +23.601% at the median
+and adverse in all five blocks. In each native/BPF cell, 95/96 writes exhaust
+the 10 ms deferral budget. The next implementation is an opt-in event-driven
+executor shared by native and BPF, replacing periodic re-evaluation with
+wakeup on demand completion or budget expiry. The
+[experiment plan](../../../workloads/lmcache-disk/gds-control/event-driven-experiment-20260907.md)
+retains the old polling measurements and specifies a new, separate comparison.
+Historical statements below that the live-feedback wiring is unfinished are
+superseded by this update. No improvement for the new executor is claimed yet.
+
 The LMCache native/BPF storage-policy implementations are now running on the
 575 driver. The [five-arm end-to-end comparison](../../../workloads/lmcache-disk/results-575-lmcache-gds-five-arm-20260906.md)
 completed 25 measurements: recompute, CPU cache, cuFile FIFO, native policy,
