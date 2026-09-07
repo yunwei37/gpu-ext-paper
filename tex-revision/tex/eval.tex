@@ -20,14 +20,14 @@ We answer RQ1 in \S\ref{sec:rq1} through policy microbenchmarks, agent-driven ca
 
 We evaluate \sys on two machines: Server~A with Intel Core Ultra~9 285K (24 cores), 128~GB DDR5 RAM, and NVIDIA RTX~5090 GPU; Server~B with dual Intel Gold 6138 (80 cores), 256~GB RAM, and NVIDIA P40 GPU.
 % 我们在两台机器上评估 gpubpf：服务器 A 配备 Intel Core Ultra 9 285K（24 核）、128 GB DDR5 内存和 NVIDIA RTX 5090 GPU；服务器 B 配备双路 Intel Gold 6138（80 核）、256 GB 内存和 NVIDIA P40 GPU。
-Unless otherwise specified, experiments run on Server~A, averaging 10 trials using geometric mean.
-% 除非另有说明，实验均在服务器 A 上进行，每项结果取 10 次试验的几何平均值。
+Unless otherwise specified, the original experiments run on Server~A, averaging 10 trials using geometric mean; the added revision studies report their own repetitions and summary statistics.
+% 除非另有说明，原始实验均在服务器 A 上进行，每项结果取 10 次试验的几何平均值；新增修订研究分别报告其重复次数和汇总统计量。
 We compare \sys{} against three classes of baselines: (1) driver defaults (UVM LRU/FIFO eviction, native GPU scheduler), (2) application-level hints (\texttt{cudaMemAdvise}), and (3) framework-managed policies (e.g., llama.cpp \texttt{ncmoe}, vLLM CPU offload, LMCache) where applicable.
 % 我们将 gpubpf 与三类基线对比：(1) 驱动默认行为（UVM LRU/FIFO 驱逐、原生 GPU 调度器），(2) 应用层提示（\texttt{cudaMemAdvise}），以及 (3) 框架管理的策略（如 llama.cpp 的 \texttt{ncmoe}、vLLM CPU offload、LMCache，在适用处）。
 The matched comparisons in \S\ref{sec:policy-mechanism} additionally evaluate policies from published research systems: MoE-Infinity~\cite{xue2025moeinfinity}, XSched~\cite{shen2025xsched}, GPREEMPT~\cite{fan2025gpreempt}, Expert Buffering~\cite{huang2023towards}, FineMoE~\cite{yu2026finemoe}, Hummingbird~\cite{hu2026hummingbird}, and POD-Attention~\cite{kamath2025pod}; each pairs a native policy implementation with a \sys{} port.
 % \S\ref{sec:policy-mechanism} 进一步评估 MoE-Infinity、XSched、GPREEMPT、Expert Buffering、FineMoE、Hummingbird 和 POD-Attention 等已发表系统的策略；每组配对原生策略实现和 \sys{} 移植版。
-We use PyTorch (version 2.9.0) and vLLM (version 0.11.0) with custom allocators, llama.cpp (version 7101), and Faiss (version 1.13.0) with UVM build config.
-% 我们使用 PyTorch（版本 2.9.0）和 vLLM（版本 0.11.0，配自定义分配器）、llama.cpp（版本 7101）以及采用 UVM 构建配置的 Faiss（版本 1.13.0）。
+The original experiments use PyTorch (version 2.9.0) and vLLM (version 0.11.0) with custom allocators, llama.cpp (version 7101), and Faiss (version 1.13.0) with UVM build config; revision artifacts record their separate software configurations.
+% 原始实验使用 PyTorch（版本 2.9.0）和 vLLM（版本 0.11.0，配自定义分配器）、llama.cpp（版本 7101）以及采用 UVM 构建配置的 Faiss（版本 1.13.0）；修订工件另行记录各自的软件配置。
 Driver-attached \sys{} policies can operate without application-source changes; the matched research-policy ports and storage-tier comparison use the adapters and shared executors described below.
 % 驱动挂接的 \sys{} 策略可以无需修改应用源码运行；匹配的研究策略移植和存储层对比则使用下文说明的适配器与共享执行器。
 
@@ -80,10 +80,10 @@ This highlights \sys's programmability: different workloads require different sc
 % 智能体驱动的策略探索案例研究
 \label{sec:rq1-agent}
 
-We provided an AI coding agent (Claude Code with Opus 4.5) with \sys{}'s eBPF interfaces; the agent autonomously generated all policy logic without human review or guidance, while humans authored only the initial framework and benchmark harness.
-% 我们向一个 AI 编程智能体（Claude Code，Opus 4.5）提供 gpubpf 的 eBPF 接口；智能体在无人审阅或指导的情况下自主生成了全部策略逻辑，人类只编写初始框架和基准测试工具。
-All 59 policies evaluated were produced via a fully automated generate-test-iterate loop.
-% 评估的全部 59 个策略均由完全自动化的“生成—测试—迭代”循环产出。
+In the original agent study, we provided an AI coding agent (Claude Code with Opus 4.5) with \sys{}'s eBPF interfaces; the agent autonomously generated all policy logic in that study without human review or guidance, while humans authored only the initial framework and benchmark harness.
+% 在原始智能体研究中，我们向一个 AI 编程智能体（Claude Code，Opus 4.5）提供 gpubpf 的 eBPF 接口；智能体在无人审阅或指导的情况下自主生成了该研究中的全部策略逻辑，人类只编写初始框架和基准测试工具。
+All 59 policies in that study were produced via a fully automated generate-test-iterate loop; the added research-policy ports and storage-tier study are separate, coordinated revision work, not part of that 59-policy count or no-human-guidance claim.
+% 该研究的全部 59 个策略均由完全自动化的“生成—测试—迭代”循环产出；新增的研究策略移植和存储层研究属于另行协调的修订工作，不计入这 59 个策略，也不属于无人指导的声明范围。
 We conclude with four case studies showing performance gains and the exploration process.
 % 最后我们通过四个案例研究展示性能收益与探索过程。
 
@@ -198,7 +198,7 @@ Native GPU allocation (no UVM) achieves the highest performance when data fits i
 UVM with \sys prefetching enables 15M-node training at 2.17$\times$ oversubscription without application modification.
 % 采用 gpubpf 预取的 UVM 使 15M 节点（2.17× 超订）训练得以进行，且无需修改应用。
 
-\sys uses sequential prefetch with an uprobe tracing PyTorch allocations, determining prefetch ranges via device-traced history.
+\sys uses sequential prefetch with a uprobe tracing PyTorch allocations, determining prefetch ranges via device-traced history.
 % gpubpf 使用带 uprobe 追踪 PyTorch 分配的顺序预取，并通过设备端追踪的历史确定预取范围。
 The agent tested deeper lookahead after single-block-ahead prefetch (K=1) improved epoch time by 21\%, but found K=2 and K=3 degraded by 16\%, and adaptive K (up to 6) by 46\%.
 % 在单块提前预取（K=1）将单轮时间改善 21\% 之后，智能体测试了更深的前瞻，但发现 K=2 和 K=3 会使性能下降 16\%，自适应 K（最高 6）下降 46\%。
