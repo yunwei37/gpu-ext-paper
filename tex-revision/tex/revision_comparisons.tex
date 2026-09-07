@@ -4,8 +4,8 @@
 
 We evaluate whether \sys{} can express the policies of published state-of-the-art systems, and what the general mechanism costs when it runs the same policy as an ad-hoc implementation.
 % 我们评估 \sys{} 能否表达已发表最先进系统的策略，以及通用机制在运行与临时实现相同的策略时代价几何。
-\Cref{fig:matched-ports} summarizes five matched reimplementations (scheduling ports XSched and GPREEMPT appear in \Cref{fig:scheduler-latency}): each panel pairs the original implementation with a \sys{} port of the same policy on the same workload and executor.
-% \Cref{fig:matched-ports} 汇总了五个匹配重实现（调度移植版 XSched 和 GPREEMPT 见 \Cref{fig:scheduler-latency}）：每个子图在相同工作负载和执行器上，将原始实现与同一策略的 \sys{} 移植版配对。
+\Cref{fig:matched-ports} separates two comparisons: a workload baseline versus a native policy implementation measures policy benefit, while native versus \sys{} on the same executor measures the port's cost; XSched and GPREEMPT appear in \Cref{fig:scheduler-latency}.
+% \Cref{fig:matched-ports} 区分两层比较：工作负载基线与原生策略实现比较策略收益，相同执行器上的原生实现与 \sys{} 比较移植代价；XSched 和 GPREEMPT 见 \Cref{fig:scheduler-latency}。
 Across the decision classes these systems span, host-JIT \sys{} selectors express expert prediction/prefetch and priority queue admission; kernel-BPF programs driving native actuators express TSG timeslices, fault-time prefetch, and UVM eviction-list ordering with validated used/unused heads and tails rather than arbitrary victims; and a device-BPF selector expresses SM-local task selection.
 % 这些系统覆盖的决策类别与 \sys{} 各层的对应关系为：主机 JIT 的 \sys{} 选择器可表达专家预测/预取与优先级队列准入；驱动原生执行器的内核 BPF 程序可表达 TSG 时间片、缺页时预取和 UVM 驱逐列表排序（仅限经验证的 used/unused 头尾，而非任意 victim）；设备端 BPF 选择器可表达 SM 本地任务选择。
 Disk/CXL placement has no general \sys{} backend.
@@ -21,8 +21,8 @@ Disk/CXL placement has no general \sys{} backend.
 
 \paragraph{Methodology}
 % 方法
-Each comparison pairs the original implementation with a \sys{} port of the same policy on the same workload and executor, on RTX~5090 (driver 575.57.08) with exclusive GPU access and repeated randomized trials.
-% 每组对比在相同工作负载和执行器上，将原始实现与同一策略的 \sys{} 移植版配对，在 RTX~5090（驱动 575.57.08）上以独占 GPU 和重复随机试验运行。
+Each comparison pairs a native implementation with a \sys{} port of the same policy on the same workload and executor, on RTX~5090 (driver 575.57.08) with exclusive GPU access and repeated randomized trials; a paper-described component reimplementation is distinguished from an upstream artifact below.
+% 每组对比在相同工作负载和执行器上，将原生实现与同一策略的 \sys{} 移植版配对，在 RTX~5090（驱动 575.57.08）上以独占 GPU 和重复随机试验运行；下文区分按论文描述复刻的组件与上游工件。
 Every configuration passes numerical correctness checks with the policy verifiably executing; we report medians with paired bootstrap intervals.
 % 每种配置都通过数值正确性检查且策略可验证地执行；报告中位数及配对 bootstrap 区间。
 
@@ -54,20 +54,36 @@ Porting Expert Buffering's~\cite{huang2023towards} inactive-first hot-expert res
 
 \paragraph{FineMoE (dynamic expert sets)}
 % FineMoE（动态专家集）
-The \sys{} port of FineMoE's~\cite{yu2026finemoe} dynamic expert-set selection reduces prefetched-but-unused payload by 60.4\% over an all-positive ablation and matches its native counterpart (4.51 vs 4.50 tokens/s).
-% FineMoE~\cite{yu2026finemoe} 动态专家集选择的 \sys{} 移植版相比全正例消融减少了 60.4\% 的预取但未用负载，并与原生实现持平（4.51 对 4.50 token/s）。
+For FineMoE's~\cite{yu2026finemoe} dynamic expert-set selection, the demand-only baseline disables speculative prefetch; the all-positive ablation instead prefetches every positive prediction.
+% 对 FineMoE~\cite{yu2026finemoe} 的动态专家集选择，按需基线关闭推测预取；全正例消融则预取所有正预测。
+Across five blocks, demand-only, all-positive, native C, and \sys{} achieve median throughput of 5.171, 3.623, 4.499, and 4.514 tokens/s.
+% 五组实验中，按需、全正例、原生 C 和 \sys{} 的吞吐中位数分别为 5.171、3.623、4.499 和 4.514 token/s。
+The \sys{} policy reduces evicted-unused speculative payload by 60.4\% and improves paired throughput by 24.6\% over all-positive, but loses 12.6\% throughput against demand-only: less waste does not guarantee a net prefetch benefit.
+% \sys{} 策略相对全正例减少了 60.4\% 的未使用即被驱逐的推测负载，配对吞吐提高 24.6\%，但相对按需基线吞吐下降 12.6\%：浪费减少不保证预取的净收益。
+The BPF/native paired throughput difference is $+0.21\%$ (95\% CI $[-0.17\%,+0.52\%]$), with no detected directional mechanism effect.
+% BPF/原生的配对吞吐差异为 $+0.21\%$（95\% CI $[-0.17\%,+0.52\%]$），未检测到明确方向的机制效应。
 
 \paragraph{Hummingbird (idle admission)}
 % Hummingbird（空闲准入）
 We port Hummingbird's~\cite{hu2026hummingbird} idle-interval admission component to both a C implementation and a host-JIT \sys{} program on the same DNN frontend, under periodic and BurstGPT arrivals.
 % 我们将 Hummingbird~\cite{hu2026hummingbird} 的空闲区间准入组件在同一 DNN 前端上分别实现为 C 版本和主机 JIT 的 \sys{} 程序，覆盖周期性和 BurstGPT 两种到达模式。
-The two implementations behave identically (\sys{}/C ratio 0.994 in both arrival patterns), confirming that the mechanism carries the component's scheduling decisions without distortion.
-% 两种实现表现一致（两种到达模式下 \sys{}/C 比率均为 0.994），证实该机制不失真地承载了该组件的调度决策。
+Relative to default scheduling, idle admission lowers median LC response p99 from 1.980 to 1.831/1.864~ms (C/\sys{}) for periodic arrivals, and from 5.436 to 4.989/4.940~ms for BurstGPT arrivals.
+% 相比默认调度，空闲准入将周期性到达的 LC 响应 p99 中位数从 1.980 降至 1.831/1.864 毫秒（C/\sys{}），将 BurstGPT 到达的相应值从 5.436 降至 4.989/4.940 毫秒。
+This foreground benefit costs background throughput: both ports deliver about 133 requests/s versus 179 for default scheduling, and lose 19--20\% to the fixed-GPREEMPT control in paired comparisons.
+% 这一前台收益付出了后台吞吐代价：两个移植版约为每秒 133 个请求，默认调度约为 179；相对固定 GPREEMPT 对照，配对吞吐下降 19--20\%。
+These are conservative reimplementations of the idle-admission component, not the authors' complete scheduler; similar C/BPF goodput does not establish identical foreground protection.
+% 这些是空闲准入组件的保守重实现，而非作者的完整调度器；相近的 C/BPF 有效吞吐不能证明前台保护相同。
 
 \paragraph{POD-Attention (device-side selection)}
 % POD-Attention（设备端选择）
-A device-BPF selector preserves POD-Attention's~\cite{kamath2025pod} proportional SM-local task choice with exact numerical output, adding 1.78\% mean operator latency over the CUDA adapter across ten attention shapes and beating two-stream FlashAttention in seven of them.
-% 设备端 BPF 选择器保持了 POD-Attention~\cite{kamath2025pod} 按比例的 SM 本地任务选择，数值输出完全一致；在十种注意力形状上，相比 CUDA 适配器平均算子延迟增加 1.78\%，并在其中七种形状上优于双流 FlashAttention。
+A device-BPF selector implements POD-Attention's~\cite{kamath2025pod} proportional SM-local task choice; the five-arm comparison includes non-fused FlashAttention serial and two-stream baselines, upstream POD inline selection, a CUDA adapter, and the BPF adapter across ten shapes and five blocks.
+% 设备端 BPF 选择器实现 POD-Attention~\cite{kamath2025pod} 按比例的 SM 本地任务选择；五臂比较覆盖未融合的 FlashAttention 串行和双流基线、上游 POD 内联选择、CUDA 适配器和 BPF 适配器，共十种形状、五组实验。
+BPF beats the two-stream baseline in seven shapes, not all: for Llama decode batch 128, baseline/CUDA/BPF operator latency is 5.360/4.322/4.344~ms, whereas batch 32 gives 3.303/3.460/3.494~ms.
+% BPF 在七种而非全部形状上优于双流基线：Llama 解码批量 128 时基线/CUDA/BPF 算子延迟为 5.360/4.322/4.344 毫秒，批量 32 时则为 3.303/3.460/3.494 毫秒。
+Fusion gains belong to POD's policy/operator; the BPF/CUDA paired latency cost is 0.51--1.18\% in nine shapes, with a 0.44\% reduction in the remaining shape.
+% 融合收益来自 POD 的策略/算子；九种形状中 BPF/CUDA 配对延迟代价为 0.51--1.18\%，剩余一种降低 0.44\%。
+The separate batch-32 setup-decomposition study measures a 1.78\% operator cost, not a ten-shape average, and reports 271~s of BPF startup before the first Python statement, outside operator timing.
+% 独立的批量 32 启动分解实验测得 1.78\% 算子代价，而非十种形状的平均值，并记录了首条 Python 语句之前 271 秒的 BPF 启动时间，不计入算子计时。
 
 \paragraph{Mechanism cost}
 % 机制代价
