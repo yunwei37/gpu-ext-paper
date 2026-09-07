@@ -2,6 +2,19 @@
 
 ## Active follow-up — 2026-09-07 UTC
 
+The [PTX-free application-injection follow-up](../../experiment/sass-existing-application-next-20260907.md)
+now has a built BPF device-function exporter (main `08e1692e`), preserving
+the real compiler-generated function rather than launching a companion
+kernel. The four-instruction input exports a 316-byte two-parameter PTX
+function; merged wrapper/BPF code assembles into sm_120 tools-patch SASS.
+Local OpenCode Qwen and GLM are completing tool embedding. Live execution
+inside the existing application's EXIT remains unfinished, and successful
+assembly alone does not establish it. The
+[recovered branch evidence](../../experiment/revision-sass-aot-readiness-20260904.md)
+also retains bpftime `8e4e64d`'s older five-run companion interposition
+measurement (5.1375/32.1015 us steady total), without treating that separate
+kernel launch as in-body SASS injection. No completed GPU study repeats.
+
 The fresh [Fig. 13 memory/scheduling comparison](../../../workloads/fig13-fast/results-performance-575-20260907.md)
 completes five blocks / 20 cells in main `10994d21`, with all 40 tenants and
 all policy tools exiting zero, followed by original-core/saved-GDS-UVM/service
