@@ -1,5 +1,19 @@
 # Matched scheduling figure
 
+## Device observability update (2026-09-07)
+
+`obs-overhead-with-array.pdf` is the current device-observability figure.
+`plot_obs_with_array.py` reads the original Table 1 cells and the separate
+five-pair GPU-array campaign; `obs-with-array-data.json` retains every plotted
+pair. The [caption and reproduction instructions](obs-with-array.caption.md)
+identify the independent baselines and final readback outside prefill.
+The historical P40 points and all ten-pair RTX 5090 results remain visible,
+including negative launchlate overhead samples. `obs-overhead-bars.pdf`
+remains unchanged as the previous rendering. This is an existing-data plot
+update, not a new performance campaign.
+
+## Scheduling renderings
+
 `scheduling-comparison-lc-bars.pdf` is the current figure: a single-column
 two-panel rendering of LC latency (XSched and GPreempt workloads), rendered
 by `workloads/gpreempt/plot_scheduling_comparison_lc.py` from the published

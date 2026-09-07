@@ -1,0 +1,179 @@
+{
+  "schema": "obs_overhead_with_array_v1",
+  "metric": "prefill throughput loss, percent of the same-campaign baseline throughput (lower is better)",
+  "plot_note": "symlog axis, linear between -1 and +1; the negative gpubpf launchlate pairs are shown, not clamped",
+  "campaigns": {
+    "p40_submitted": {
+      "gpu": "P40",
+      "workload": "Llama 1B, sequence-mixed llama.cpp prefill",
+      "status": "historical",
+      "n_pairs": null,
+      "raw_variance": "none recorded with the published values; no per-pair values are available and none are implied",
+      "source": [
+        "docs/paper/tex/eval.tex (tab:obs-overhead)",
+        "workloads/llama.cpp/observability_overhead/p40-submitted-table1.json"
+      ],
+      "published_point_pct": {
+        "gpubpf_kernelretsnoop": 8.0,
+        "nvbit_kernelretsnoop": 85.0,
+        "gpubpf_threadhist": 3.0,
+        "nvbit_threadhist": 87.0,
+        "gpubpf_launchlate": 14.0,
+        "nvbit_launchlate": 93.0
+      }
+    },
+    "rtx5090_table1": {
+      "gpu": "RTX 5090",
+      "driver": "575.57.08",
+      "workload": "TinyLlama-1.1B Q4_K_M, llama.cpp pp512 prefill",
+      "status": "published",
+      "n_pairs_per_arm": 10,
+      "baseline_mean_tok_s": 37586.322536,
+      "source": [
+        "workloads/llama.cpp/observability_overhead/revision-rq4/results-table1-warp-plt-575-06/cells.json",
+        "workloads/llama.cpp/observability_overhead/revision-rq4/results-table1-warp-plt-575-06/summary.json",
+        "workloads/llama.cpp/observability_overhead/revision-rq4/results-table1-warp-plt-575-06/README.md"
+      ],
+      "per_pair_overhead_pct": {
+        "gpubpf_kernelretsnoop": {
+          "1": 90.74179670427486,
+          "2": 90.64385720397932,
+          "3": 90.82755293236096,
+          "4": 90.57807264610227,
+          "5": 91.06607737566796,
+          "6": 90.74700396391869,
+          "7": 90.57464036904655,
+          "8": 90.73900281191106,
+          "9": 90.54109687985833,
+          "10": 90.5917580374786
+        },
+        "gpubpf_threadhist": {
+          "1": 2.713053611298995,
+          "2": 2.3757518110864937,
+          "3": 3.713380284788796,
+          "4": 2.6907863448638105,
+          "5": 2.4865871404651196,
+          "6": 3.8947970723437573,
+          "7": 2.9632561032937006,
+          "8": 3.792049003877808,
+          "9": 2.6913935009292507,
+          "10": 2.33202585446159
+        },
+        "gpubpf_launchlate": {
+          "1": -0.4611073368924159,
+          "2": 0.21614712792501603,
+          "3": 0.5568480110162363,
+          "4": -0.1843418430121474,
+          "5": -0.635142141005402,
+          "6": 1.2265931980930782,
+          "7": 0.19496048834385893,
+          "8": 0.6981215052899591,
+          "9": -0.026298184047372938,
+          "10": 0.622370757332359
+        },
+        "nvbit_kernelretsnoop": {
+          "1": 99.61570729439411,
+          "2": 99.6177433966551,
+          "3": 99.6188801416558,
+          "4": 99.62185559763589,
+          "5": 99.61595451300033,
+          "6": 99.6263522679295,
+          "7": 99.62372449079874,
+          "8": 99.62628147238028,
+          "9": 99.62140794319475,
+          "10": 99.62239676192875
+        },
+        "nvbit_threadhist": {
+          "1": 9.716553796302266,
+          "2": 11.148759923779926,
+          "3": 13.619418875411009,
+          "4": 10.057663744239592,
+          "5": 8.452587225527603,
+          "6": 10.447519837269068,
+          "7": 9.87423157355256,
+          "8": 10.14294037648165,
+          "9": 9.92727120239599,
+          "10": 10.1141562387317
+        },
+        "nvbit_launchlate": {
+          "1": 7.23642282544045,
+          "2": 8.355717358283446,
+          "3": 10.680765859086527,
+          "4": 11.360775048312425,
+          "5": 7.276012512033742,
+          "6": 8.366449105841246,
+          "7": 6.89314381256755,
+          "8": 8.453033534082817,
+          "9": 9.197477915457327,
+          "10": 10.139365870528634
+        }
+      },
+      "mean_overhead_pct": {
+        "gpubpf_kernelretsnoop": 90.70508589245986,
+        "gpubpf_threadhist": 2.965308072740932,
+        "gpubpf_launchlate": 0.22081515830431692,
+        "nvbit_kernelretsnoop": 99.62103038795733,
+        "nvbit_threadhist": 10.350110279369137,
+        "nvbit_launchlate": 8.795916384163416
+      },
+      "min_overhead_pct": {
+        "gpubpf_kernelretsnoop": 90.54109687985833,
+        "gpubpf_threadhist": 2.33202585446159,
+        "gpubpf_launchlate": -0.635142141005402,
+        "nvbit_kernelretsnoop": 99.61570729439411,
+        "nvbit_threadhist": 8.452587225527603,
+        "nvbit_launchlate": 6.89314381256755
+      },
+      "max_overhead_pct": {
+        "gpubpf_kernelretsnoop": 91.06607737566796,
+        "gpubpf_threadhist": 3.8947970723437573,
+        "gpubpf_launchlate": 1.2265931980930782,
+        "nvbit_kernelretsnoop": 99.6263522679295,
+        "nvbit_threadhist": 13.619418875411009,
+        "nvbit_launchlate": 11.360775048312425
+      }
+    },
+    "rtx5090_gpu_array": {
+      "gpu": "RTX 5090",
+      "driver": "575.57.08",
+      "workload": "TinyLlama-1.1B Q4_K_M, llama.cpp pp512 prefill",
+      "status": "new",
+      "tool": "kernelretsnoop",
+      "storage": "gpu-array-onevalue",
+      "n_pairs": 5,
+      "independent_campaign": true,
+      "baseline_note": "own five-block baseline; the five pairs are not interleaved with, or paired against, the table1 NVBit or gpubpf-ring arms",
+      "baseline_mean_tok_s": 37979.2560812,
+      "source": [
+        "workloads/llama.cpp/observability_overhead/revision-rq4/results-onevalue-array-bootstrap-575-20260907/cells.json",
+        "workloads/llama.cpp/observability_overhead/revision-rq4/results-onevalue-array-bootstrap-575-20260907/summary.json",
+        "workloads/llama.cpp/observability_overhead/revision-rq4/results-onevalue-array-bootstrap-575-20260907/README.md"
+      ],
+      "final_lookup_ms": {
+        "mean_ms": 10.379343,
+        "min_ms": 10.157582,
+        "max_ms": 10.959894,
+        "allocated_bytes": 23199768,
+        "note": "one whole-value host lookup of the finite GPU-local array after target completion; outside the prefill timing window; buffer sized for the pp512 workload"
+      },
+      "per_pair_overhead_pct": {
+        "gpubpf_kernelretsnoop": {
+          "1": 5.486182131391664,
+          "2": 5.484603740519516,
+          "3": 4.01753648690946,
+          "4": 6.16948228524672,
+          "5": 6.704966189985542
+        }
+      },
+      "mean_overhead_pct": {
+        "gpubpf_kernelretsnoop": 5.572554166810581
+      },
+      "min_overhead_pct": {
+        "gpubpf_kernelretsnoop": 4.01753648690946
+      },
+      "max_overhead_pct": {
+        "gpubpf_kernelretsnoop": 6.704966189985542
+      }
+    }
+  }
+}

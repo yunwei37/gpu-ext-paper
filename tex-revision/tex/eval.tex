@@ -483,9 +483,9 @@ Attaching to a running process requires no application restart.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{img/results-raw/revision/obs-overhead-bars.pdf}
-\caption{\sys device-side observability overhead versus NVBit (log scale). (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B, ten paired runs.}
-% gpubpf 设备端可观测开销与 NVBit 对比（对数坐标）。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B，十次配对运行。
+\includegraphics[width=\columnwidth]{img/results-raw/revision/obs-overhead-with-array.pdf}
+\caption{Prefill throughput loss relative to each campaign's baseline (lower is better). (a) Historical P40 values. (b) RTX~5090: ten pairs per original tool and five independent GPU-array pairs (diamonds); ticks show means, whiskers min--max. Symlog axis is linear from $-1$ to $1\%$. The array reduces kernel-return recording overhead to 5.57\% for finite pp512 buffering; its final 23.2~MB readback (10.38~ms) is outside prefill.}
+% 相对各批次 baseline 的预填充吞吐损失（越低越好）。(a) 历史 P40 数值。(b) RTX~5090：原工具各十组配对，GPU 数组另有五组独立配对（菱形）；短线表示均值，横线为最小至最大值。对称对数轴在 -1 到 1\% 区间为线性。数组将有限 pp512 缓冲下的内核返回记录开销降至 5.57\%；最终 23.2~MB 回读（10.38~ms）不计入预填充。
 \label{fig:obs-overhead}
 \end{figure}
 
