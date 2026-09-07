@@ -226,7 +226,7 @@ def _draw(data: dict, paths: list[Path]) -> None:
             axis.set_yscale("symlog", linthresh=1)
             axis.set_ylim(-1, 200)
             axis.set_yticks([-1, 0, 1, 10, 100], ["−1", "0", "1", "10", "100"])
-            axis.set_xticks(range(3), ["kernelret\nsnoop", "thread-\nhist", "launch-\nlate"])
+            axis.set_xticks(range(3), ["kernel-\nret-snoop", "thread-\nhist", "launch-\nlate"])
             axis.set_title(("(a) P40", "(b) RTX 5090")[column], fontsize=7.5, pad=4)
             axis.grid(axis="y", alpha=.25, linewidth=.6)
             axis.axhline(0, color="#555555", linewidth=.6)
