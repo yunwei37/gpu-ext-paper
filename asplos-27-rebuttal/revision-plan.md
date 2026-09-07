@@ -1,6 +1,6 @@
 # ASPLOS'27 #1797 Revision Plan
 
-## Active follow-up — 2026-09-06
+## Active follow-up — 2026-09-07 UTC
 
 The LMCache native/BPF storage-policy implementations are now running on the
 575 driver. The [five-arm end-to-end comparison](../../../workloads/lmcache-disk/results-575-lmcache-gds-five-arm-20260906.md)
@@ -28,6 +28,21 @@ also completes all 15 measurements and 2,400 requests. Both show substantial
 paired variability despite real native/BPF write deferral; neither establishes
 a stable policy benefit. Live pending-demand feedback remains implementation
 work. No historical record is replaced by either follow-up.
+
+The runner fixes and the subsequent
+[scheduled-arrival comparison](../../../workloads/lmcache-disk/results-575-gds-mixed-scheduled-20260907.md)
+are now complete: 15 fresh child processes and all 2,400 requests finish.
+FIFO/native/BPF scheduled-arrival read p99 medians are
+298.220/265.297/247.931 ms. BPF lowers p99 in all five FIFO pairs, with a paired
+median change of -12.440%; native's paired median is -11.040%. This is a
+tradeoff, not an across-the-board improvement: read p50 medians rise from
+44.878 ms for FIFO to 181.313/159.258 ms for native/BPF, and BPF/FIFO write
+throughput has paired median change -1.673%. BPF/native p99 changes have
+median +0.538% but range from -15.884% to +6.322%, not a tight overhead bound.
+These are storage-request latencies, not vLLM TTFT. The policy uses controlled
+pressure and one 10 ms write deferral; live pending-demand feedback remains
+unimplemented. Fresh-process isolation and separate scheduled/dispatch
+timestamps are no longer pending implementation tasks.
 
 RTX 5090 Table 1 is complete for all three tools, as recorded below. The next
 device-tool task is a separately selectable GPU-local event-buffer and bulk
