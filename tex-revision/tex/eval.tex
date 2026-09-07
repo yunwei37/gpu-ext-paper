@@ -12,8 +12,8 @@ Our evaluation addresses two research questions:
   % RQ2（机制代价）：gpubpf 机制的代价有多大——包括钩子与可观测开销，以及通过 gpubpf 执行同一策略的代价？
 \end{itemize}
 
-We answer RQ1 in \S\ref{sec:rq1-micro}--\S\ref{sec:policy-mechanism}: policy microbenchmarks, agent-driven case studies on realistic workloads, multi-tenant settings, and matched reimplementations of published policies. \S\ref{sec:rq2-cost} answers RQ2.
-% 我们在 \S\ref{sec:rq1-micro}--\S\ref{sec:policy-mechanism} 回答 RQ1：策略微基准、真实负载上的智能体驱动案例研究、多租户场景，以及对已发表策略的匹配重实现；\S\ref{sec:rq2-cost} 回答 RQ2。
+We answer RQ1 in \S\ref{sec:rq1} through policy microbenchmarks, agent-driven case studies on realistic workloads, multi-tenant settings, and matched reimplementations of published policies. \S\ref{sec:rq2-cost} answers RQ2.
+% 我们在 \S\ref{sec:rq1} 通过策略微基准、真实负载上的智能体驱动案例研究、多租户场景，以及对已发表策略的匹配重实现回答 RQ1；\S\ref{sec:rq2-cost} 回答 RQ2。
 
 
 \subsection{Methodology and Setup}
@@ -46,7 +46,11 @@ We release the agent prompts, benchmark harnesses, and policy sources used in th
 
 \end{figure}
 
-\subsection{Single-Tenant Memory and Scheduling Policies}
+\subsection{RQ1: Policy Expression and Benefits}
+% RQ1：策略表达与收益
+\label{sec:rq1}
+
+\subsubsection{Single-Tenant Memory and Scheduling Policies}
 % 单租户内存与调度策略
 \label{sec:rq1-micro}
 
@@ -78,7 +82,7 @@ LatencyBudget, which caps per-block stealing time, matches fixed-work baseline.
 This highlights \sys's programmability: different workloads require different scheduling strategies.
 % 这凸显了 gpubpf 的可编程性：不同工作负载需要不同的调度策略。
 
-\subsection{Agent-Driven Policy Exploration Case Studies}
+\subsubsection{Agent-Driven Policy Exploration Case Studies}
 % 智能体驱动的策略探索案例研究
 \label{sec:rq1-agent}
 
@@ -256,7 +260,7 @@ Only 2 of 8 policies yielded positive results.
 
 % Across all four case studies, \sys's programmable policies exploit workload structure (experts, KV-cache, graph structure, index layout) that existing UVM and framework-level mechanisms cannot leverage, and the agent's exploration followed a consistent pattern: broad initial policy, failure-driven refinement, and iterative convergence, with eBPF containment ensuring every failed attempt was recovered in seconds rather than requiring driver rebuilds or reboots.
 
-\subsection{Multi-Tenant Memory, Bandwidth, and Scheduling}
+\subsubsection{Multi-Tenant Memory, Bandwidth, and Scheduling}
 % 多租户内存、带宽与调度
 \label{sec:rq1-mt}
 
@@ -360,8 +364,8 @@ Our multi-tenant setting is software co-location on an unpartitioned GPU, comple
 
 \input{tex/revision_comparisons}
 
-\subsection{Mechanism Cost and Overheads}
-% 机制代价与开销
+\subsection{RQ2: Mechanism Cost}
+% RQ2：机制代价
 \label{sec:rq2-cost}
 
 We quantify what the general mechanism costs: the same-policy execution cost measured by the matched ports in \S\ref{sec:policy-mechanism} is 0.7--3.3\%, and the verifier's one-time admission cost is 141~ms for the 60-instruction \texttt{kernelretsnoop} and 12~ms for the 13-instruction \texttt{threadhist} (\S\ref{sec:verification}); below we measure hook, observability, and map-placement overheads.
