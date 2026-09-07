@@ -99,10 +99,10 @@ For decode (memory-bound), \sys achieves \textbf{1.76$\times$ speedup} over appl
 % 对于解码（内存受限），gpubpf 相比经应用调优的 UVM 提示（\texttt{cuda\-Mem\-Advise}）取得 \textbf{1.76× 加速}，相比框架卸载（\texttt{ncmoe=64}）取得 4.8× 加速。
 This is a policy gain over baseline policies; \S\ref{sec:policy-mechanism} separately measures the cost of executing the same policy through \sys{}.
 % 这是相对基线策略的策略收益；\S\ref{sec:policy-mechanism} 单独测量了通过 gpubpf 执行同一策略的代价。
-These hints improve decode over default UVM but require application modification and degrade prefill by 40\%; \sys outperforms hints on decode while preserving prefill within 4\% of default UVM, without application changes.
-% 这些提示相比默认 UVM 改善了解码，但需要修改应用，并使预填充性能下降 40\%；gpubpf 在解码上优于提示，同时将预填充保持在默认 UVM 的 4\% 以内，且无需修改应用。
-For prefill (compute-bound), framework offloading (\texttt{ncmoe=32}) achieves 13\% higher prefill throughput than \sys{}, but decode dominates end-to-end latency, so the decode improvement outweighs the prefill gap.%\arq{I don't understand the final data point. what has 13\% higher throughput? The graphed performance of UVM eBPF looks like it has worse performance compared to the alternatives. BTW---its very weird that none of the bars in Figure 8 are labeled "\sys"--I think that UVM eBPF is supposed to be that configuration but it does not make a lot of sense.}
-% 对于预填充（计算受限），框架卸载（\texttt{ncmoe=32}）比 gpubpf 的预填充吞吐量高 13\%，但解码主导端到端延迟，因此解码的改善超过了预填充的差距。
+These hints improve decode over default UVM but require application modification and degrade prefill by 40\%; \sys keeps prefill within 4\% of default UVM, without application changes.
+% 这些提示相比默认 UVM 改善了解码，但需要修改应用，并使预填充性能下降 40\%；gpubpf 将预填充保持在默认 UVM 的 4\% 以内，且无需修改应用。
+For prefill (compute-bound), framework offloading (\texttt{ncmoe=32}) achieves 13\% higher prefill throughput than \sys{}; this prefill/decode tradeoff pairs the prefill gap against the larger decode gains above.
+% 对于预填充（计算受限），框架卸载（\texttt{ncmoe=32}）比 gpubpf 的预填充吞吐量高 13\%；这一预填充/解码取舍以预填充差距对应上文更大的解码收益。
 
 The agent arrived at the final policy through iterative exploration: sequential prefetch degraded decode throughput due to mismatch with MoE stride patterns (consistent with the 8\% degradation in \Cref{fig:clc-policies}a), leading to stride-based prefetch aligned with regular weight layout within each expert layer.
 % 智能体通过迭代探索得出最终策略：顺序预取因与 MoE 步长模式不匹配而降低了解码吞吐量（与 \Cref{fig:clc-policies}a 中 8\% 的下降一致），于是改为与各专家层内规则权重布局对齐的步长预取。
@@ -133,14 +133,14 @@ The model nearly fills GPU VRAM, so the default no-offload configuration OOMs un
 % 该模型几乎占满 GPU 显存，因此默认的不卸载配置在负载下会 OOM。
 We stress KV-cache growth by sending 100 concurrent requests from ShareGPT~\cite{sharegpt} (single-round, no prefix caching), resulting in 36--40GB total footprint ($\approx$60K tokens KV-cache).
 % 我们通过发送来自 ShareGPT~\cite{sharegpt} 的 100 个并发请求（单轮、无前缀缓存）施加 KV-cache 增长压力，总占用达 36--40GB（约 60K token 的 KV-cache）。
-Existing solutions offload KV-cache or experts but not both; UVM attempts on-demand migration of both, leading to thrashing.
-% 现有方案只卸载 KV-cache 或专家权重之一；UVM 则尝试对二者按需迁移，导致抖动。
+In the framework configurations we evaluate, CPU offloading targets either experts or KV-cache, not both; UVM attempts on-demand migration of both, leading to thrashing.
+% 在我们评估的框架配置中，CPU 卸载只针对专家权重或 KV-cache 之一，而非二者兼有；UVM 则尝试对二者按需迁移，导致抖动。
 We compare vLLM's CPU-offload mode (\texttt{--cpu-offload-gb 8}) against \sys with UVM and a sequential prefetch policy.
 % 我们将 vLLM 的 CPU 卸载模式（\texttt{--cpu-offload-gb 8}）与采用 UVM 和顺序预取策略的 gpubpf 进行对比。
 \sys improves mean and p99 time-to-first-token by 1.7--2$\times$ and decoding throughput by 1.3$\times$ over vLLM's default framework-managed offload (\Cref{fig:vllm-kv-offload}), matching LMCache~\cite{lmcache}, a state-of-the-art KV-cache offloading framework.
 % 相比 vLLM 默认的框架管理卸载，gpubpf 将平均和 p99 首 token 时间改善 1.7--2×，解码吞吐量提高 1.3×（\Cref{fig:vllm-kv-offload}），与最先进的 KV-cache 卸载框架 LMCache~\cite{lmcache} 持平。
-Notably, UVM without \sys policies performs worse than vLLM's offload, while \sys performs similarly to the best framework offloading, with better tail latency, dynamically and transparently.
-% 值得注意的是，没有 gpubpf 策略的 UVM 表现不如 vLLM 的卸载，而 gpubpf 以动态、透明的方式达到了与最佳框架卸载相当的效果，且尾延迟更优。
+UVM without \sys policies performs worse than vLLM's offload, while \sys matches the best framework offloading with better tail latency, dynamically and transparently.
+% 没有 gpubpf 策略的 UVM 表现不如 vLLM 的卸载，而 gpubpf 以动态、透明的方式与最佳框架卸载持平，且尾延迟更优。
 
 Under memory pressure, the main challenge is managing two competing data types: KV-cache, exhibiting temporal locality (recent tokens accessed frequently during attention) and per-request spatial locality, and model weights with stride patterns in matrix operations.
 % 在内存压力下，主要挑战是管理两类相互竞争的数据：具有时间局部性（最近的 token 在注意力计算中被频繁访问）和每请求空间局部性的 KV-cache，以及在矩阵运算中具有步长模式的模型权重。
@@ -195,15 +195,15 @@ With both user-expressed prefetching and \sys, it achieves 1.44$\times$ addition
 % 当用户预取与 gpubpf 同时使用时，通过预取更大区域、减少阻塞缺页，又获得了 1.44× 的额外加速。
 Native GPU allocation (no UVM) achieves the highest performance when data fits in memory (1.89~s at 5M nodes) but fails with OOM beyond $\sim$8M nodes.
 % 当数据能放入内存时，原生 GPU 分配（无 UVM）性能最高（5M 节点时 1.89 秒），但在超过约 8M 节点时因 OOM 失败。
-UVM with \sys prefetching enables training at 15M nodes (2.17$\times$ oversubscription) with near-native performance and no application modification.
-% 采用 gpubpf 预取的 UVM 使训练能在 15M 节点（2.17× 超订）下进行，性能接近原生且无需修改应用。
+UVM with \sys prefetching enables 15M-node training at 2.17$\times$ oversubscription without application modification.
+% 采用 gpubpf 预取的 UVM 使 15M 节点（2.17× 超订）训练得以进行，且无需修改应用。
 
-\sys uses sequential prefetch with a uprobe tracing PyTorch allocations, determining prefetch ranges via device-traced history.
+\sys uses sequential prefetch with an uprobe tracing PyTorch allocations, determining prefetch ranges via device-traced history.
 % gpubpf 使用带 uprobe 追踪 PyTorch 分配的顺序预取，并通过设备端追踪的历史确定预取范围。
 The agent tested deeper lookahead after single-block-ahead prefetch (K=1) improved epoch time by 21\%, but found K=2 and K=3 degraded by 16\%, and adaptive K (up to 6) by 46\%.
 % 在单块提前预取（K=1）将单轮时间改善 21\% 之后，智能体测试了更深的前瞻，但发现 K=2 和 K=3 会使性能下降 16\%，自适应 K（最高 6）下降 46\%。
-Suspecting lock contention initially, the agent identified PCIe bandwidth saturation as the true bottleneck, confirming one-block lookahead as optimal.
-% 智能体最初怀疑锁竞争，随后确认真正的瓶颈是 PCIe 带宽饱和，从而确认单块前瞻为最优。
+Suspecting lock contention initially, the agent identified PCIe bandwidth saturation as the true bottleneck, making one-block lookahead the best of the tested settings.
+% 智能体最初怀疑锁竞争，随后确认真正的瓶颈是 PCIe 带宽饱和，单块前瞻为所测设置中的最佳。
 
 \begin{figure}
 \centering
@@ -332,14 +332,14 @@ Our multi-tenant setting is software co-location on an unpartitioned GPU, comple
 
 We evaluate whether \sys{} can express published state-of-the-art policies, and what the general mechanism costs when running the same policy as an ad-hoc implementation.
 % 我们评估 \sys{} 能否表达已发表的最先进策略，以及通用机制运行与专用实现相同的策略时的代价。
-\Cref{fig:matched-ports} separates two comparisons: a workload baseline versus a native policy measures policy benefit, while native versus \sys{} on the same executor measures port cost; XSched and GPREEMPT appear in \Cref{fig:scheduler-latency}.
-% \Cref{fig:matched-ports} 区分两层比较：工作负载基线与原生策略比较策略收益，相同执行器上的原生实现与 \sys{} 比较移植代价；XSched 和 GPREEMPT 见 \Cref{fig:scheduler-latency}。
+\Cref{fig:matched-ports} separates two comparisons: a workload baseline versus a native policy shows deployment benefit or cost, while native versus \sys{} on the same executor measures port cost; XSched and GPREEMPT appear in \Cref{fig:scheduler-latency}.
+% \Cref{fig:matched-ports} 区分两层比较：工作负载基线与原生策略比较部署的收益或代价，相同执行器上的原生实现与 \sys{} 比较移植代价；XSched 和 GPREEMPT 见 \Cref{fig:scheduler-latency}。
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{img/results-raw/revision/matched-port-panels.pdf}
-\caption{Matched policy ports on RTX~5090. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) all-positive prefetch, (d) default scheduling, and (e) two-stream FlashAttention. Each panel reports one metric over five blocks: median first-visible-text latency (a), median throughput (b,c), median LC response p99 (d), and mean operator latency for Llama decode batch 128 (e). Native-policy bars use the same executor as \sys{}; panel (d) uses the idle-admission component.}
-% RTX~5090 上的匹配策略移植。基线依次为关闭预测的专家缓存、固定 K 的 FIFO、全正例预取、默认调度和双流 FlashAttention。每个面板报告五组实验中的一个指标：首个可见文本延迟中位数（a）、吞吐中位数（b、c）、LC 响应 p99 中位数（d），以及 Llama 解码批量 128 的平均算子延迟（e）。原生策略与 \sys{} 使用相同执行器；面板（d）使用空闲准入组件。
+\caption{Matched policy ports on RTX~5090. Baselines are (a) prediction-disabled expert caching with a prefill overload shortcut, (b) fixed-$K$ FIFO, (c) all-positive prefetch, (d) default scheduling, and (e) two-stream FlashAttention. Each panel reports one metric over five blocks: secondary first-visible-text latency median (a), median throughput (b,c), median LC response p99 (d), and mean operator latency for Llama decode batch 128 (e). Native-policy bars use the same executor as \sys{}; panel (d) uses the idle-admission component.}
+% RTX~5090 上的匹配策略移植。基线依次为关闭预测且保留预填充超额加载捷径的专家缓存、固定 K 的 FIFO、全正例预取、默认调度和双流 FlashAttention。每个面板报告五组实验中的一个指标：次要指标首个可见文本延迟中位数（a）、吞吐中位数（b、c）、LC 响应 p99 中位数（d），以及 Llama 解码批量 128 的平均算子延迟（e）。原生策略与 \sys{} 使用相同执行器；面板（d）使用空闲准入组件。
 \label{fig:matched-ports}
 \end{figure*}
 
@@ -356,6 +356,13 @@ Host-JIT \sys{} programs implement MoE-Infinity's~\cite{xue2025moeinfinity} pred
 % 主机 JIT 的 \sys{} 程序实现 MoE-Infinity~\cite{xue2025moeinfinity} 的预测匹配、预取排序和驱逐选择，共用的 GPT-OSS-120B 执行器负责专家传输与推理。
 Across five paired runs, native and \sys{} reduce first-visible-text latency by 22.1\% and 22.5\%, respectively, over prediction-disabled expert caching.
 % 五次配对试验中，相对关闭预测的专家缓存，原生与 \sys{} 分别将首个可见文本延迟降低 22.1\% 和 22.5\%。
+However, primary throughput medians (including final prefetch drain) are 11.90/11.22/11.19 token/s for baseline/native/\sys{}; lower secondary visible-text latency does not reverse this throughput loss.
+% 但包含最终预取排空的主要吞吐中位数为基线/原生/\sys{} 的 11.90/11.22/11.19 token/s；更低的次要首段可见文本延迟并未改变这一吞吐损失。
+The paired \sys{}/native throughput change is $-0.35\%$ (95\% CI $[-1.08\%,+0.55\%]$).
+% \sys{} 相对原生的配对吞吐变化为 $-0.35\%$（95\% CI $[-1.08\%,+0.55\%]$）。
+Only the baseline retains a prefill extra-expert overload shortcut, so baseline/policy contrasts also change executor behavior and do not isolate policy benefit.
+% 仅基线保留预填充时额外加载专家的超额捷径，因此基线与策略的对比还改变了执行器行为，不能单独归因于策略收益。
+% Evidence: workloads/moe-infinity/results-paper-v3-protected-575.md; five completed blocks, no rerun.
 
 \paragraph{XSched (preemptive scheduling)}
 % XSched（抢占式调度）
