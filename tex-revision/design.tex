@@ -198,12 +198,8 @@ Invalid prefetch range & Valid migration range & Native prefetch \\
 \label{tab:safety-rules}
 \end{table}
 
-\paragraph{Failure handling and trusted computing base.}
-% 失败处理与可信计算基。
-Program rejection prevents policy installation, while request rejection invokes the operation-specific fallback.
-% 程序拒绝阻止策略安装，请求拒绝则调用相应操作的回退行为。
-Together, program verification and transition validation cover execution safety and resource-state invariants.
-% 程序验证与转移验证共同覆盖执行安全与资源状态不变量。
+\paragraph{Trusted computing base.}
+% 可信计算基。
 The trusted computing base (TCB) comprises the host OS, GPU driver and firmware, policy verifiers and compilation toolchain, and \sys{}'s hooks, helpers, and transition validators.
 % 可信计算基（TCB）包括主机 OS、GPU 驱动与固件、策略验证器与编译工具链，以及 \sys{} 的钩子、helper 和转移验证器。
 Policy safety assumes correct operation of the GPU hardware and this TCB.

@@ -24,8 +24,6 @@ Unless otherwise specified, experiments run on Server~A, averaging 10 trials usi
 % 除非另有说明，实验均在服务器 A 上进行，每项结果取 10 次试验的几何平均值。
 We compare \sys{} against three classes of baselines: (1) driver defaults (UVM LRU/FIFO eviction, native GPU scheduler), (2) application-level hints (\texttt{cudaMemAdvise}), and (3) framework-managed policies (e.g., llama.cpp \texttt{ncmoe}, vLLM CPU offload, LMCache) where applicable.
 % 我们将 gpubpf 与三类基线对比：(1) 驱动默认行为（UVM LRU/FIFO 驱逐、原生 GPU 调度器），(2) 应用层提示（\texttt{cudaMemAdvise}），以及 (3) 框架管理的策略（如 llama.cpp 的 \texttt{ncmoe}、vLLM CPU offload、LMCache，在适用处）。
-The comparisons in \S\ref{sec:policy-mechanism} additionally evaluate policies from published research systems: MoE-Infinity~\cite{xue2025moeinfinity}, XSched~\cite{shen2025xsched}, GPREEMPT~\cite{fan2025gpreempt}, Expert Buffering~\cite{huang2023towards}, FineMoE~\cite{yu2026finemoe}, Hummingbird~\cite{hu2026hummingbird}, and POD-Attention~\cite{kamath2025pod}; each pairs a native policy implementation with a \sys{} port.
-% \S\ref{sec:policy-mechanism} 进一步评估 MoE-Infinity、XSched、GPREEMPT、Expert Buffering、FineMoE、Hummingbird 和 POD-Attention 等已发表系统的策略；每组配对原生策略实现和 \sys{} 移植版。
 We use PyTorch (version 2.9.0) and vLLM (version 0.11.0) with custom allocators, llama.cpp (version 7101), and Faiss (version 1.13.0) with UVM build config.
 % 我们使用 PyTorch（版本 2.9.0）和 vLLM（版本 0.11.0，配自定义分配器）、llama.cpp（版本 7101）以及采用 UVM 构建配置的 Faiss（版本 1.13.0）。
 All tests with \sys policies require no application modifications.
@@ -333,8 +331,6 @@ The tenants share an unpartitioned GPU managed by a system-wide policy.
 % 已发表系统的策略
 \label{sec:policy-mechanism}
 
-We evaluate whether \sys{} can express the policies of published state-of-the-art systems, and what the general mechanism costs when it runs the same policy as a native implementation.
-% 我们评估 \sys{} 能否表达已发表最先进系统的策略，以及通用机制相对原生实现运行同一策略的开销。
 \Cref{tab:published-policies} summarizes the seven policies, their execution requirements, and their implementations through \sys{}.
 % \Cref{tab:published-policies} 汇总七种策略、其执行需求以及通过 \sys{} 实现的方式。
 
@@ -350,26 +346,26 @@ We evaluate whether \sys{} can express the policies of published state-of-the-ar
 System & Original policy & Original mechanism and \sys{} implementation \\
 % 系统；原有策略；原有机制与 gpubpf 实现。
 \midrule
-MoE-Infinity~\cite{xue2025moeinfinity} & Match access predictions, rank expert prefetches, and select eviction victims. & A user-space runtime manages expert transfers; \sys{} implements cache decisions as host-side programs on the shared GPT-OSS-120B executor. \\
-% MoE-Infinity：匹配访问预测、排列专家预取顺序并选择驱逐对象；用户态运行时管理专家传输，gpubpf 通过主机侧程序在共用 GPT-OSS-120B 执行器上实现缓存决策。
+MoE-Infinity~\cite{xue2025moeinfinity} & Match access predictions, rank expert prefetches, and select eviction victims. & The original system uses a user-space runtime to manage expert transfers; \sys{} implements cache decisions as host-side programs. \\
+% MoE-Infinity：匹配访问预测、排列专家预取顺序并选择驱逐对象；原系统使用用户态运行时管理专家传输，gpubpf 通过主机侧程序实现缓存决策。
 \addlinespace
-Expert Buffering~\cite{huang2023towards} & Admit experts to the cache and prioritize eviction of experts unused by the current batch. & A user-space cache manages GPU buffers and CPU-to-GPU copies; \sys{} implements admission and eviction as host-side programs on the shared cache executor. \\
-% Expert Buffering：决定专家缓存准入，优先驱逐当前批次不用的专家；用户态缓存管理 GPU 缓冲区和 CPU 到 GPU 的复制，gpubpf 通过主机侧程序在共用缓存执行器上实现准入与驱逐。
+Expert Buffering~\cite{huang2023towards} & Admit experts to the cache and prioritize eviction of experts unused by the current batch. & The original system uses a user-space cache to manage GPU buffers and CPU-to-GPU copies; \sys{} implements admission and eviction as host-side programs. \\
+% Expert Buffering：决定专家缓存准入，优先驱逐当前批次不用的专家；原系统使用用户态缓存管理 GPU 缓冲区和 CPU 到 GPU 的复制，gpubpf 通过主机侧程序实现准入与驱逐。
 \addlinespace
-FineMoE~\cite{yu2026finemoe} & Select a dynamic set of experts for speculative prefetch. & A user-space cache uses CUDA runtime transfers; \sys{} implements dynamic expert selection as a host-side program on the shared inference executor. \\
-% FineMoE：动态选择推测预取的专家集合；用户态缓存通过 CUDA runtime 传输数据，gpubpf 通过主机侧程序在共用推理执行器上实现动态专家选择。
+FineMoE~\cite{yu2026finemoe} & Select a dynamic set of experts for speculative prefetch. & The original system uses a user-space cache with CUDA runtime transfers; \sys{} implements dynamic expert selection as a host-side program. \\
+% FineMoE：动态选择推测预取的专家集合；原系统使用用户态缓存，通过 CUDA runtime 传输数据，gpubpf 通过主机侧程序实现动态专家选择。
 \addlinespace
-Hummingbird~\cite{hu2026hummingbird} & Split background kernels to fill foreground idle intervals, with priority-aware memory management. & CUDA API interception and kernel splitting handle execution, while memory management modifies UVM; our host-side \sys{} port implements idle admission on the shared DNN executor. \\
-% Hummingbird：拆分后台 GPU 内核以填充前台空闲区间，并按优先级管理内存；CUDA API 拦截与内核拆分负责执行，内存管理修改 UVM，我们的主机侧 gpubpf 移植在共用 DNN 执行器上实现空闲准入。
+Hummingbird~\cite{hu2026hummingbird} & Split background kernels to fill foreground idle intervals, with priority-aware memory management. & The original system uses CUDA API interception and kernel splitting for execution and modifies UVM for memory management; our host-side \sys{} program implements idle admission. \\
+% Hummingbird：拆分后台 GPU 内核以填充前台空闲区间，并按优先级管理内存；原系统通过 CUDA API 拦截与内核拆分控制执行，并修改 UVM 管理内存，我们的主机侧 gpubpf 程序实现空闲准入。
 \addlinespace
-POD-Attention~\cite{kamath2025pod} & Proportionally select prefill or decode work for each SM. & Native selection inside the GPU kernel becomes a device-side \sys{} program; the fused attention kernel executes the selected work. \\
-% POD-Attention：按比例为各 SM 选择 prefill 或 decode 工作；GPU 内核中的原生选择逻辑由设备侧 gpubpf 程序实现，融合注意力内核执行所选工作。
+POD-Attention~\cite{kamath2025pod} & Proportionally select prefill or decode work for each SM. & The original system selects work inside the fused GPU kernel; \sys{} implements this selection as a device-side program, retaining the fused attention computation. \\
+% POD-Attention：按比例为各 SM 选择 prefill 或 decode 工作；原系统在融合 GPU 内核中选择工作，gpubpf 通过设备侧程序实现这一选择，保留融合注意力计算。
 \addlinespace
-XSched~\cite{shen2025xsched} & Select the highest-priority task through preemptible command queues. & A user-space scheduler uses queue control and, at higher preemption levels, GPU instrumentation or driver interfaces; our host-side \sys{} port retains the original inter-kernel executor. \\
-% XSched：通过可抢占命令队列选择最高优先级任务；用户态调度器控制队列，较高抢占级别还使用 GPU 插桩或驱动接口，我们的主机侧 gpubpf 移植保留原始内核间抢占执行器。
+XSched~\cite{shen2025xsched} & Select the highest-priority task through preemptible command queues. & The original system uses user-space queue control and, at higher preemption levels, GPU instrumentation or driver interfaces; our host-side \sys{} program selects tasks with preemption between GPU kernels. \\
+% XSched：通过可抢占命令队列选择最高优先级任务；原系统在用户态控制队列，较高抢占级别还使用 GPU 插桩或驱动接口，我们的主机侧 gpubpf 程序选择任务，抢占发生在 GPU 内核之间。
 \addlinespace
-GPREEMPT~\cite{fan2025gpreempt} & Control task admission and assign timeslices by priority. & User-space blocking/release relies on a modified GPU driver for timeslices; \sys{} implements these decisions with host- and driver-side programs on the same executor. \\
-% GPREEMPT：控制任务准入并按优先级分配时间片；用户态阻塞与释放依赖修改后的 GPU 驱动控制时间片，gpubpf 通过主机侧和驱动侧程序在相同执行器上实现这些决策。
+GPREEMPT~\cite{fan2025gpreempt} & Control task admission and assign timeslices by priority. & The original system uses user-space blocking/release and a modified GPU driver for timeslice control; \sys{} implements these decisions with host- and driver-side programs. \\
+% GPREEMPT：控制任务准入并按优先级分配时间片；原系统使用用户态阻塞与释放，并通过修改后的 GPU 驱动控制时间片，gpubpf 通过主机侧和驱动侧程序实现这些决策。
 \bottomrule
 \end{tabularx}
 \end{table*}
@@ -377,24 +373,24 @@ GPREEMPT~\cite{fan2025gpreempt} & Control task admission and assign timeslices b
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{tex-revision/img/results-raw/revision/matched-policy-panels.pdf}
-\caption{Policy comparisons on RTX~5090: workload baseline, native policy, and \sys on the same executor. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) prefetching all positively predicted experts, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. TTFT measures first-visible-text latency; panel (e) uses Llama decode batch 128. Bars show medians over five blocks, except (e) means and (f) ten blocks; whiskers in (b,f,g) show full ranges. Panel (d) uses idle admission; (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s.}
-% RTX~5090 上的策略比较：相同执行器上的工作负载基线、原生策略与 gpubpf。基线为关闭预测的专家缓存（a）、固定 K 的 FIFO（b）、预取所有预测会用到的专家（c）、默认调度（d、g）、双流 FlashAttention（e）和原生 CUDA（f）。TTFT 表示首个可见文本延迟；面板（e）使用 Llama 解码批量 128。柱形为五组实验的中位数，但（e）为均值、（f）使用十组；（b、f、g）的须线表示完整范围。（d）使用空闲准入；（g）为每秒 100 个 VGG19 LC 请求，对应 ResNet152 BE 每秒 100 或 200 请求。
+\caption{Policy comparisons: workload baseline, native policy, and \sys. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) prefetching all positively predicted experts, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. Panel (e) uses Llama decode batch 128. Bars show medians over five blocks, except (e) means and (f) ten blocks; whiskers in (b,f,g) show full ranges. Panel (d) uses idle admission; (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s.}
+% 策略比较：工作负载基线、原生策略与 gpubpf。基线为关闭预测的专家缓存（a）、固定 K 的 FIFO（b）、预取所有预测会用到的专家（c）、默认调度（d、g）、双流 FlashAttention（e）和原生 CUDA（f）。面板（e）使用 Llama 解码批量 128。柱形为五组实验的中位数，但（e）为均值、（f）使用十组；（b、f、g）的须线表示完整范围。（d）使用空闲准入；（g）为每秒 100 个 VGG19 LC 请求，对应 ResNet152 BE 每秒 100 或 200 请求。
 \label{fig:matched-ports}
 \end{figure*}
 
 \paragraph{Methodology}
 % 方法
-\Cref{fig:matched-ports} separates two comparisons: a workload baseline versus a native policy implementation measures policy benefit, while native versus \sys{} on the same executor measures the port's cost.
-% \Cref{fig:matched-ports} 区分两层比较：工作负载基线与原生策略实现比较策略收益，相同执行器上的原生实现与 \sys{} 比较移植代价。
-Each comparison pairs a native implementation with a \sys{} port of the same policy on the same workload and executor, on RTX~5090 (driver 575.57.08) with exclusive GPU access and repeated randomized trials.
-% 每组对比在相同工作负载和执行器上，将原生实现与同一策略的 \sys{} 移植版配对，在 RTX~5090（驱动 575.57.08）上以独占 GPU 和重复随机试验运行。
+In \Cref{fig:matched-ports}, the workload baseline versus the native policy measures policy benefit; native versus \sys{} execution of that policy measures mechanism cost, with the workload and underlying execution unchanged.
+% 在 \Cref{fig:matched-ports} 中，工作负载基线与原生策略的比较衡量策略收益；在工作负载和底层执行保持不变时，原生与 \sys{} 执行该策略的比较衡量机制代价。
+These experiments use driver 575.57.08 with exclusive GPU access and repeated randomized trials.
+% 这些实验使用驱动 575.57.08，以独占 GPU 和重复随机试验运行。
 Unless stated otherwise, we report medians with paired bootstrap intervals; POD's operator plot uses the mean of five per-run means.
 % 除非另有说明，我们报告中位数及配对 bootstrap 区间；POD 算子图使用五次运行均值的平均值。
 
 \paragraph{Results}
 % 结果
-With MoE-Infinity's policy, the native implementation and \sys{} reduce first-visible-text latency by 22.1\% and 22.5\%, respectively, relative to prediction-disabled expert caching across five paired runs.
-% 采用 MoE-Infinity 策略时，五次配对运行中原生实现与 \sys{} 相比关闭预测的专家缓存，分别将首个可见文本延迟降低 22.1\% 和 22.5\%。
+With MoE-Infinity's policy, the native implementation and \sys{} reduce TTFT by 22.1\% and 22.5\%, respectively, relative to prediction-disabled expert caching across five paired runs.
+% 采用 MoE-Infinity 策略时，五次配对运行中原生实现与 \sys{} 相比关闭预测的专家缓存，分别将 TTFT 降低 22.1\% 和 22.5\%。
 For Expert Buffering at the same cache capacity, both the native policy and \sys{} reduce whole-expert loads by 12.85\% relative to fixed-$K$ FIFO (\Cref{fig:matched-ports}(b)).
 % 对 Expert Buffering，在相同缓存容量下，原生策略与 \sys{} 均相对固定 K 的 FIFO 将完整专家加载次数减少 12.85\%（\Cref{fig:matched-ports}(b)）。
 With FineMoE's policy, \sys{} improves throughput by 24.6\% over a policy that prefetches every expert with a positive prediction; native and \sys{} throughput differ by 0.21\% in paired runs (95\% CI $[-0.17\%,+0.52\%]$).
@@ -428,8 +424,8 @@ We measure hook, observability, and map-placement overheads below; \S\ref{sec:po
 
 \paragraph{Verification Overhead.}
 % 验证开销。
-Load-time verification takes 141~ms for \texttt{kernelretsnoop} and 12~ms for \texttt{threadhist}.
-% 加载时验证对 \texttt{kernelretsnoop} 耗时 141~ms，对 \texttt{threadhist} 耗时 12~ms。
+Load-time verification takes 141~ms for \texttt{kernel\-ret\-snoop} and 12~ms for \texttt{thread\-hist}.
+% 加载时验证对 \texttt{kernel\-ret\-snoop} 耗时 141~ms，对 \texttt{thread\-hist} 耗时 12~ms。
 
 \paragraph{Host Runtime Overhead.}
 % 主机运行时开销。
@@ -440,24 +436,22 @@ With hooks enabled but no policy attached, the overhead is less than 0.2\%.
 
 \paragraph{Device-side Overhead.}
 % 设备端开销。
-We evaluate device-side observability tools built on \sys (\Cref{fig:obs-overhead}) using llama.cpp prefill on two GPUs: the P40 (Llama 1B, sequence-mixed) and the RTX~5090 (TinyLlama-1.1B, 512-token prefill with custom NVBit adapters~\cite{villa2019nvbit}).
-% 我们在两块 GPU 上使用 llama.cpp 预填充评估基于 gpubpf 构建的设备端可观测工具（\Cref{fig:obs-overhead}）：P40（Llama 1B，序列混合）和 RTX~5090（TinyLlama-1.1B，512-token 预填充，定制 NVBit 适配器~\cite{villa2019nvbit}）。
-Tools include \texttt{kernel\-ret\-snoop} (per-block finish timestamps), \texttt{thread\-hist} (load imbalance detection), and \texttt{launch\-late} (GPU kernel launch latency).
-% 工具包括 \texttt{kernel\-ret\-snoop}（每块完成时间戳）、\texttt{thread\-hist}（负载不均衡检测）和 \texttt{launch\-late}（GPU 内核启动延迟）。
+We compare device-side observability tools built on \sys{} with NVBit~\cite{villa2019nvbit} (\Cref{fig:obs-overhead}) using llama.cpp prefill on two GPUs: the P40 (Llama 1B, sequence-mixed) and the RTX~5090 (TinyLlama-1.1B, 512-token prefill).
+% 我们使用两块 GPU 上的 llama.cpp 预填充，对比基于 \sys{} 与 NVBit~\cite{villa2019nvbit} 构建的设备端可观测工具（\Cref{fig:obs-overhead}）：P40（Llama 1B，序列混合）和 RTX~5090（TinyLlama-1.1B，512-token 预填充）。
+On the P40, the tools are \texttt{kernel\-ret\-snoop} (per-block finish timestamps), \texttt{thread\-hist} (load imbalance detection), and \texttt{launch\-late} (GPU kernel launch latency).
+% P40 上的工具为 \texttt{kernel\-ret\-snoop}（每块完成时间戳）、\texttt{thread\-hist}（负载不均衡检测）和 \texttt{launch\-late}（GPU 内核启动延迟）。
 Overhead is measured as token/s degradation during prefill.
 % 开销以预填充期间 token/s 的下降来衡量。
 On the P40, \sys achieves 3--14\% overhead versus NVBit's 85--93\%, due to the warp-uniform execution model.
 % 在 P40 上，得益于 warp 统一执行模型，gpubpf 的开销为 3--14\%，而 NVBit 为 85--93\%。
-On the RTX~5090, \sys has lower overhead than NVBit for all three tools: 5.57\% versus 99.62\% for per-warp kernel-return logging, 2.97\% versus 10.35\% for the exit-count histogram, and 0.22\% versus 8.80\% for \texttt{launchlate}.
-% 在 RTX~5090 上，gpubpf 在三个工具上的开销均低于 NVBit：逐 warp 内核返回记录为 5.57\% 对 99.62\%，退出计数直方图为 2.97\% 对 10.35\%，\texttt{launchlate} 为 0.22\% 对 8.80\%。
-Attaching to a running process requires no application restart.
-% 附加到正在运行的进程无需重启应用。
+In panel (b), \texttt{kernel\-ret\-snoop} records per-warp kernel returns and \texttt{thread\-hist} counts exits; their overheads are 5.57\% and 2.97\% with \sys{}, versus 99.62\% and 10.35\% with NVBit, while \texttt{launch\-late} incurs 0.22\% versus 8.80\%.
+% 在面板（b）中，\texttt{kernel\-ret\-snoop} 记录逐 warp 的内核返回，\texttt{thread\-hist} 统计退出次数；它们在 \sys{} 下的开销为 5.57\% 和 2.97\%，在 NVBit 下为 99.62\% 和 10.35\%，而 \texttt{launch\-late} 的开销为 0.22\% 对 8.80\%。
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{tex-revision/img/results-raw/revision/obs-overhead-with-array.pdf}
-\caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B: ten baseline/tool pairs per configuration, except \sys kernelretsnoop (five independent pairs). Bars show means and whiskers show RTX~5090 run ranges; P40 uses original reported values. For \sys kernelretsnoop, records are collected after prefill (10.38\,ms, outside prefill timing).}
-% 相对未插桩基线的预填充吞吐下降。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B：每个配置十组基线/工具配对，gpubpf kernelretsnoop 使用另外独立测量的五组配对。柱形为均值，须线为 RTX~5090 的运行范围；P40 使用原文报告值。gpubpf kernelretsnoop 在预填充后收集记录（10.38 ms，不计入预填充计时）。
+\caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B: ten baseline/tool pairs per configuration, except \sys \texttt{kernel\-ret\-snoop} (five independent pairs). Bars show means and whiskers in (b) show run ranges; P40 uses original reported values. For \sys \texttt{kernel\-ret\-snoop}, records are collected after prefill (10.38\,ms, outside prefill timing).}
+% 相对未插桩基线的预填充吞吐下降。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B：每个配置十组基线/工具配对，gpubpf \texttt{kernel\-ret\-snoop} 使用另外独立测量的五组配对。柱形为均值，（b）中的须线表示运行范围；P40 使用原文报告值。gpubpf \texttt{kernel\-ret\-snoop} 在预填充后收集记录（10.38 ms，不计入预填充计时）。
 \label{fig:obs-overhead}
 \end{figure}
 
