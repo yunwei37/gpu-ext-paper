@@ -408,8 +408,6 @@ For POD-Attention, we evaluate ten shapes over five blocks against non-fused Fla
 For Llama decode batch 128, operator latency falls from 5.360~ms with two-stream FlashAttention to 4.322~ms with the native policy and 4.344~ms with \sys{}.
 % 在 Llama 解码批量 128 下，算子延迟从双流 FlashAttention 的 5.360 毫秒降至原生策略的 4.322 毫秒和 \sys{} 的 4.344 毫秒。
 
-\paragraph{Mechanism cost}
-% 机制代价
 Expert Buffering incurs 0.7\% overhead; across ten shapes, POD's operator latency in paired runs decreases by up to 0.44\% or increases by up to 1.18\%.
 % Expert Buffering 的开销为 0.7\%；在十种形状的配对运行中，POD 的算子延迟最多降低 0.44\% 或增加 1.18\%。
 A UVM policy verified by the kernel incurs 3.2\% overhead with prefetch disabled in fifteen paired runs measuring page-fault handling.
@@ -438,20 +436,20 @@ With hooks enabled but no policy attached, the overhead is less than 0.2\%.
 % 设备端开销。
 We compare device-side observability tools built on \sys{} with NVBit~\cite{villa2019nvbit} (\Cref{fig:obs-overhead}) using llama.cpp prefill on two GPUs: the P40 (Llama 1B, sequence-mixed) and the RTX~5090 (TinyLlama-1.1B, 512-token prefill).
 % 我们使用两块 GPU 上的 llama.cpp 预填充，对比基于 \sys{} 与 NVBit~\cite{villa2019nvbit} 构建的设备端可观测工具（\Cref{fig:obs-overhead}）：P40（Llama 1B，序列混合）和 RTX~5090（TinyLlama-1.1B，512-token 预填充）。
-On the P40, the tools are \texttt{kernel\-ret\-snoop} (per-block finish timestamps), \texttt{thread\-hist} (load imbalance detection), and \texttt{launch\-late} (GPU kernel launch latency).
-% P40 上的工具为 \texttt{kernel\-ret\-snoop}（每块完成时间戳）、\texttt{thread\-hist}（负载不均衡检测）和 \texttt{launch\-late}（GPU 内核启动延迟）。
+The tools are \texttt{kernel\-ret\-snoop} (153~LOC) and \texttt{thread\-hist} (89~LOC), whose device-side programs record GPU kernel return timestamps and thread exit-count distributions, respectively, and \texttt{launch\-late} (347~LOC), which combines host- and device-side observations to measure GPU kernel launch latency.
+% 工具包括 \texttt{kernel\-ret\-snoop}（153 LOC）和 \texttt{thread\-hist}（89 LOC），其设备端程序分别记录 GPU 内核返回时间戳和线程退出计数分布；\texttt{launch\-late}（347 LOC）结合主机端与设备端观测，测量 GPU 内核启动延迟。
 Overhead is measured as token/s degradation during prefill.
 % 开销以预填充期间 token/s 的下降来衡量。
 On the P40, \sys achieves 3--14\% overhead versus NVBit's 85--93\%, due to the warp-uniform execution model.
 % 在 P40 上，得益于 warp 统一执行模型，gpubpf 的开销为 3--14\%，而 NVBit 为 85--93\%。
-In panel (b), \texttt{kernel\-ret\-snoop} records per-warp kernel returns and \texttt{thread\-hist} counts exits; their overheads are 5.57\% and 2.97\% with \sys{}, versus 99.62\% and 10.35\% with NVBit, while \texttt{launch\-late} incurs 0.22\% versus 8.80\%.
-% 在面板（b）中，\texttt{kernel\-ret\-snoop} 记录逐 warp 的内核返回，\texttt{thread\-hist} 统计退出次数；它们在 \sys{} 下的开销为 5.57\% 和 2.97\%，在 NVBit 下为 99.62\% 和 10.35\%，而 \texttt{launch\-late} 的开销为 0.22\% 对 8.80\%。
+In panel (b), the three tools incur 5.57\%, 2.97\%, and 0.22\% overhead with \sys{}, compared with 99.62\%, 10.35\%, and 8.80\% with NVBit, respectively.
+% 在面板（b）中，三个工具在 \sys{} 下的开销依次为 5.57\%、2.97\% 和 0.22\%，在 NVBit 下分别为 99.62\%、10.35\% 和 8.80\%。
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{tex-revision/img/results-raw/revision/obs-overhead-with-array.pdf}
-\caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B: ten baseline/tool pairs per configuration, except \sys \texttt{kernel\-ret\-snoop} (five independent pairs). Bars show means and whiskers in (b) show run ranges;}
-% 相对未插桩基线的预填充吞吐下降。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B：每个配置十组基线/工具配对，gpubpf \texttt{kernel\-ret\-snoop} 使用另外独立测量的五组配对。柱形为均值，（b）中的须线表示运行范围。
+\caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B. Bars show means and whiskers in (b) show run ranges.}
+% 相对未插桩基线的预填充吞吐下降。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B。柱形为均值，（b）中的须线表示运行范围。
 \label{fig:obs-overhead}
 \end{figure}
 
