@@ -272,37 +272,62 @@ BE throughput remains unchanged.
 % \vspace{-1.5em}
 \end{figure}
 
+% Previous comparison retained below.
+% \paragraph{Memory-bound Priority Differentiation.}
+% % 内存密集型优先级区分。
+% We evaluate \sys's memory policies for priority differentiation on \emph{memory-bound} workloads under UVM oversubscription using HotSpot~\cite{che2009rodinia} (spatial locality), GEMM from PolyBench~\cite{grauer2012auto} (compute-intensive, memory-bound under UVM oversubscription), and K-Means~\cite{gu2020uvmbench} (sparse access).
+% % 我们在 UVM 超订下使用 HotSpot~\cite{che2009rodinia}（空间局部性）、来自 PolyBench~\cite{grauer2012auto} 的 GEMM（计算密集，在 UVM 超订下为内存受限）和 K-Means~\cite{gu2020uvmbench}（稀疏访问），在\emph{内存密集型}工作负载上评估 gpubpf 的内存优先级区分策略。
+% Each experiment runs two concurrent processes competing for GPU memory.
+% % 每个实验运行两个并发进程竞争 GPU 内存。
+% Policy labels use priority values 0--100 (lower = higher priority): \texttt{Prefetch(lo,hi)} prefetches pages for processes in that range (454~LOC), while \texttt{Evict(lo,hi)} selects eviction victims accordingly (472~LOC).
+% % 策略标签使用 0--100 的优先级数值（数值越低优先级越高）：\texttt{Prefetch(lo,hi)} 为处于该范围的进程预取页面（454 LOC），\texttt{Evict(lo,hi)} 则据此选择驱逐对象（472 LOC）。
+% We compare against: (1)~no-policy execution, (2)~single-process runtime (Single~1$\times$), and (3)~theoretical optimum (2$\times$Single~1$\times$).
+% % 我们对比：(1) 无策略执行，(2) 单进程运行时（Single 1×），以及 (3) 理论最优（2×Single 1×）。
+% 
+% \Cref{fig:all-kernels-priority} shows that without policies, both processes degrade severely due to memory thrashing.
+% % \Cref{fig:all-kernels-priority} 显示，没有策略时，两个进程都因内存抖动而严重退化。
+% With \sys memory priority policies, total completion time improves by 55--92\%, and high-priority processes complete 6--19\% faster.
+% % 使用 gpubpf 内存优先级策略后，总完成时间改善 55--92\%，高优先级进程完成速度加快 6--19\%。
+% % In the original comparison, GPREEMPT-style~\cite{fan2025gpreempt} scheduler timeslice policies improve completion time by less than 1\%.
+% % 在原有比较中，GPREEMPT 式~\cite{fan2025gpreempt}调度器时间片策略对完成时间的改善不足 1\%。
+% The paired Scheduler$^\dagger$ and Combined$^\dagger$ measurements compare scheduling alone with jointly enabled scheduling and memory priority.
+% % Scheduler$^\dagger$ 与 Combined$^\dagger$ 的配对测量比较仅启用调度与同时启用调度和内存优先级。
+% Adding memory priority reduces high-priority completion time by a median of 10.38\%, 2.31\%, and 1.36\% for HotSpot, GEMM, and K-Means, respectively, over five paired runs.
+% % 在五次配对运行中，加入内存优先级后，HotSpot、GEMM 和 K-Means 的高优先级任务完成时间分别缩短 10.38\%、2.31\% 和 1.36\%（各次相对改善的中位数）。
+% The scheduling results in \S\ref{sec:policy-mechanism} also show that timeslice policies improve latency for compute-bound workloads.
+% % \S\ref{sec:policy-mechanism} 的调度结果也表明，时间片策略能改善计算密集型工作负载的延迟。
+% 
+% \begin{figure}
+% \centering
+% % \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/all_kernels_stacked.pdf}
+% \includegraphics[width=\columnwidth]{tex-revision/img/results-raw/revision/memory-composition.pdf}
+% 
+% \caption{Multi-tenant memory priority differentiation (P: Prefetch, E: Evict). Single 1$\times$ denotes single-process completion time, and 2$\times$Single 1$\times$ denotes the theoretical lower bound.}
+% % 多租户内存优先级区分（P：Prefetch，E：Evict）。Single 1× 表示单进程完成时间，2×Single 1× 表示理论下界。
+% \label{fig:all-kernels-priority}
+% \end{figure}
+
 \paragraph{Memory-bound Priority Differentiation.}
 % 内存密集型优先级区分。
-We evaluate \sys's memory policies for priority differentiation on \emph{memory-bound} workloads under UVM oversubscription using HotSpot~\cite{che2009rodinia} (spatial locality), GEMM from PolyBench~\cite{grauer2012auto} (compute-intensive, memory-bound under UVM oversubscription), and K-Means~\cite{gu2020uvmbench} (sparse access).
-% 我们在 UVM 超订下使用 HotSpot~\cite{che2009rodinia}（空间局部性）、来自 PolyBench~\cite{grauer2012auto} 的 GEMM（计算密集，在 UVM 超订下为内存受限）和 K-Means~\cite{gu2020uvmbench}（稀疏访问），在\emph{内存密集型}工作负载上评估 gpubpf 的内存优先级区分策略。
-Each experiment runs two concurrent processes competing for GPU memory.
-% 每个实验运行两个并发进程竞争 GPU 内存。
-Policy labels use priority values 0--100 (lower = higher priority): \texttt{Prefetch(lo,hi)} prefetches pages for processes in that range (454~LOC), while \texttt{Evict(lo,hi)} selects eviction victims accordingly (472~LOC).
-% 策略标签使用 0--100 的优先级数值（数值越低优先级越高）：\texttt{Prefetch(lo,hi)} 为处于该范围的进程预取页面（454 LOC），\texttt{Evict(lo,hi)} 则据此选择驱逐对象（472 LOC）。
-We compare against: (1)~no-policy execution, (2)~single-process runtime (Single~1$\times$), and (3)~theoretical optimum (2$\times$Single~1$\times$).
-% 我们对比：(1) 无策略执行，(2) 单进程运行时（Single 1×），以及 (3) 理论最优（2×Single 1×）。
+We evaluate \sys's memory and scheduling policies for priority differentiation using HotSpot~\cite{che2009rodinia} (spatial locality), GEMM from PolyBench~\cite{grauer2012auto} (compute-intensive, memory-bound under UVM oversubscription), and K-Means~\cite{gu2020uvmbench} (sparse access).
+% 我们使用 HotSpot~\cite{che2009rodinia}（空间局部性）、来自 PolyBench~\cite{grauer2012auto} 的 GEMM（计算密集，在 UVM 超订下为内存受限）和 K-Means~\cite{gu2020uvmbench}（稀疏访问），评估 \sys 的内存与调度策略对优先级区分的作用。
+Each experiment runs two concurrent processes competing for GPU memory, with the oversubscription ratio defined as their combined allocation divided by GPU memory capacity.
+% 每个实验运行两个竞争 GPU 内存的并发进程，超订比例定义为两者的总分配量除以 GPU 显存容量。
+We compare default execution (Default), scheduling alone (Sched), priority-based prefetching (Prefetch, 454~LOC), prefetching with priority-based eviction (Evict, 472~LOC), and their combination with scheduling (Mem + Sched).
+% 我们比较默认执行（Default）、仅调度（Sched）、基于优先级的预取（Prefetch，454 LOC）、结合优先级驱逐的预取（Evict，472 LOC），以及内存策略与调度的组合（Mem + Sched）。
 
-\Cref{fig:all-kernels-priority} shows that without policies, both processes degrade severely due to memory thrashing.
-% \Cref{fig:all-kernels-priority} 显示，没有策略时，两个进程都因内存抖动而严重退化。
-With \sys memory priority policies, total completion time improves by 55--92\%, and high-priority processes complete 6--19\% faster.
-% 使用 gpubpf 内存优先级策略后，总完成时间改善 55--92\%，高优先级进程完成速度加快 6--19\%。
-% In the original comparison, GPREEMPT-style~\cite{fan2025gpreempt} scheduler timeslice policies improve completion time by less than 1\%.
-% 在原有比较中，GPREEMPT 式~\cite{fan2025gpreempt}调度器时间片策略对完成时间的改善不足 1\%。
-The paired Scheduler$^\dagger$ and Combined$^\dagger$ measurements compare scheduling alone with jointly enabled scheduling and memory priority.
-% Scheduler$^\dagger$ 与 Combined$^\dagger$ 的配对测量比较仅启用调度与同时启用调度和内存优先级。
-Adding memory priority reduces high-priority completion time by a median of 10.38\%, 2.31\%, and 1.36\% for HotSpot, GEMM, and K-Means, respectively, over five paired runs.
-% 在五次配对运行中，加入内存优先级后，HotSpot、GEMM 和 K-Means 的高优先级任务完成时间分别缩短 10.38\%、2.31\% 和 1.36\%（各次相对改善的中位数）。
-The scheduling results in \S\ref{sec:policy-mechanism} also show that timeslice policies improve latency for compute-bound workloads.
-% \S\ref{sec:policy-mechanism} 的调度结果也表明，时间片策略能改善计算密集型工作负载的延迟。
+\Cref{fig:all-kernels-priority} reports high-priority completion speedup relative to Default.
+% \Cref{fig:all-kernels-priority} 报告高优先级任务相对 Default 的完成时间加速比。
+Both memory policies and scheduling alleviate the slowdown from memory contention, with scheduling yielding larger improvements in these workloads.
+% 内存策略和调度都能缓解显存争用带来的性能下降，调度在这些工作负载中带来的改善更大。
+Combining memory priority with scheduling further reduces high-priority completion time by 9.5--12.0\% for HotSpot, 2.3--3.1\% for GEMM, and 1.2--1.5\% for K-Means relative to scheduling alone across the evaluated ratios.
+% 在已评估的各超订比例下，相比仅调度，内存优先级与调度的组合进一步将 HotSpot、GEMM 和 K-Means 的高优先级完成时间分别缩短 9.5--12.0\%、2.3--3.1\% 和 1.2--1.5\%。
 
-\begin{figure}
+\begin{figure}[t]
 \centering
-% \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/all_kernels_stacked.pdf}
-\includegraphics[width=\columnwidth]{tex-revision/img/results-raw/revision/memory-composition.pdf}
-
-\caption{Multi-tenant memory priority differentiation (P: Prefetch, E: Evict). Single 1$\times$ denotes single-process completion time, and 2$\times$Single 1$\times$ denotes the theoretical lower bound.}
-% 多租户内存优先级区分（P：Prefetch，E：Evict）。Single 1× 表示单进程完成时间，2×Single 1× 表示理论下界。
+\includegraphics[width=\columnwidth]{tex-revision/img/results-raw/revision/memory-oversubscription-speedup.pdf}
+\caption{High-priority completion speedup over Default as the oversubscription ratio increases. Points show medians of five paired speedups, and whiskers show their ranges.}
+% 高优先级任务相对 Default 的完成时间加速比随超订比例的变化。数据点表示五次配对加速比的中位数，须线表示其范围。
 \label{fig:all-kernels-priority}
 \end{figure}
 
