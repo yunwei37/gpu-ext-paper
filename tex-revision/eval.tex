@@ -322,6 +322,8 @@ Both memory policies and scheduling alleviate the slowdown from memory contentio
 % 内存策略和调度都能缓解显存争用带来的性能下降，调度在这些工作负载中带来的改善更大。
 Combining memory priority with scheduling further reduces high-priority completion time by 9.5--12.0\% for HotSpot, 2.3--3.1\% for GEMM, and 1.2--1.5\% for K-Means relative to scheduling alone across the evaluated ratios.
 % 在已评估的各超订比例下，相比仅调度，内存优先级与调度的组合进一步将 HotSpot、GEMM 和 K-Means 的高优先级完成时间分别缩短 9.5--12.0\%、2.3--3.1\% 和 1.2--1.5\%。
+Combining memory prioritization with scheduling further improves high-priority completion time, demonstrating the benefit of coordinating the two policies.
+% 内存优先级与调度相结合，进一步改善高优先级任务的完成时间，说明协调两种策略能够带来额外收益。
 
 \begin{figure}[t]
 \centering
