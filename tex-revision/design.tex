@@ -45,8 +45,10 @@ GPU kernels (launched tasks) and GPU thread-blocks (parallel execution units wit
 % 存储与 CXL 层级。
 Extending the state-machine model to storage offload would add storage-resident and transfer-in-progress states: policies would choose placement and transfer timing, while the storage backend would retain buffer ownership and completion handling.
 % 将状态机模型扩展到存储卸载，需要增加存储驻留与传输进行中的状态：策略选择放置位置和传输时机，存储后端则保留缓冲区所有权并处理完成事件。
-A CXL tier could similarly add placement states through host memory-management interfaces; both extensions would require backend-specific transition validation.
-% CXL 层级也可通过主机内存管理接口增加放置状态；两种扩展都需要针对后端的转移验证。
+A CXL tier could similarly add placement states through host memory-management interfaces.
+% CXL 层级也可通过主机内存管理接口增加放置状态。
+Each backend would check whether a requested transition is valid before initiating it.
+% 每个后端都需要在发起所请求的转移前检查其是否合法。
 
 \subsection{GPU-Specific Challenges for eBPF Extensibility}
 % eBPF 可扩展性的 GPU 特有挑战
@@ -96,15 +98,19 @@ Policies, as verified eBPF programs invoking OS kernel functions (\emph{kfuncs})
 % 策略是经过验证的 eBPF 程序，可调用 OS 内核函数（\emph{kfunc}），附加到驱动事件、用户态 uprobe 和设备端事件上。
 Each trigger asynchronously initiates multiple proactive or deferred state transitions across memory and scheduling domains without blocking, coordinated through eBPF workqueues.
 % 每个触发通过 eBPF 工作队列协调，异步地跨内存和调度领域发起多个主动或被延迟的状态转换，且不阻塞。
-For example, an application launch event can trigger prefetching based on device observations while requesting preemption of a lower-priority tenant.
-% 例如，应用启动事件可以依据设备观测触发预取，同时请求抢占低优先级租户。
+For example, a uprobe on \texttt{cudaLaunchKernel} concurrently initiates a 6.6\,ms DMA prefetch based on device observations and preempts another tenant to free GPU memory.
+% 例如，\texttt{cudaLaunchKernel} 上的 uprobe 并发地基于设备观测发起一次 6.6\,ms 的 DMA 预取，并抢占另一租户以释放 GPU 内存。
 
 \input{tex-revision/fig_exec_model}
 
 To ensure OS kernel safety, verified kfuncs restrict policy actions to two dimensions: \emph{selection} (choosing resources, e.g., eviction order, tenant preemption priority) and \emph{timing} (when to act, e.g., proactive prefetch).
 % 为保证 OS 内核安全，经验证的 kfunc 将策略动作限制在两个维度：\emph{选择}（选择资源，如逐出顺序、租户抢占优先级）和\emph{时机}（何时行动，如主动预取）。
-The driver controls the underlying state machines; policies select the ordering and timing of permitted operations, with invalid requests handled by the transition rules in \S\ref{sec:verification}.
-% 驱动掌控底层状态机；策略选择允许操作的顺序和时机，非法请求由 \S\ref{sec:verification} 中的转移规则处理。
+The driver controls the underlying state machines.
+% 驱动掌控底层状态机。
+Policies select the ordering and timing of driver-managed operations, but cannot allocate memory or remove tasks.
+% 策略选择驱动所管理操作的顺序与时机，但不能分配内存或移除任务。
+Invalid requests follow the operation-specific rules in \S\ref{sec:verification}.
+% 非法请求遵循 \S\ref{sec:verification} 中针对各操作的规则。
 Currently, a single policy program is loaded system-wide but may internally differentiate tenant treatment for priorities, similar to sched\_ext; per-tenant isolation is future work.
 % 目前，单个策略程序系统级加载，但可在内部按优先级区分对待租户，类似 sched\_ext；按租户隔离是未来工作。
 
@@ -112,29 +118,35 @@ Currently, a single policy program is loaded system-wide but may internally diff
 % 运行时验证与优化
 \label{sec:verification}
 
-\sys{} trusts administrators to install policies, but treats policy code as potentially buggy or misconfigured.
-% \sys{} 信任管理员安装策略，但将策略代码视为可能存在错误或配置不当。
-Program verification constrains policy execution; transition validation checks each requested resource change against driver-owned state.
-% 程序验证约束策略执行；转移验证依据驱动持有的状态检查每次资源变更请求。
+\sys{}'s threat model mirrors standard eBPF: administrators are trusted, but policy code may be buggy or misconfigured.
+% \sys{} 的威胁模型与标准 eBPF 相同：管理员可信，但策略代码可能有 bug 或配置错误。
+Before a policy runs, the verifier checks its memory accesses and termination.
+% 策略运行前，验证器检查其内存访问是否合法，以及执行能否终止。
+When a policy requests a resource change, the driver checks whether the change is valid for the resource's current state.
+% 策略请求变更资源时，驱动检查该变更在资源当前状态下是否合法。
 \Cref{tab:safety-rules} summarizes the rules and their enforcement.
 % \Cref{tab:safety-rules} 汇总了这些规则及其执行方式。
 
 \subsubsection{Transition Validation}
 % 驱动持有的转移验证
 
-Policy callbacks submit requests through restricted interfaces; the driver retains exclusive authority to change resource state.
-% 策略回调通过受限接口提交请求；驱动保留修改资源状态的独占权限。
+Policy callbacks submit requests through restricted interfaces. The driver retains exclusive authority to change resource state.
+% 策略回调通过受限接口提交请求。驱动保留修改资源状态的独占权限。
 Before applying a request, the driver checks resource ownership, whether the observed state is still current, and whether the requested transition is allowed.
 % 在应用请求前，驱动检查资源归属、观测状态是否仍然有效，以及请求的转移是否被允许。
-For mutable resources such as eviction queues, validation and the resulting state change share the driver's synchronization, preventing another operation from invalidating the checked state between these steps (\Cref{fig:transition-validation}).
-% 对于驱逐队列等可变资源，验证与后续状态变更使用驱动的同一同步机制，防止其他操作在这两步之间使已检查的状态失效（\Cref{fig:transition-validation}）。
+The resource state must remain valid between checking a request and applying it.
+% 从检查请求到执行请求，资源状态必须持续满足验证条件。
+For mutable resources such as eviction queues, the driver synchronizes validation and the resulting state change as one step (\Cref{fig:transition-validation}).
+% 对于驱逐队列等可变资源，驱动通过同步机制将验证与后续状态变更作为一个步骤执行（\Cref{fig:transition-validation}）。
 Long-running transfers remain asynchronous under the native driver's control.
 % 耗时较长的传输仍由原生驱动异步执行。
 
-Repeated identical requests are idempotent; conflicting requests within one callback are rejected.
-% 同一回调中的相同重复请求是幂等的，冲突请求则被拒绝。
-Fallback follows the operation's semantics: a rejected eviction-order request preserves the current state, whereas an invalid prefetch action or range uses native prefetch behavior.
-% 回退遵循操作本身的语义：被拒绝的驱逐顺序请求保留当前状态，非法的预取动作或范围则采用原生预取行为。
+Repeating an identical request has the same effect as issuing it once.
+% 重复提交同一请求与提交一次具有相同效果。
+Conflicting requests within one callback are rejected.
+% 同一回调中的冲突请求会被拒绝。
+A rejected eviction-order request leaves the current order unchanged, while an invalid prefetch action or range uses the driver's native prefetch behavior.
+% 被拒绝的驱逐顺序请求保持当前顺序不变，非法的预取动作或范围则采用驱动原生的预取行为。
 
 \begin{figure}[t]
 \begin{minipage}{\columnwidth}
@@ -150,8 +162,8 @@ apply(resource, observed, request):
       return operation fallback(current)
     initiate native transition(request, current)
 \end{lstlisting}
-\caption{Transition validation. State checks and transition initiation share one protected step; transfer completion remains asynchronous.}
-% 转移验证。状态检查与转移发起共享一个受保护的步骤；传输完成仍为异步过程。
+\caption{Transition validation. State checks and transition initiation share one protected step. Transfer completion remains asynchronous.}
+% 转移验证。状态检查与转移发起共享一个受保护的步骤。传输完成仍为异步过程。
 \label{fig:transition-validation}
 \end{minipage}
 \end{figure}
@@ -159,23 +171,27 @@ apply(resource, observed, request):
 \subsubsection{SIMT-aware Verification}
 % SIMT 感知验证
 
-Device-side verification checks memory bounds and termination, then analyzes whether policy values are identical across the lanes of a warp.
-% 设备端验证检查内存边界与终止性，随后分析策略值在同一 warp 的各 lane 间是否相同。
-The analysis assigns values \emph{unknown}, \emph{uniform}, or \emph{varying} labels and propagates them through the control-flow graph.
-% 分析为值赋予\emph{未知}、\emph{lane 间一致}或\emph{lane 间不一致}标签，并沿控制流图传播。
-Constants are uniform, while lane identifiers are varying; copies preserve labels, and arithmetic propagates lane variation from its operands.
-% 常量在 lane 间一致，lane 标识在 lane 间不一致；复制保留标签，算术运算传播操作数中的 lane 差异。
-Loads and helper results use the uniformity of their source data and the declared helper semantics.
-% 加载操作与 helper 返回值依据源数据的一致性以及声明的 helper 语义确定标签。
-At control-flow joins, varying information dominates uniform information; propagation repeats until the labels stabilize, including across loop back edges.
-% 在控制流合并点，非一致信息优先于一致信息；传播持续到标签稳定，并覆盖循环回边。
+Because GPUs execute in SIMT (Single Instruction, Multiple Threads) mode, device-side eBPF programs must maintain warp-level execution semantics within eBPF’s scalar model.
+% 由于 GPU 以 SIMT（单指令多线程）模式执行，设备端 eBPF 程序必须在 eBPF 的标量模型内保持 warp 级执行语义。
+\sys{} enforces warp-uniformity via SIMT-aware verification: it distinguishes \emph{warp-uniform} (identical across warp threads, e.g., region IDs) from \emph{lane-varying} (thread-local state) values.
+% \sys{} 通过 SIMT 感知验证强制 warp 一致性：区分\emph{warp 一致}（各 warp 线程取值相同，如区域 ID）和\emph{lane 可变}（线程局部状态）的值。
+After checking memory bounds and termination, the verifier tracks how values depend on their inputs: constants are uniform, while values derived from lane identifiers may differ across lanes.
+% 在检查内存边界与终止性后，验证器跟踪值对输入的依赖：常量在各 lane 间一致，而由 lane 标识计算出的值可能因 lane 而异。
+This analysis follows computations and control flow, including loops.
+% 这一分析沿计算过程和控制流传播一致性信息，也覆盖循环。
 
-The verifier then requires uniform branch conditions, map keys, shared-map values, and atomic target addresses; unknown values cannot satisfy these requirements.
-% 随后，验证器要求分支条件、map 键、共享 map 值与原子操作目标地址具有一致性；未知值无法满足这些要求。
-These restrictions let a warp follow one policy decision and update shared state consistently; a branch on lane ID or a shared-map update derived from it is rejected.
-% 这些约束使一个 warp 遵循同一策略决策，并一致地更新共享状态；基于 lane ID 的分支或由其派生的共享 map 更新会被拒绝。
-GPU-wide barriers and global synchronization are prohibited to keep policy execution bounded.
-% GPU 级屏障与全局同步被禁止，以保持策略执行有界。
+Lane-varying values cannot affect control flow or external side effects.
+% lane 可变的值不能影响控制流或外部副作用。
+Branch conditions, loop bounds, and map-update keys must be warp-uniform or warp-aggregated.
+% 分支条件、循环边界和 map 更新键必须是 warp 一致的或经 warp 聚合的。
+Shared-map values and atomic target addresses must also be uniform so that lanes update shared state consistently.
+% 共享 map 值和原子操作目标地址也必须在各 lane 间一致，以便各 lane 一致地更新共享状态。
+The verifier rejects programs when it cannot establish the required uniformity.
+% 当验证器无法确认所需的一致性时，就拒绝该程序。
+For example, a branch on lane ID or a shared-map update derived from it is rejected.
+% 例如，基于 lane ID 的分支或由其派生的共享 map 更新会被拒绝。
+Additionally, \sys{} forbids GPU-wide barriers, global synchronization, non-uniform atomics, and it bounds resource usage per policy hook.
+% 此外，\sys{} 禁止 GPU 级屏障、全局同步和非一致原子操作，并限制每个策略钩子的资源用量。
 
 \begin{table}[t]
 \centering
@@ -184,7 +200,7 @@ GPU-wide barriers and global synchronization are prohibited to keep policy execu
 \toprule
 \textbf{Illegal behavior} & \textbf{Safety property} & \textbf{Handling} \\
 \midrule
-Out-of-bounds access or unbounded loop & Memory bounds; termination & Reject program \\
+Out-of-bounds access or unbounded loop & Memory bounds and termination & Reject program \\
 Lane-dependent branch & Uniform control flow & Reject program \\
 Varying shared-map value or atomic target & Uniform updates to shared state & Reject program \\
 GPU-wide barrier & Bounded synchronization & Reject program \\
@@ -193,8 +209,8 @@ Conflicting requests & Request consistency & Operation fallback \\
 Invalid prefetch range & Valid migration range & Native prefetch \\
 \bottomrule
 \end{tabularx}
-\caption{Safety rules and representative rejected behaviors. Program rejection occurs before execution; resource requests are checked before transition initiation.}
-% 安全规则与典型拒绝行为。程序在执行前被拒绝；资源请求在发起转移前被检查。
+\caption{Safety rules and representative rejected behaviors. Program rejection occurs before execution. Resource requests are checked before transition initiation.}
+% 安全规则与典型拒绝行为。程序在执行前被拒绝。资源请求在发起转移前被检查。
 \label{tab:safety-rules}
 \end{table}
 
@@ -225,11 +241,12 @@ Following eBPF's philosophy, \sys{} maps use eventual consistency: periodically 
 % 遵循 eBPF 的理念，\sys{} 的 map 采用最终一致性：在 GPU 内核完成时周期性地将设备本地分片合并为权威快照。
 This model suffices as policies rely on approximate statistics; occasional staleness may affect optimality but cannot violate correctness invariants like memory integrity.
 % 该模型足够用，因为策略依赖近似统计；偶尔的过期可能影响最优性，但不会违反内存完整性等正确性不变量。
-
 When access patterns change faster than the synchronization interval, policies can issue synchronization operations more frequently, trading overhead for freshness, while transition validation (\S\ref{sec:verification}) prevents stale requests from corrupting driver state.
-% 当访问模式变化快于同步周期时，策略可以提高同步频率，以开销换取新鲜度；同时转移验证（\S\ref{sec:verification}）防止过期请求破坏驱动状态。
-Counters with associative merge operations can be combined across shards; eviction-list order and unique ownership require a single authority.
-% 合并运算满足结合律的计数器可以跨分片合并；驱逐列表顺序与唯一所有权需要单一权威。
+% 当访问模式变化快于同步周期时，策略可以提高同步频率，以开销换取新鲜度。同时转移验证（\S\ref{sec:verification}）防止过期请求破坏驱动状态。
+Counters can be combined across shards using associative operations such as addition.
+% 计数器可以通过加法等满足结合律的运算跨分片合并。
+Changes to eviction-list order and resource ownership must be controlled by one component.
+% 驱逐列表顺序和资源归属的变更必须由同一个组件控制。
 
 \subsection{Example: MoE Expert Offloading}
 % 示例：MoE 专家卸载
