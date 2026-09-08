@@ -432,29 +432,24 @@ Unless stated otherwise, we report medians with confidence intervals. POD's oper
 
 \paragraph{Results}
 % 结果
-MoE-Infinity reduces TTFT by 22.1\% (native) and 22.5\% (\sys{}) relative to prediction-disabled expert caching.
-% 在五次配对运行中，MoE-Infinity 相比关闭预测的专家缓存，将 TTFT 降低 22.1\%（原生）和 22.5\%（\sys{}）。
-Expert Buffering reduces full expert loads by 12.85\% in both implementations relative to fixed-$K$ FIFO at the same cache capacity (\Cref{fig:matched-ports}(b)).
-% 在相同缓存容量下，Expert Buffering 的两种实现相比固定 K 的 FIFO 均将完整专家加载次数减少 12.85\%（\Cref{fig:matched-ports}(b)）。
-FineMoE raises \sys{} throughput by 24.6\% over prefetching every positively predicted expert.
-% 相比预取所有预测会用到的专家，FineMoE 将 \sys{} 吞吐提高 24.6\%。
-Native and \sys{} throughput differ by 0.21\% in paired runs (95\% CI $[-0.17\%,+0.52\%]$).
-% 原生与 \sys{} 在配对运行中的吞吐差异为 0.21\%（95\% CI $[-0.17\%,+0.52\%]$）。
-Hummingbird reduces LC response p99 by 5.9--9.1\% (\sys{}) and 7.5--8.2\% (native) relative to default scheduling across periodic and BurstGPT arrivals.
-% 在周期性和 BurstGPT 到达模式下，Hummingbird 相比默认调度将 LC 响应 p99 降低 5.9--9.1\%（\sys{}）和 7.5--8.2\%（原生）。
-With two LC and four BE processes, XSched lowers LC p99 latency from submission to the first block's start from 76.9~s (native CUDA) to 27.0~s (native policy) and 27.3~s (\sys{}) (\Cref{fig:matched-ports}(f)).
-% 在两个 LC 和四个 BE 进程下，XSched 将 LC 从提交到首个线程块开始执行的 p99 延迟从 76.9 秒（原生 CUDA）降至 27.0 秒（原生策略）和 27.3 秒（\sys{}）（\Cref{fig:matched-ports}(f)）。
-Under continuous background load, GPREEMPT lowers LC response p99 from 1.796~ms (default scheduling) to 1.615~ms (native policy) and 1.610~ms (\sys{}).
-% 在连续后台负载下，GPREEMPT 将 LC 响应 p99 从 1.796 毫秒（默认调度）降至 1.615 毫秒（原生策略）和 1.610 毫秒（\sys{}）。
-POD-Attention covers ten shapes with five runs each, compared with non-fused FlashAttention and native POD.
-% POD-Attention 覆盖十种形状，每种运行五次，与未融合的 FlashAttention 和原生 POD 比较。
-At Llama decode batch 128, operator latency falls from 5.360~ms (two-stream FlashAttention) to 4.322~ms (native POD) and 4.344~ms (\sys{}).
-% 在 Llama 解码批量 128 下，算子延迟从 5.360 毫秒（双流 FlashAttention）降至 4.322 毫秒（原生 POD）和 4.344 毫秒（\sys{}）。
-
-Expert Buffering incurs 0.7\% overhead. Across ten shapes, POD's operator latency in paired runs decreases by up to 0.44\% or increases by up to 1.18\%.
-% Expert Buffering 的开销为 0.7\%。在十种形状的配对运行中，POD 的算子延迟最多降低 0.44\% 或增加 1.18\%。
-A UVM policy verified by the kernel incurs 3.2\% overhead with prefetch disabled in fifteen paired runs measuring page-fault handling.
-% 在测量缺页处理的十五次配对运行中，通过内核验证的 UVM 策略在禁用预取时开销为 3.2\%。
+Against the baselines in \Cref{fig:matched-ports}(a--g), MoE-Infinity lowers TTFT by 22.1\% (native) and 22.5\% (\sys{}).
+% 相比 \Cref{fig:matched-ports}(a--g) 中对应的基线，MoE-Infinity 将 TTFT 降低 22.1\%（原生）和 22.5\%（\sys{}）。
+Expert Buffering cuts full expert loads by 12.85\% in both implementations, with 0.7\% \sys{} overhead.
+% Expert Buffering 的两种实现均将完整专家加载次数减少 12.85\%，\sys{} 的开销为 0.7\%。
+FineMoE raises \sys{} throughput by 24.6\%, with a 0.21\% difference from native (95\% CI $[-0.17\%,+0.52\%]$).
+% FineMoE 将 \sys{} 吞吐提高 24.6\%，与原生实现相差 0.21\%（95\% CI $[-0.17\%,+0.52\%]$）。
+Hummingbird lowers LC response p99 by 7.5--8.2\% (native) and 5.9--9.1\% (\sys{}).
+% Hummingbird 将 LC 响应 p99 降低 7.5--8.2\%（原生）和 5.9--9.1\%（\sys{}）。
+POD-Attention reduces operator latency from 5.360~ms to 4.322~ms (native) and 4.344~ms (\sys{}).
+% POD-Attention 将算子延迟从 5.360 毫秒降至 4.322 毫秒（原生）和 4.344 毫秒（\sys{}）。
+Across shapes, \sys{} latency ranges from 0.44\% lower to 1.18\% higher than native.
+% 在不同形状下，\sys{} 延迟相比原生实现最多降低 0.44\% 或增加 1.18\%。
+XSched lowers LC p99 latency from submission to first block execution from 76.9~s to 27.0~s (native) and 27.3~s (\sys{}).
+% XSched 将 LC 从提交到首个线程块执行的 p99 延迟从 76.9 秒降至 27.0 秒（原生）和 27.3 秒（\sys{}）。
+GPREEMPT lowers LC response p99 from 1.796~ms to 1.615~ms (native) and 1.610~ms (\sys{}).
+% GPREEMPT 将 LC 响应 p99 从 1.796 毫秒降至 1.615 毫秒（原生）和 1.610 毫秒（\sys{}）。
+With prefetch disabled, the UVM policy verified by the kernel adds 3.2\% page-fault handling overhead.
+% 在禁用预取时，通过内核验证的 UVM 策略增加 3.2\% 的缺页处理开销。
 
 \subsection{RQ2: Mechanism Cost}
 % RQ2：机制代价
