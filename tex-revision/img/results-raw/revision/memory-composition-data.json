@@ -1,0 +1,478 @@
+{
+  "workloads": [
+    {
+      "name": "HotSpot",
+      "sources": [
+        "eval/multi-tenant-memory/results_hotspot/policy_comparison_20251208_101609.csv",
+        "eval/multi-tenant-memory/results_hotspot/sched_comparison_20251208_113441.csv",
+        "eval/multi-tenant-memory/results_combined_575_20260908.Mwmymz/hotspot/combined_20260908_002905/combined_comparison.csv"
+      ],
+      "original": [
+        {
+          "label": "No policy",
+          "high": 53.947341203689575,
+          "low": 53.92711305618286
+        },
+        {
+          "label": "Scheduler",
+          "high": 53.78015661239624,
+          "low": 53.806888580322266
+        },
+        {
+          "label": "Prefetch(0,20)",
+          "high": 42.78873896598816,
+          "low": 42.67709493637085
+        },
+        {
+          "label": "Prefetch(20,80)",
+          "high": 22.511011838912964,
+          "low": 23.995417594909668
+        },
+        {
+          "label": "Evict(20,80)",
+          "high": 22.391013622283936,
+          "low": 23.892356872558594
+        }
+      ],
+      "single": 2.46960186958313,
+      "composition": [
+        {
+          "block": 0,
+          "policy": "baseline",
+          "high": 80.798918,
+          "low": 81.041481
+        },
+        {
+          "block": 0,
+          "policy": "memory_only",
+          "high": 27.532882,
+          "low": 29.223197
+        },
+        {
+          "block": 0,
+          "policy": "sched_only",
+          "high": 4.039891,
+          "low": 6.199698
+        },
+        {
+          "block": 0,
+          "policy": "combined",
+          "high": 3.560419,
+          "low": 6.499766
+        },
+        {
+          "block": 1,
+          "policy": "memory_only",
+          "high": 24.87666,
+          "low": 26.568771
+        },
+        {
+          "block": 1,
+          "policy": "sched_only",
+          "high": 3.981859,
+          "low": 6.155824
+        },
+        {
+          "block": 1,
+          "policy": "combined",
+          "high": 3.517945,
+          "low": 6.479807
+        },
+        {
+          "block": 1,
+          "policy": "baseline",
+          "high": 56.63416,
+          "low": 56.378129
+        },
+        {
+          "block": 2,
+          "policy": "sched_only",
+          "high": 3.912184,
+          "low": 6.10578
+        },
+        {
+          "block": 2,
+          "policy": "combined",
+          "high": 3.568093,
+          "low": 6.530586
+        },
+        {
+          "block": 2,
+          "policy": "baseline",
+          "high": 56.286889,
+          "low": 56.533284
+        },
+        {
+          "block": 2,
+          "policy": "memory_only",
+          "high": 26.199263,
+          "low": 27.876546
+        },
+        {
+          "block": 3,
+          "policy": "combined",
+          "high": 3.552392,
+          "low": 6.530794
+        },
+        {
+          "block": 3,
+          "policy": "baseline",
+          "high": 56.267999,
+          "low": 56.554973
+        },
+        {
+          "block": 3,
+          "policy": "memory_only",
+          "high": 24.57307,
+          "low": 26.28702
+        },
+        {
+          "block": 3,
+          "policy": "sched_only",
+          "high": 3.963689,
+          "low": 6.125378
+        },
+        {
+          "block": 4,
+          "policy": "baseline",
+          "high": 56.253704,
+          "low": 56.501349
+        },
+        {
+          "block": 4,
+          "policy": "memory_only",
+          "high": 26.308259,
+          "low": 27.978223
+        },
+        {
+          "block": 4,
+          "policy": "sched_only",
+          "high": 3.962947,
+          "low": 6.160951
+        },
+        {
+          "block": 4,
+          "policy": "combined",
+          "high": 3.568392,
+          "low": 6.515025
+        }
+      ]
+    },
+    {
+      "name": "GEMM",
+      "sources": [
+        "eval/multi-tenant-memory/results_gemm/policy_comparison_20251208_102321.csv",
+        "eval/multi-tenant-memory/results_gemm/sched_comparison_20251208_113846.csv",
+        "eval/multi-tenant-memory/results_combined_575_20260908.Mwmymz/gemm/combined_20260908_003830/combined_comparison.csv"
+      ],
+      "original": [
+        {
+          "label": "No policy",
+          "high": 135.79012441635132,
+          "low": 135.7397849559784
+        },
+        {
+          "label": "Scheduler",
+          "high": 136.48326230049133,
+          "low": 136.5449821949005
+        },
+        {
+          "label": "Prefetch(0,20)",
+          "high": 83.5085723400116,
+          "low": 85.17046928405762
+        },
+        {
+          "label": "Prefetch(20,80)",
+          "high": 23.9730863571167,
+          "low": 29.61594820022583
+        },
+        {
+          "label": "Evict(20,80)",
+          "high": 24.012399911880493,
+          "low": 29.690080165863037
+        }
+      ],
+      "single": 11.51070523262024,
+      "composition": [
+        {
+          "block": 0,
+          "policy": "baseline",
+          "high": 138.765256,
+          "low": 139.038169
+        },
+        {
+          "block": 0,
+          "policy": "memory_only",
+          "high": 22.200545,
+          "low": 28.115147
+        },
+        {
+          "block": 0,
+          "policy": "sched_only",
+          "high": 13.370843,
+          "low": 19.282938
+        },
+        {
+          "block": 0,
+          "policy": "combined",
+          "high": 13.068414,
+          "low": 22.038077
+        },
+        {
+          "block": 1,
+          "policy": "memory_only",
+          "high": 22.096665,
+          "low": 28.041292
+        },
+        {
+          "block": 1,
+          "policy": "sched_only",
+          "high": 13.367278,
+          "low": 19.280421
+        },
+        {
+          "block": 1,
+          "policy": "combined",
+          "high": 12.997999,
+          "low": 21.956966
+        },
+        {
+          "block": 1,
+          "policy": "baseline",
+          "high": 138.788579,
+          "low": 138.529776
+        },
+        {
+          "block": 2,
+          "policy": "sched_only",
+          "high": 13.403701,
+          "low": 19.311345
+        },
+        {
+          "block": 2,
+          "policy": "combined",
+          "high": 12.999451,
+          "low": 21.941708
+        },
+        {
+          "block": 2,
+          "policy": "baseline",
+          "high": 138.555513,
+          "low": 138.795441
+        },
+        {
+          "block": 2,
+          "policy": "memory_only",
+          "high": 22.139241,
+          "low": 28.092414
+        },
+        {
+          "block": 3,
+          "policy": "combined",
+          "high": 13.069229,
+          "low": 22.062815
+        },
+        {
+          "block": 3,
+          "policy": "baseline",
+          "high": 138.843762,
+          "low": 138.590036
+        },
+        {
+          "block": 3,
+          "policy": "memory_only",
+          "high": 22.294574,
+          "low": 28.243196
+        },
+        {
+          "block": 3,
+          "policy": "sched_only",
+          "high": 13.375765,
+          "low": 19.289882
+        },
+        {
+          "block": 4,
+          "policy": "baseline",
+          "high": 138.878309,
+          "low": 138.622167
+        },
+        {
+          "block": 4,
+          "policy": "memory_only",
+          "high": 25.792923,
+          "low": 31.747941
+        },
+        {
+          "block": 4,
+          "policy": "sched_only",
+          "high": 13.350483,
+          "low": 19.281576
+        },
+        {
+          "block": 4,
+          "policy": "combined",
+          "high": 13.041686,
+          "low": 21.994206
+        }
+      ]
+    },
+    {
+      "name": "K-Means",
+      "sources": [
+        "eval/multi-tenant-memory/results_kmeans/policy_comparison_20251208_103714.csv",
+        "eval/multi-tenant-memory/results_kmeans/sched_comparison_20251208_114516.csv",
+        "eval/multi-tenant-memory/results_combined_575_20260908.Mwmymz/kmeans/combined_20260908_005722/combined_comparison.csv"
+      ],
+      "original": [
+        {
+          "label": "No policy",
+          "high": 85.48987030982971,
+          "low": 85.45954942703247
+        },
+        {
+          "label": "Scheduler",
+          "high": 85.70949101448059,
+          "low": 85.70951557159424
+        },
+        {
+          "label": "Prefetch(0,20)",
+          "high": 17.04487180709839,
+          "low": 17.36100435256958
+        },
+        {
+          "label": "Prefetch(20,80)",
+          "high": 5.476607084274292,
+          "low": 6.707535266876221
+        },
+        {
+          "label": "Evict(20,80)",
+          "high": 5.3000428676605225,
+          "low": 6.5975494384765625
+        }
+      ],
+      "single": 3.9005630016326904,
+      "composition": [
+        {
+          "block": 0,
+          "policy": "baseline",
+          "high": 335.357313,
+          "low": 335.118057
+        },
+        {
+          "block": 0,
+          "policy": "memory_only",
+          "high": 243.36391,
+          "low": 258.582308
+        },
+        {
+          "block": 0,
+          "policy": "sched_only",
+          "high": 31.487096,
+          "low": 57.789015
+        },
+        {
+          "block": 0,
+          "policy": "combined",
+          "high": 31.084584,
+          "low": 58.290425
+        },
+        {
+          "block": 1,
+          "policy": "memory_only",
+          "high": 254.149297,
+          "low": 269.441061
+        },
+        {
+          "block": 1,
+          "policy": "sched_only",
+          "high": 31.600424,
+          "low": 57.864287
+        },
+        {
+          "block": 1,
+          "policy": "combined",
+          "high": 31.125356,
+          "low": 58.336857
+        },
+        {
+          "block": 1,
+          "policy": "baseline",
+          "high": 333.607006,
+          "low": 333.346169
+        },
+        {
+          "block": 2,
+          "policy": "sched_only",
+          "high": 31.535854,
+          "low": 57.743344
+        },
+        {
+          "block": 2,
+          "policy": "combined",
+          "high": 31.13275,
+          "low": 58.339609
+        },
+        {
+          "block": 2,
+          "policy": "baseline",
+          "high": 332.056461,
+          "low": 332.299329
+        },
+        {
+          "block": 2,
+          "policy": "memory_only",
+          "high": 243.910112,
+          "low": 258.641047
+        },
+        {
+          "block": 3,
+          "policy": "combined",
+          "high": 31.123468,
+          "low": 58.406741
+        },
+        {
+          "block": 3,
+          "policy": "baseline",
+          "high": 330.890035,
+          "low": 331.164119
+        },
+        {
+          "block": 3,
+          "policy": "memory_only",
+          "high": 246.060516,
+          "low": 260.657138
+        },
+        {
+          "block": 3,
+          "policy": "sched_only",
+          "high": 31.610468,
+          "low": 57.849767
+        },
+        {
+          "block": 4,
+          "policy": "baseline",
+          "high": 331.459398,
+          "low": 331.707854
+        },
+        {
+          "block": 4,
+          "policy": "memory_only",
+          "high": 252.582322,
+          "low": 267.9019
+        },
+        {
+          "block": 4,
+          "policy": "sched_only",
+          "high": 31.597359,
+          "low": 57.769726
+        },
+        {
+          "block": 4,
+          "policy": "combined",
+          "high": 31.168501,
+          "low": 58.415803
+        }
+      ]
+    }
+  ]
+}

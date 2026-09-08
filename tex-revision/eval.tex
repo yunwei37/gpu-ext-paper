@@ -287,19 +287,24 @@ We compare against: (1)~no-policy execution, (2)~single-process runtime (Single~
 % \Cref{fig:all-kernels-priority} 显示，没有策略时，两个进程都因内存抖动而严重退化。
 With \sys memory priority policies, total completion time improves by 55--92\%, and high-priority processes complete 6--19\% faster.
 % 使用 gpubpf 内存优先级策略后，总完成时间改善 55--92\%，高优先级进程完成速度加快 6--19\%。
-Critically, for these \emph{memory-bound} workloads, GPREEMPT-style~\cite{fan2025gpreempt} scheduler timeslice policies are \emph{ineffective} (<1\% improvement) because the bottleneck is UVM page faults and PCIe bandwidth, not GPU compute time.
-% 关键在于，对于这些\emph{内存密集型}工作负载，GPREEMPT 式~\cite{fan2025gpreempt}调度器时间片策略\emph{无效}（改善不足 1\%），因为瓶颈是 UVM 缺页和 PCIe 带宽，而非 GPU 计算时间。
+In the original comparison, GPREEMPT-style~\cite{fan2025gpreempt} scheduler timeslice policies improve completion time by less than 1\%.
+% 在原有比较中，GPREEMPT 式~\cite{fan2025gpreempt}调度器时间片策略对完成时间的改善不足 1\%。
+We additionally compare no policy, memory priority alone, scheduling alone, and their combination, with all policies enabled before CUDA initialization and completion measured from a common start for both processes.
+% 我们进一步比较无策略、仅内存优先级策略、仅调度策略以及两者组合，所有策略均在 CUDA 初始化前启用，并从两个进程的共同起点测量完成时间。
+Across five runs per configuration, combining memory priority with scheduling reduces high-priority completion time by a median of 10.38\%, 2.31\%, and 1.36\% relative to scheduling alone for HotSpot, GEMM, and K-Means, respectively.
+% 每种配置运行五次，相比仅使用调度策略，组合内存优先级与调度策略使 HotSpot、GEMM 和 K-Means 的高优先级任务完成时间分别缩短 10.38\%、2.31\% 和 1.36\%（各次相对改善的中位数）。
 The scheduling results in \S\ref{sec:policy-mechanism} show the complementary case: timeslice policies improve latency when GPU compute is the bottleneck.
 % \S\ref{sec:policy-mechanism} 的调度结果展示了互补情形：当 GPU 计算是瓶颈时，时间片策略能改善延迟。
 
-\begin{figure}
+\begin{figure*}[t]
 \centering
-\includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/all_kernels_stacked.pdf}
+% \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/all_kernels_stacked.pdf}
+\includegraphics[width=\textwidth]{tex-revision/img/results-raw/revision/memory-composition.pdf}
 
-\caption{Multi-tenant memory priority differentiation. Single 1$\times$: single-process time; 2$\times$Single 1$\times$: theoretical lower bound.}
-% 多租户内存优先级区分。Single 1×：单进程时间；2×Single 1×：理论下界。
+\caption{Multi-tenant memory priority differentiation and policy composition. Each panel retains the original comparison (left) and adds a separate comparison of memory and scheduling policies (right). New bars show median completion times over five runs, whiskers show the observed range of total completion time, and diamonds mark high-priority completion. Single 1$\times$ is the original single-process time, and 2$\times$Single 1$\times$ is the theoretical lower bound for the original comparison.}
+% 多租户内存优先级区分与策略组合。每个面板保留原有比较（左），并加入独立的内存与调度策略比较（右）。新增条形表示五次运行的完成时间中位数，误差线表示总完成时间的观测范围，菱形标记高优先级任务的完成时间。Single 1× 为原有单进程时间，2×Single 1× 为原有比较的理论下界。
 \label{fig:all-kernels-priority}
-\end{figure}
+\end{figure*}
 
 \paragraph{Two-Tenant: High-Priority LLM Inference + Background Training.}
 % 双租户：高优先级 LLM 推理 + 后台训练。
