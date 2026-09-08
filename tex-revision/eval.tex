@@ -450,8 +450,8 @@ In panel (b), \texttt{kernel\-ret\-snoop} records per-warp kernel returns and \t
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{tex-revision/img/results-raw/revision/obs-overhead-with-array.pdf}
-\caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B: ten baseline/tool pairs per configuration, except \sys \texttt{kernel\-ret\-snoop} (five independent pairs). Bars show means and whiskers in (b) show run ranges; P40 uses original reported values. For \sys \texttt{kernel\-ret\-snoop}, records are collected after prefill (10.38\,ms, outside prefill timing).}
-% 相对未插桩基线的预填充吞吐下降。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B：每个配置十组基线/工具配对，gpubpf \texttt{kernel\-ret\-snoop} 使用另外独立测量的五组配对。柱形为均值，（b）中的须线表示运行范围；P40 使用原文报告值。gpubpf \texttt{kernel\-ret\-snoop} 在预填充后收集记录（10.38 ms，不计入预填充计时）。
+\caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B: ten baseline/tool pairs per configuration, except \sys \texttt{kernel\-ret\-snoop} (five independent pairs). Bars show means and whiskers in (b) show run ranges; P40 uses original reported values.}
+% 相对未插桩基线的预填充吞吐下降。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B：每个配置十组基线/工具配对，gpubpf \texttt{kernel\-ret\-snoop} 使用另外独立测量的五组配对。柱形为均值，（b）中的须线表示运行范围；P40 使用原文报告值。
 \label{fig:obs-overhead}
 \end{figure}
 
