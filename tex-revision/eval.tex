@@ -6,8 +6,8 @@ Our evaluation addresses two research questions:
 % 我们的评估围绕两个研究问题展开：
 
 \begin{itemize}[leftmargin=*]
-  \item \textbf{RQ1 (Policy Expressibility and Benefits):} Can AI agents safely express GPU resource-management policies through \sys---including policies from published state-of-the-art systems---and do those policies improve performance?
-  % RQ1（策略可表达性与收益）：AI 智能体能否通过 gpubpf 安全地表达 GPU 资源管理策略——包括已发表最先进系统的策略——这些策略能否提升性能？
+  \item \textbf{RQ1 (Policy Expressibility and Benefits):} Can AI agents safely express GPU resource-management policies, including those from published state-of-the-art systems, through \sys{}? Do these policies improve performance?
+  % RQ1（策略可表达性与收益）：AI 智能体能否通过 gpubpf 安全地表达 GPU 资源管理策略，包括已发表最先进系统中的策略？这些策略能否提升性能？
   \item \textbf{RQ2 (Mechanism Cost):} What runtime overhead does \sys{} add for hooks, observability, and policy execution?
   % RQ2（机制代价）：gpubpf 的钩子、可观测功能和策略执行引入了多少运行时开销？
 \end{itemize}
@@ -289,10 +289,8 @@ With \sys memory priority policies, total completion time improves by 55--92\%, 
 % 使用 gpubpf 内存优先级策略后，总完成时间改善 55--92\%，高优先级进程完成速度加快 6--19\%。
 % In the original comparison, GPREEMPT-style~\cite{fan2025gpreempt} scheduler timeslice policies improve completion time by less than 1\%.
 % 在原有比较中，GPREEMPT 式~\cite{fan2025gpreempt}调度器时间片策略对完成时间的改善不足 1\%。
-We compare scheduling alone (Scheduler$^\dagger$) with scheduling and memory priority combined (Combined$^\dagger$) in a separate experiment.
-% 我们在独立实验中比较仅调度（Scheduler$^\dagger$）与调度加内存优先级（Combined$^\dagger$）。
-Both configurations enable policies before CUDA initialization and measure completion from a common start for the two processes.
-% 两种配置均在 CUDA 初始化前启用策略，并从两个进程的共同起点测量完成时间。
+The paired Scheduler$^\dagger$ and Combined$^\dagger$ measurements compare scheduling alone with jointly enabled scheduling and memory priority.
+% Scheduler$^\dagger$ 与 Combined$^\dagger$ 的配对测量比较仅启用调度与同时启用调度和内存优先级。
 Adding memory priority reduces high-priority completion time by a median of 10.38\%, 2.31\%, and 1.36\% for HotSpot, GEMM, and K-Means, respectively, over five paired runs.
 % 在五次配对运行中，加入内存优先级后，HotSpot、GEMM 和 K-Means 的高优先级任务完成时间分别缩短 10.38\%、2.31\% 和 1.36\%（各次相对改善的中位数）。
 The scheduling results in \S\ref{sec:policy-mechanism} also show that timeslice policies improve latency for compute-bound workloads.
@@ -303,8 +301,8 @@ The scheduling results in \S\ref{sec:policy-mechanism} also show that timeslice 
 % \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/all_kernels_stacked.pdf}
 \includegraphics[width=\columnwidth]{tex-revision/img/results-raw/revision/memory-composition.pdf}
 
-\caption{Multi-tenant memory priority differentiation (P: Prefetch, E: Evict). Single 1$\times$ and 2$\times$Single 1$\times$ retain the original baseline and theoretical lower bound.}
-% 多租户内存优先级区分（P：Prefetch，E：Evict）。Single 1× 和 2×Single 1× 保留原有基线及理论下界。
+\caption{Multi-tenant memory priority differentiation (P: Prefetch, E: Evict). Single 1$\times$ denotes single-process completion time, and 2$\times$Single 1$\times$ denotes the theoretical lower bound.}
+% 多租户内存优先级区分（P：Prefetch，E：Evict）。Single 1× 表示单进程完成时间，2×Single 1× 表示理论下界。
 \label{fig:all-kernels-priority}
 \end{figure}
 
