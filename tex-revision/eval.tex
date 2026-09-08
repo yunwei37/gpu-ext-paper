@@ -163,10 +163,10 @@ The resulting policy (totaling $\sim$680~LOC) effectively prevents thrashing see
 
 \end{figure}
 
-For LMCache's cuFile backend in compatibility mode, an agent-developed policy prioritizes reads and limits the total deferral of each background write to 200~ms.
-% 对 LMCache 的 cuFile 后端兼容模式，智能体开发的策略优先处理读取，并将每个后台写请求的累计推迟时间限制在 200 ms 内。
-Across five paired runs, the median p99 read latency is 323.707~ms with FIFO, 123.141~ms with the same policy implemented without \sys{}, and 118.097~ms with \sys{}, measured from each request's scheduled arrival.
-% 五组配对运行中，读取延迟从各请求的预定到达时刻起算，p99 延迟的中位数在 FIFO、同一策略的非 \sys{} 实现和 \sys{} 实现下分别为 323.707、123.141 和 118.097 ms。
+For LMCache's local-disk backend, an agent-developed policy prioritizes reads over background writes while limiting each write's total deferral to 200~ms.
+% 对 LMCache 的本地磁盘后端，智能体开发的策略优先处理读请求，并将每个后台写请求的累计推迟时间限制在 200 ms 内。
+Across five paired runs, median read p99, measured from scheduled request arrival, falls from 323.707~ms with FIFO to 123.141~ms with the native policy and 118.097~ms with the same policy implemented through \sys{}.
+% 在五组配对运行中，从请求的预定到达时刻起算的读请求 p99 延迟中位数，由 FIFO 下的 323.707 ms 降至原生策略下的 123.141 ms，以及同一策略通过 \sys{} 实现时的 118.097 ms。
 The median paired reduction with \sys{} relative to FIFO is 61.9\%.
 % \sys{} 相对 FIFO 的配对降幅中位数为 61.9\%。
 
@@ -248,6 +248,8 @@ Only 2 of 8 policies yielded positive results.
 
 We evaluate \sys on multi-tenant GPU workloads, comparing per-tenant policies against global and framework-managed approaches.
 % 我们在多租户 GPU 工作负载上评估 gpubpf，将每租户策略与全局策略和框架管理的方法进行对比。
+The tenants share an unpartitioned GPU managed by a system-wide policy.
+% 租户共享一块由系统级策略管理的未分区 GPU。
 
 \paragraph{Compute-bound Scheduler (LC + BE)}
 % 计算密集型调度器（LC + BE）。
@@ -343,9 +345,6 @@ We compare default UVM (driver FIFO/LRU) against \sys per-tenant memory and sche
 % \Cref{fig:two-tenant} 显示双方同时受益：LC 的 TPOT 下降 40--45\%，TTFT 下降 14--20\%，同时 GNN 训练也改善 28\%，接近理想的公平份额基线。
 This shows \sys reduces contention for both workloads rather than favoring one over the other.
 % 这说明 gpubpf 减轻了两种工作负载之间的竞争，而非偏袒其中一方。
-
-The tenants share an unpartitioned GPU managed by a system-wide policy.
-% 租户共享一块由系统级策略管理的未分区 GPU。
 
 \begin{figure}
 \centering
