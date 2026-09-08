@@ -366,7 +366,7 @@ LatencyBudget (CLC) & Scheduling Block & Device & 19 \\
 \end{table}
 \end{comment}
 
-\subsubsection{Policies from Published Systems}
+\subsubsection{Policies from Prior Systems}
 % 已发表系统的策略
 \label{sec:policy-mechanism}
 
@@ -423,10 +423,8 @@ In \Cref{fig:matched-ports}, we compare the workload baseline with the native po
 % 在 \Cref{fig:matched-ports} 中，我们比较工作负载基线与原生策略，以衡量策略收益。
 We then compare the \sys{} and native (without \sys{}) implementations of the same policy to measure the cost of \sys{}, keeping the workload and underlying execution unchanged.
 % 随后，我们在保持工作负载和底层执行不变的条件下，比较同一策略的 \sys{} 实现与原生实现（不使用 \sys{}），以衡量 \sys{} 的执行代价。
-These experiments use driver 575.57.08 with exclusive GPU access and repeated randomized trials.
-% 这些实验使用驱动 575.57.08，以独占 GPU 和重复随机试验运行。
-Unless stated otherwise, we report medians with confidence intervals. POD's operator plot uses the mean of five per-run means.
-% 除非另有说明，我们报告中位数及置信区间。POD 算子图使用五次运行均值的平均值。
+Unless stated otherwise, we report medians with confidence intervals.
+% 除非另有说明，我们报告中位数及置信区间。
 
 \paragraph{Results}
 % 结果
@@ -446,8 +444,6 @@ XSched lowers LC p99 latency from submission to first block execution from 76.9~
 % XSched 将 LC 从提交到首个线程块执行的 p99 延迟从 76.9 秒降至 27.0 秒（原生）和 27.3 秒（\sys{}）。
 GPREEMPT lowers LC response p99 from 1.796~ms to 1.615~ms (native) and 1.610~ms (\sys{}).
 % GPREEMPT 将 LC 响应 p99 从 1.796 毫秒降至 1.615 毫秒（原生）和 1.610 毫秒（\sys{}）。
-With prefetch disabled, the UVM policy verified by the kernel adds 3.2\% page-fault handling overhead.
-% 在禁用预取时，通过内核验证的 UVM 策略增加 3.2\% 的缺页处理开销。
 
 \subsection{RQ2: Mechanism Cost}
 % RQ2：机制代价
