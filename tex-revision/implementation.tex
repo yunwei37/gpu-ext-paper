@@ -62,8 +62,8 @@ Unlike the workshop version~\cite{egpu}, which relies on atomic synchronization,
 % gpubpf 通过 ptrace 暂停应用、拦截 CUDA 运行时 API、提取 GPU 内核 PTX、插入二进制 trampoline 并重新加载插桩后的 GPU 内核，对设备端状态变迁（GPU 内核启动、内存访问、执行阶段边界）进行挂钩，且无需重新编译或重启应用。
 Applications can also load the runtime at startup using \texttt{LD\_PRELOAD}.
 % 应用也可以通过 \texttt{LD\_PRELOAD} 在启动时加载运行时。
-For applications without PTX, host-side policies still operate through driver hooks, and a prototype built on NVBit~\cite{villa2019nvbit} inserts compiled eBPF code into SASS.
-% 对于不含 PTX 的应用，主机端策略仍通过驱动钩子运行，基于 NVBit~\cite{villa2019nvbit} 的原型则将编译后的 eBPF 代码插入 SASS。
+For applications without PTX, host-side policies still operate through driver hooks, and an alternative instrumentation inserts eBPF code into SASS.
+% 对于不含 PTX 的应用，主机端策略仍通过驱动钩子运行，基于 NVBit~\cite{villa2019nvbit} 的插桩将编译后的 eBPF 代码插入 SASS。
 Trampolines insert prologue/epilogue logic for SIMT register preservation.
 % Trampoline 插入用于 SIMT 寄存器保存的前导/收尾逻辑。
 In each trampoline, per-lane inputs are aggregated using \texttt{\_\_ballot\_\allowbreak{}sync} and \texttt{\_\_shfl\_\allowbreak{}sync}, with a warp leader selected via \texttt{\_\_ffs\allowbreak{}(\_\_active\-mask())} to execute the scalar eBPF handler once per warp, broadcasting results via shuffle instructions.

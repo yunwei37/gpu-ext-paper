@@ -21,8 +21,8 @@ JSON but are not plotted. Historical and new bars are not paired.
 For each new configuration, the lower segment ends at the median first-completion
 time. The complete bar ends at the median last-completion time. The upper segment
 is the difference of those endpoints, not an independently averaged duration.
-Whiskers span the five observed last-completion times. The diamond marks median
-high-priority completion, including cases where it is the later completion.
+Whiskers span the five observed last-completion times. In all new scheduling-only and combined runs, the high-priority process
+finishes first, so the lower segment ends at median high-priority completion.
 The original Single 1× and 2×Single 1× lines extend only across the original group.
 
 The text reports the median of five within-run relative reductions in
