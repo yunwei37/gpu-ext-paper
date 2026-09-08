@@ -40,15 +40,8 @@ Memory chunks move between host and device memory via eviction and prefetching.
 % 内存块通过逐出和预取在主机内存和设备内存之间移动。
 GPU kernels (launched tasks) and GPU thread-blocks (parallel execution units within kernels) transition among ready, running, and finished states through scheduling and preemption operations.
 % GPU 内核（已启动的任务）和 GPU 线程块（内核内的并行执行单元）通过调度和抢占操作在就绪、运行和完成状态之间转换。
-
-\paragraph{Storage and CXL tiers.}
-% 存储与 CXL 层级。
-Extending the state-machine model to storage offload would add storage-resident and transfer-in-progress states: policies would choose placement and transfer timing, while the storage backend would retain buffer ownership and completion handling.
-% 将状态机模型扩展到存储卸载，需要增加存储驻留与传输进行中的状态：策略选择放置位置和传输时机，存储后端则保留缓冲区所有权并处理完成事件。
-A CXL tier could similarly add placement states through host memory-management interfaces.
-% CXL 层级也可通过主机内存管理接口增加放置状态。
-Each backend would check whether a requested transition is valid before initiating it.
-% 每个后端都需要在发起所请求的转移前检查其是否合法。
+The model could extend to storage and CXL tiers by adding placement and transfer states, with policies choosing where and when to move data and each backend validating and executing those moves.
+% 该模型可通过增加放置与传输状态扩展到存储和 CXL 层级，由策略选择数据移往何处以及何时移动，并由各后端验证和执行这些移动。
 
 \subsection{GPU-Specific Challenges for eBPF Extensibility}
 % eBPF 可扩展性的 GPU 特有挑战
