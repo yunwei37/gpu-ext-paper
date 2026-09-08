@@ -47,7 +47,7 @@ Other approaches modify the OS kernel driver~\cite{kato2011timegraph,kato2012gde
 
 In this paper, we propose \sys, a new system that provides an OS interface for GPU resource management policy that is safe, dynamic, and full-stack.
 % 本文提出 \sys，一个提供安全、动态且全栈的 GPU 资源管理策略 OS 接口的新系统。
-Similar to prior work on resource management~\cite{schedext-docs, zussman2025cache_ext, bachl2021flow}, \sys{} supports eBPF-based policies.
+Similar to prior work on resource management~\cite{schedext-docs, zussman2025cache_ext, hoiland2018xdp}, \sys{} supports eBPF-based policies.
 % 与以往的资源管理工作类似，\sys 支持基于 eBPF 的策略。
 Users write callback functions that manage system resources and are called on user-defined events (e.g., when the system reaches a specific code location, or periodically).
 % 用户编写管理系统资源的回调函数，它们由用户自定义的事件触发（例如系统到达特定代码位置时，或周期性地触发）。
@@ -82,7 +82,7 @@ Traditional eBPF does not allow such callbacks to modify OS state required to im
 
 \sys{} addresses these challenges through a novel execution model for eBPF-based resource management that separates the effect of a callback from its triggering event.
 % \sys 通过一种面向基于 eBPF 的资源管理的新型执行模型来应对这些挑战，将回调的效果与其触发事件解耦。
-Unlike prior eBPF-based systems (e.g., sched\_ext~\cite{schedext-docs}, cache\_ext~\cite{zussman2025cache_ext}, and XDP~\cite{bachl2021flow}), where each callback makes a single synchronous decision at a fixed event, \sys{} allows callbacks that asynchronously transition resources at user-defined events.
+Unlike prior eBPF-based systems (e.g., sched\_ext~\cite{schedext-docs}, cache\_ext~\cite{zussman2025cache_ext}, and XDP~\cite{hoiland2018xdp}), where each callback makes a single synchronous decision at a fixed event, \sys{} allows callbacks that asynchronously transition resources at user-defined events.
 % 不同于以往的 eBPF 系统（如 sched\_ext、cache\_ext 和 XDP），它们的每个回调在固定事件处做出单一的同步决策，\sys 允许回调在用户自定义事件处异步地转移资源。
 In particular, \sys callbacks invoke transitions when a given event occurs, and the system asynchronously transitions the resource between states.
 % 具体而言，\sys 回调在给定事件发生时被触发，系统随后异步地在状态之间转移资源。
