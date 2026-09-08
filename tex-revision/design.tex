@@ -174,6 +174,8 @@ After checking memory bounds and termination, the verifier tracks how values dep
 % 在检查内存边界与终止性后，验证器跟踪值对输入的依赖：常量在各 lane 间一致，而由 lane 标识计算出的值可能因 lane 而异。
 This analysis follows computations and control flow, including loops.
 % 这一分析沿计算过程和控制流传播一致性信息，也覆盖循环。
+When control-flow paths merge, the verifier treats a value as lane-varying if it may differ across lanes on any incoming path.
+% 当控制流路径汇合时，只要某个值在任一传入路径上可能因 lane 而异，验证器就将其视为 lane 间不一致的值。
 
 Lane-varying values cannot affect control flow or external side effects.
 % lane 可变的值不能影响控制流或外部副作用。
@@ -242,6 +244,8 @@ When application heuristics interfere with a policy, the policy can adjust its p
 % 当应用自身的优化策略与资源策略相互干扰时，资源策略可以根据观测到的访存模式和内存压力调整预取强度。
 Counters can be combined across shards using associative operations such as addition.
 % 计数器可以通过加法等满足结合律的运算跨分片合并。
+Policies can also store individual records in memory for the host or GPU to read.
+% 策略也可以将单条访存记录保存在 GPU 全局内存中，供主机读取。
 The driver retains control over changes to eviction order and resource ownership.
 % 驱动保留对驱逐顺序和资源归属变更的控制权。
 
