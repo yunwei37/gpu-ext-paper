@@ -333,6 +333,34 @@ The tenants share an unpartitioned GPU managed by a system-wide policy.
 \label{fig:microbench}
 \end{figure*}
 
+\begin{comment}
+\begin{table}[t]
+\centering
+\small
+
+\begin{tabularx}{\columnwidth}{@{} X l c c @{}}
+\toprule
+\textbf{Policy} & \textbf{Tag} & \textbf{Domain} & \textbf{LOC} \\
+\midrule
+Global FIFO Eviction & Memory Eviction & Host & 145 \\
+Global LFU Eviction & Memory Eviction & Host & 304 \\
+Multi-tenant Quota LRU & Memory Multi-tenant & Host & 472 \\
+Adaptive Seq. Prefetch & Memory Prefetch & Host & 375 \\
+Stride Prefetch & Memory Prefetch & Host & 472 \\
+GPU L2 Stride Prefetch & Memory Prefetch & Device & 45 \\
+Tree-based Prefetch & Memory Multi-tenant & Host & 454 \\
+Dynamic Timeslice & Scheduling & Host & 408 \\
+Preemption Control & Scheduling & Host & 925 \\
+MaxSteals (CLC) & Scheduling Block & Device & 16 \\
+LatencyBudget (CLC) & Scheduling Block & Device & 19 \\
+\bottomrule
+\end{tabularx}
+\caption{Policy support matrix. Domain indicates where the policy executes: Host (driver eBPF), Device (GPU eBPF), or both.}
+\label{tab:support-matrix}
+\vspace{-2em}
+\end{table}
+\end{comment}
+
 \subsubsection{Policies from Published Systems}
 % 已发表系统的策略
 \label{sec:policy-mechanism}
