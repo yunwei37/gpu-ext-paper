@@ -129,19 +129,19 @@ Policy callbacks submit requests through restricted interfaces. The driver retai
 % 策略回调通过受限接口提交请求。驱动保留修改资源状态的独占权限。
 Before applying a request, the driver checks resource ownership, whether the observed state is still current, and whether the requested transition is allowed.
 % 在应用请求前，驱动检查资源归属、观测状态是否仍然有效，以及请求的转移是否被允许。
-The resource state must remain valid between checking a request and applying it.
-% 从检查请求到执行请求，资源状态必须持续满足验证条件。
+The driver must prevent other operations from invalidating these checks before it applies the request.
+% 驱动必须防止其他操作在请求执行前使上述检查失效。
 For mutable resources such as eviction queues, the driver synchronizes validation and the resulting state change as one step (\Cref{fig:transition-validation}).
 % 对于驱逐队列等可变资源，驱动通过同步机制将验证与后续状态变更作为一个步骤执行（\Cref{fig:transition-validation}）。
 Long-running transfers remain asynchronous under the native driver's control.
 % 耗时较长的传输仍由原生驱动异步执行。
 
-Repeating an identical request has the same effect as issuing it once.
-% 重复提交同一请求与提交一次具有相同效果。
+Within one callback, repeating an identical request has the same effect as issuing it once.
+% 在同一次回调内，重复提交同一请求与提交一次具有相同效果。
 Conflicting requests within one callback are rejected.
 % 同一回调中的冲突请求会被拒绝。
-A rejected eviction-order request leaves the current order unchanged, while an invalid prefetch action or range uses the driver's native prefetch behavior.
-% 被拒绝的驱逐顺序请求保持当前顺序不变，非法的预取动作或范围则采用驱动原生的预取行为。
+The driver leaves the eviction order unchanged when it rejects a reordering request and uses native prefetch behavior for invalid prefetch actions or ranges.
+% 驱动拒绝重排请求时保持驱逐顺序不变，并对非法的预取动作或范围采用原生预取行为。
 
 \begin{figure}[t]
 \begin{minipage}{\columnwidth}
@@ -242,8 +242,8 @@ When application heuristics interfere with a policy, the policy can adjust its p
 % 当应用自身的优化策略与资源策略相互干扰时，资源策略可以根据观测到的访存模式和内存压力调整预取强度。
 Counters can be combined across shards using associative operations such as addition.
 % 计数器可以通过加法等满足结合律的运算跨分片合并。
-Changes to eviction-list order and resource ownership must be controlled by one component.
-% 驱逐列表顺序和资源归属的变更必须由同一个组件控制。
+The driver retains control over changes to eviction order and resource ownership.
+% 驱动保留对驱逐顺序和资源归属变更的控制权。
 
 \subsection{Example: MoE Expert Offloading}
 % 示例：MoE 专家卸载

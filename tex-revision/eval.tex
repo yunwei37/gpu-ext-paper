@@ -163,8 +163,8 @@ The resulting policy (totaling $\sim$680~LOC) effectively prevents thrashing see
 
 \end{figure}
 
-For LMCache's cuFile backend in compatibility mode, an agent-developed policy prioritizes reads and defers background writes within a 200~ms cumulative budget.
-% 对 LMCache 的 cuFile 后端兼容模式，智能体开发的策略优先处理读取，并在累计 200 ms 的预算内延迟后台写入。
+For LMCache's cuFile backend in compatibility mode, an agent-developed policy prioritizes reads and limits the total deferral of each background write to 200~ms.
+% 对 LMCache 的 cuFile 后端兼容模式，智能体开发的策略优先处理读取，并将每个后台写请求的累计推迟时间限制在 200 ms 内。
 Across five paired runs, the median p99 read latency is 323.707~ms with FIFO, 123.141~ms with the same policy implemented without \sys{}, and 118.097~ms with \sys{}, measured from each request's scheduled arrival.
 % 五组配对运行中，读取延迟从各请求的预定到达时刻起算，p99 延迟的中位数在 FIFO、同一策略的非 \sys{} 实现和 \sys{} 实现下分别为 323.707、123.141 和 118.097 ms。
 The median paired reduction with \sys{} relative to FIFO is 61.9\%.
