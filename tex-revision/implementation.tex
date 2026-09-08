@@ -11,6 +11,10 @@ Our user-space loader and JIT infrastructure ($\sim$10 KLOC) builds upon bpftime
 % 我们的用户态加载器与 JIT 基础设施（约 10 KLOC）基于 bpftime 框架~\cite{bpftime} 构建，用于设备端代码生成；同时，基于 LLVM 的后端（约 1 KLOC）将受限的 gpubpf eBPF 指令子集翻译为 GPU 设备代码（PTX）（见 \S\ref{sec:impl-gpu}）。
 Although our implementation targets NVIDIA GPUs, the host-side design aligns with generic Linux abstractions (HMM/\texttt{migrate\_vma}~\cite{rocm-gpu-memory,linux-gpusvm-doc}, DRM scheduler~\cite{drm-gpu-sched,amdgpu-userq-doc}), and the device-side can be extended to generate vendor-neutral IR~\cite{spirv-ir-rfc} for future portability.
 % 尽管我们的实现面向 NVIDIA GPU，但主机端设计遵循通用 Linux 抽象（HMM/\texttt{migrate\_vma}~\cite{rocm-gpu-memory,linux-gpusvm-doc}、DRM 调度器~\cite{drm-gpu-sched,amdgpu-userq-doc}），设备端也可扩展为生成厂商中立的 IR~\cite{spirv-ir-rfc}，以支持未来的可移植性。
+A port would retain the policy interface and state-machine model while adapting driver hooks, code generation, and instrumentation to the target GPU.
+% 移植时可以保留策略接口和状态机模型，同时针对目标 GPU 调整驱动钩子、代码生成和插桩。
+Future accelerators could expose hooks for validated resource transitions and access to runtime statistics directly in hardware or firmware.
+% 未来的加速器可以直接在硬件或固件中提供经过验证的资源转移钩子，以及运行时统计信息的访问接口。
 
 \subsection{Host-side Integration}
 % 主机端集成
@@ -56,6 +60,10 @@ Unlike the workshop version~\cite{egpu}, which relies on atomic synchronization,
 % 设备端状态变迁钩子
 \sys hooks device-side state transitions (GPU kernel launch, memory access, execution-phase boundaries) by using ptrace to pause applications, intercepting CUDA runtime APIs, extracting GPU kernel PTX, inserting binary trampolines, and reloading instrumented GPU kernels without application recompilation or restart.
 % gpubpf 通过 ptrace 暂停应用、拦截 CUDA 运行时 API、提取 GPU 内核 PTX、插入二进制 trampoline 并重新加载插桩后的 GPU 内核，对设备端状态变迁（GPU 内核启动、内存访问、执行阶段边界）进行挂钩，且无需重新编译或重启应用。
+Applications can also load the runtime at startup using \texttt{LD\_PRELOAD}.
+% 应用也可以通过 \texttt{LD\_PRELOAD} 在启动时加载运行时。
+For applications without PTX, host-side policies still operate through driver hooks, and a prototype built on NVBit~\cite{villa2019nvbit} inserts compiled eBPF code into SASS.
+% 对于不含 PTX 的应用，主机端策略仍通过驱动钩子运行，基于 NVBit~\cite{villa2019nvbit} 的原型则将编译后的 eBPF 代码插入 SASS。
 Trampolines insert prologue/epilogue logic for SIMT register preservation.
 % Trampoline 插入用于 SIMT 寄存器保存的前导/收尾逻辑。
 In each trampoline, per-lane inputs are aggregated using \texttt{\_\_ballot\_\allowbreak{}sync} and \texttt{\_\_shfl\_\allowbreak{}sync}, with a warp leader selected via \texttt{\_\_ffs\allowbreak{}(\_\_active\-mask())} to execute the scalar eBPF handler once per warp, broadcasting results via shuffle instructions.

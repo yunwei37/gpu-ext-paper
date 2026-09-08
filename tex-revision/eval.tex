@@ -8,8 +8,8 @@ Our evaluation addresses two research questions:
 \begin{itemize}[leftmargin=*]
   \item \textbf{RQ1 (Policy Expressibility and Benefits):} Can AI agents safely express GPU resource-management policies through \sys---including policies from published state-of-the-art systems---and do those policies improve performance?
   % RQ1（策略可表达性与收益）：AI 智能体能否通过 gpubpf 安全地表达 GPU 资源管理策略——包括已发表最先进系统的策略——这些策略能否提升性能？
-  \item \textbf{RQ2 (Mechanism Cost):} What does the \sys{} mechanism cost, in hook and observability overhead and in executing the same policy through \sys{}?
-  % RQ2（机制代价）：gpubpf 机制的代价有多大——包括钩子与可观测开销，以及通过 gpubpf 执行同一策略的代价？
+  \item \textbf{RQ2 (Mechanism Cost):} What runtime overhead does \sys{} add for hooks, observability, and policy execution?
+  % RQ2（机制代价）：gpubpf 的钩子、可观测功能和策略执行引入了多少运行时开销？
 \end{itemize}
 
 We answer RQ1 in \S\ref{sec:rq1} through policy microbenchmarks, agent-driven case studies on realistic workloads, multi-tenant settings, and comparisons with native implementations of published policies. \S\ref{sec:rq2-cost} answers RQ2.
@@ -165,8 +165,8 @@ The resulting policy (totaling $\sim$680~LOC) effectively prevents thrashing see
 
 For LMCache's cuFile backend in compatibility mode, an agent-developed policy prioritizes reads and defers background writes within a 200~ms cumulative budget.
 % 对 LMCache 的 cuFile 后端兼容模式，智能体开发的策略优先处理读取，并在累计 200 ms 的预算内延迟后台写入。
-Across five paired blocks, the median p99 read latency is 323.707~ms with FIFO, 123.141~ms with the native policy, and 118.097~ms with \sys{}, measured from each request's scheduled arrival.
-% 五组配对实验中，读取延迟从各请求的预定到达时刻起算，p99 延迟的中位数在 FIFO、原生策略和 \sys{} 下分别为 323.707、123.141 和 118.097 ms。
+Across five paired runs, the median p99 read latency is 323.707~ms with FIFO, 123.141~ms with the same policy implemented without \sys{}, and 118.097~ms with \sys{}, measured from each request's scheduled arrival.
+% 五组配对运行中，读取延迟从各请求的预定到达时刻起算，p99 延迟的中位数在 FIFO、同一策略的非 \sys{} 实现和 \sys{} 实现下分别为 323.707、123.141 和 118.097 ms。
 The median paired reduction with \sys{} relative to FIFO is 61.9\%.
 % \sys{} 相对 FIFO 的配对降幅中位数为 61.9\%。
 
@@ -407,8 +407,8 @@ GPREEMPT~\cite{fan2025gpreempt} & Control task admission and assign timeslices b
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{tex-revision/img/results-raw/revision/matched-policy-panels.pdf}
-\caption{Policy comparisons: workload baseline, native policy, and \sys. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) prefetching all positively predicted experts, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. Panel (e) uses Llama decode batch 128. Bars show medians over five blocks, except (e) means and (f) ten blocks. Whiskers in (b,f,g) show full ranges. Panel (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s.}
-% 策略比较：工作负载基线、原生策略与 gpubpf。基线为关闭预测的专家缓存（a）、固定 K 的 FIFO（b）、预取所有预测会用到的专家（c）、默认调度（d、g）、双流 FlashAttention（e）和原生 CUDA（f）。面板（e）使用 Llama 解码批量 128。柱形为五组实验的中位数，但（e）为均值、（f）使用十组。（b、f、g）的须线表示完整范围。（g）为每秒 100 个 VGG19 LC 请求，对应 ResNet152 BE 每秒 100 或 200 请求。
+\caption{Policy comparisons: workload baseline, native policy, and \sys. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) prefetching all positively predicted experts, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. Panel (e) uses Llama decode batch 128. Bars show medians over five runs per configuration, except (e) means and (f) ten runs. Whiskers in (b,f,g) show full ranges. Panel (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s.}
+% 策略比较：工作负载基线、原生策略与 gpubpf。基线为关闭预测的专家缓存（a）、固定 K 的 FIFO（b）、预取所有预测会用到的专家（c）、默认调度（d、g）、双流 FlashAttention（e）和原生 CUDA（f）。面板（e）使用 Llama 解码批量 128。柱形为每种配置五次运行的中位数，但（e）为均值、（f）使用十次运行。（b、f、g）的须线表示完整范围。（g）为每秒 100 个 VGG19 LC 请求，对应 ResNet152 BE 每秒 100 或 200 请求。
 \label{fig:matched-ports}
 \end{figure*}
 
@@ -416,8 +416,8 @@ GPREEMPT~\cite{fan2025gpreempt} & Control task admission and assign timeslices b
 % 方法
 In \Cref{fig:matched-ports}, we compare the workload baseline with the native policy to measure policy benefit.
 % 在 \Cref{fig:matched-ports} 中，我们比较工作负载基线与原生策略，以衡量策略收益。
-We then compare the native and \sys{} implementations of the same policy to measure the cost of executing it through \sys{}, keeping the workload and underlying execution unchanged.
-% 随后，我们在保持工作负载和底层执行不变的条件下，比较同一策略的原生实现与 \sys{} 实现，以衡量通过 \sys{} 执行该策略的代价。
+We then compare the \sys{} and native (without \sys{}) implementations of the same policy to measure the cost of \sys{}, keeping the workload and underlying execution unchanged.
+% 随后，我们在保持工作负载和底层执行不变的条件下，比较同一策略的 \sys{} 实现与原生实现（不使用 \sys{}），以衡量 \sys{} 的执行代价。
 These experiments use driver 575.57.08 with exclusive GPU access and repeated randomized trials.
 % 这些实验使用驱动 575.57.08，以独占 GPU 和重复随机试验运行。
 Unless stated otherwise, we report medians with paired bootstrap intervals. POD's operator plot uses the mean of five per-run means.
@@ -427,7 +427,7 @@ Unless stated otherwise, we report medians with paired bootstrap intervals. POD'
 % 结果
 With MoE-Infinity's policy, the native implementation and \sys{} reduce TTFT by 22.1\% and 22.5\%, respectively, relative to prediction-disabled expert caching across five paired runs.
 % 采用 MoE-Infinity 策略时，五次配对运行中原生实现与 \sys{} 相比关闭预测的专家缓存，分别将 TTFT 降低 22.1\% 和 22.5\%。
-For Expert Buffering at the same cache capacity, both the native policy and \sys{} reduce whole-expert loads by 12.85\% relative to fixed-$K$ FIFO (\Cref{fig:matched-ports}(b)).
+For Expert Buffering at the same cache capacity, both the native policy and \sys{} reduce the number of full expert loads by 12.85\% relative to fixed-$K$ FIFO (\Cref{fig:matched-ports}(b)).
 % 对 Expert Buffering，在相同缓存容量下，原生策略与 \sys{} 均相对固定 K 的 FIFO 将完整专家加载次数减少 12.85\%（\Cref{fig:matched-ports}(b)）。
 With FineMoE's policy, \sys{} improves throughput by 24.6\% over a policy that prefetches every expert with a positive prediction. Native and \sys{} throughput differ by 0.21\% in paired runs (95\% CI $[-0.17\%,+0.52\%]$).
 % 采用 FineMoE 策略时，相比预取所有预测会用到的专家，\sys{} 将吞吐提高 24.6\%。原生与 \sys{} 在配对运行中的吞吐差异为 0.21\%（95\% CI $[-0.17\%,+0.52\%]$）。
@@ -439,8 +439,8 @@ For XSched with two LC and four BE processes, LC p99 latency from submission unt
 Under continuous background load, GPREEMPT's policy reduces LC response p99 from 1.796~ms under default scheduling to 1.615~ms with the native policy and 1.610~ms with \sys{}.
 % 在连续后台负载下，GPREEMPT 策略将 LC 响应 p99 从默认调度的 1.796 毫秒降至原生策略的 1.615 毫秒和 \sys{} 的 1.610 毫秒。
 
-For POD-Attention, we evaluate ten shapes over five blocks against non-fused FlashAttention and native POD implementations.
-% 对 POD-Attention，我们在十种形状和五组实验中与未融合的 FlashAttention 及原生 POD 实现比较。
+For POD-Attention, we evaluate ten shapes over five repeated runs against non-fused FlashAttention and native POD implementations.
+% 对 POD-Attention，我们对十种形状各重复运行五次，与未融合的 FlashAttention 及原生 POD 实现比较。
 For Llama decode batch 128, operator latency falls from 5.360~ms with two-stream FlashAttention to 4.322~ms with the native policy and 4.344~ms with \sys{}.
 % 在 Llama 解码批量 128 下，算子延迟从双流 FlashAttention 的 5.360 毫秒降至原生策略的 4.322 毫秒和 \sys{} 的 4.344 毫秒。
 
