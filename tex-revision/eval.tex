@@ -91,7 +91,7 @@ Equivalent bugs in modified GPU drivers risk kernel panics, requiring recompilat
 We conclude with four case studies showing performance gains and the exploration process.
 % 最后我们通过四个案例研究展示性能收益与探索过程。
 
-\paragraph{Expert Offloading (llama.cpp GPT-OSS-120B).}
+\paragraph{Expert Offloading (llama.cpp GPT-OSS-120B)}
 % 专家卸载（llama.cpp GPT-OSS-120B）。
 We evaluate \sys on GPT-OSS-120B MXFP4 MoE (59~GB) in llama.cpp on RTX 5090 (32~GB), requiring 1.84$\times$ oversubscription.
 % 我们在 RTX 5090（32 GB）上的 llama.cpp 中评估 GPT-OSS-120B MXFP4 MoE（59 GB），需要 1.84× 超订。
@@ -127,7 +127,7 @@ The final policy combines device-side access observation (45~LOC), host-side str
 
 \end{figure}
 
-\paragraph{KV-cache Offloading (vLLM Qwen-30B MoE).}
+\paragraph{KV-cache Offloading (vLLM Qwen-30B MoE)}
 % KV-cache 卸载（vLLM Qwen-30B MoE）。
 We evaluate \sys on the Qwen-30B FP8 MoE model ($\approx$30GB) on RTX 5090 (32GB).
 % 我们在 RTX 5090（32GB）上评估 Qwen-30B FP8 MoE 模型（约 30GB）。
@@ -249,7 +249,7 @@ Only 2 of 8 policies yielded positive results.
 We evaluate \sys on multi-tenant GPU workloads, comparing per-tenant policies against global and framework-managed approaches.
 % 我们在多租户 GPU 工作负载上评估 gpubpf，将每租户策略与全局策略和框架管理的方法进行对比。
 
-\paragraph{Compute-bound Scheduler (LC + BE).}
+\paragraph{Compute-bound Scheduler (LC + BE)}
 % 计算密集型调度器（LC + BE）。
 We evaluate \sys's eBPF struct\_ops scheduling policies on \emph{compute-bound} (SM-limited) multi-tenant workloads, without memory oversubscription.
 % 我们在\emph{计算密集型}（SM 受限）的多租户工作负载上评估 gpubpf 基于 eBPF 的 struct\_ops 调度策略，不涉及内存超订。
@@ -420,8 +420,8 @@ We then compare the \sys{} and native (without \sys{}) implementations of the sa
 % 随后，我们在保持工作负载和底层执行不变的条件下，比较同一策略的 \sys{} 实现与原生实现（不使用 \sys{}），以衡量 \sys{} 的执行代价。
 These experiments use driver 575.57.08 with exclusive GPU access and repeated randomized trials.
 % 这些实验使用驱动 575.57.08，以独占 GPU 和重复随机试验运行。
-Unless stated otherwise, we report medians with paired bootstrap intervals. POD's operator plot uses the mean of five per-run means.
-% 除非另有说明，我们报告中位数及配对 bootstrap 区间。POD 算子图使用五次运行均值的平均值。
+Unless stated otherwise, we report medians with confidence intervals. POD's operator plot uses the mean of five per-run means.
+% 除非另有说明，我们报告中位数及置信区间。POD 算子图使用五次运行均值的平均值。
 
 \paragraph{Results}
 % 结果
