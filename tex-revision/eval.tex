@@ -287,14 +287,16 @@ We compare against: (1)~no-policy execution, (2)~single-process runtime (Single~
 % \Cref{fig:all-kernels-priority} 显示，没有策略时，两个进程都因内存抖动而严重退化。
 With \sys memory priority policies, total completion time improves by 55--92\%, and high-priority processes complete 6--19\% faster.
 % 使用 gpubpf 内存优先级策略后，总完成时间改善 55--92\%，高优先级进程完成速度加快 6--19\%。
-In the original comparison, GPREEMPT-style~\cite{fan2025gpreempt} scheduler timeslice policies improve completion time by less than 1\%.
+% In the original comparison, GPREEMPT-style~\cite{fan2025gpreempt} scheduler timeslice policies improve completion time by less than 1\%.
 % 在原有比较中，GPREEMPT 式~\cite{fan2025gpreempt}调度器时间片策略对完成时间的改善不足 1\%。
-In a separate comparison of scheduling alone and scheduling with memory priority, policies are enabled before CUDA initialization and completion is measured from a common start for both processes.
-% 在独立的仅调度与调度加内存优先级比较中，策略在 CUDA 初始化前启用，完成时间从两个进程的共同起点测量。
+We compare scheduling alone (Scheduler$^\dagger$) with scheduling and memory priority combined (Combined$^\dagger$) in a separate experiment.
+% 我们在独立实验中比较仅调度（Scheduler$^\dagger$）与调度加内存优先级（Combined$^\dagger$）。
+Both configurations enable policies before CUDA initialization and measure completion from a common start for the two processes.
+% 两种配置均在 CUDA 初始化前启用策略，并从两个进程的共同起点测量完成时间。
 Adding memory priority reduces high-priority completion time by a median of 10.38\%, 2.31\%, and 1.36\% for HotSpot, GEMM, and K-Means, respectively, over five paired runs.
 % 在五次配对运行中，加入内存优先级后，HotSpot、GEMM 和 K-Means 的高优先级任务完成时间分别缩短 10.38\%、2.31\% 和 1.36\%（各次相对改善的中位数）。
-The scheduling results in \S\ref{sec:policy-mechanism} show the complementary case: timeslice policies improve latency when GPU compute is the bottleneck.
-% \S\ref{sec:policy-mechanism} 的调度结果展示了互补情形：当 GPU 计算是瓶颈时，时间片策略能改善延迟。
+The scheduling results in \S\ref{sec:policy-mechanism} also show that timeslice policies improve latency for compute-bound workloads.
+% \S\ref{sec:policy-mechanism} 的调度结果也表明，时间片策略能改善计算密集型工作负载的延迟。
 
 \begin{figure}
 \centering
@@ -394,14 +396,14 @@ Expert Buffering~\cite{huang2023towards} & Admit experts to the cache and priori
 FineMoE~\cite{yu2026finemoe} & Select a dynamic set of experts for speculative prefetch. & The original system uses a user-space cache with CUDA runtime transfers. \sys{} implements dynamic expert selection as a host-side program. \\
 % FineMoE：动态选择推测预取的专家集合。原系统使用用户态缓存，通过 CUDA runtime 传输数据，gpubpf 通过主机侧程序实现动态专家选择。
 \addlinespace
-Hummingbird~\cite{hu2026hummingbird} & Split background kernels to fill foreground idle intervals, with priority-aware memory management. & The original system uses CUDA API interception and kernel splitting for execution and modifies UVM for memory management. Our host-side \sys{} program admits background tasks during foreground idle intervals. \\
-% Hummingbird：拆分后台 GPU 内核以填充前台空闲区间，并按优先级管理内存。原系统通过 CUDA API 拦截与内核拆分控制执行，并修改 UVM 管理内存，我们的主机侧 gpubpf 程序在前台空闲区间允许后台任务运行。
+Hummingbird~\cite{hu2026hummingbird} & Split background kernels to fill foreground idle intervals, with priority-aware memory management. & The original system schedules split kernels on the host, remaps thread-block coordinates on the device, and modifies UVM for memory management. Our host-side \sys{} program admits background tasks during foreground idle intervals. \\
+% Hummingbird：拆分后台 GPU 内核以填充前台空闲区间，并按优先级管理内存。原系统在主机侧调度拆分后的 GPU 内核，在设备侧映射线程块坐标，并修改 UVM 管理内存，我们的主机侧 gpubpf 程序在前台空闲区间允许后台任务运行。
 \addlinespace
 POD-Attention~\cite{kamath2025pod} & Proportionally select prefill or decode work for each SM. & The original system selects work inside the fused GPU kernel. \sys{} implements this selection as a device-side program, retaining the fused attention computation. \\
 % POD-Attention：按比例为各 SM 选择 prefill 或 decode 工作。原系统在融合 GPU 内核中选择工作，gpubpf 通过设备侧程序实现这一选择，保留融合注意力计算。
 \addlinespace
-XSched~\cite{shen2025xsched} & Select the highest-priority task through preemptible command queues. & The original system uses user-space queue control and, at higher preemption levels, GPU instrumentation or driver interfaces. Our host-side \sys{} program selects tasks with preemption between GPU kernels. \\
-% XSched：通过可抢占命令队列选择最高优先级任务。原系统在用户态控制队列，较高抢占级别还使用 GPU 插桩或驱动接口，我们的主机侧 gpubpf 程序选择任务，抢占发生在 GPU 内核之间。
+XSched~\cite{shen2025xsched} & Select the highest-priority task through preemptible command queues. & The original system controls queues on the host, adds device-side kernel-entry checks at Level 2, and uses driver interfaces at Level 3. Our host-side \sys{} program selects tasks with preemption between GPU kernels. \\
+% XSched：通过可抢占命令队列选择最高优先级任务。原系统在主机侧控制队列，在 Level 2 加入设备侧内核入口检查，在 Level 3 使用驱动接口，我们的主机侧 gpubpf 程序选择任务，抢占发生在 GPU 内核之间。
 \addlinespace
 GPREEMPT~\cite{fan2025gpreempt} & Control task admission and assign timeslices by priority. & The original system controls task blocking and release in user space and modifies the GPU driver to control timeslices. \sys{} implements these decisions with programs in user space and the GPU driver. \\
 % GPREEMPT：控制任务准入并按优先级分配时间片。原系统在用户态控制任务阻塞与释放，并修改 GPU 驱动以控制时间片，gpubpf 通过用户态和 GPU 驱动中的程序实现这些决策。
