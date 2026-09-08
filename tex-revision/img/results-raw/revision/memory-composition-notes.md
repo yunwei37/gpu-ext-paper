@@ -13,7 +13,10 @@ New completion times use the shared release timestamp and independently observed
 process exits, with policies attached before CUDA initialization. They include
 initialization, two benchmark warmups, one measured iteration, and termination.
 The original runner starts its timer before process creation and observes exits
-with sequential waits. Each group therefore retains its own no-policy control.
+with sequential waits. The plot retains the original five configurations and adds only scheduling-only
+and combined policies from the new experiment. These last two bars form the
+matched comparison. Fresh no-policy and memory-only observations remain in the
+JSON but are not plotted. Historical and new bars are not paired.
 
 For each new configuration, the lower segment ends at the median first-completion
 time. The complete bar ends at the median last-completion time. The upper segment
