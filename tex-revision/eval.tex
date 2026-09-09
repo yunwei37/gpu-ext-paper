@@ -195,7 +195,8 @@ Suspecting lock contention initially, the agent identified PCIe bandwidth satura
 
 \begin{figure}
 \centering
-\includegraphics[width=\columnwidth]{img/results-raw/pytorch/uvm_benchmark_comparison.pdf}
+% \includegraphics[width=\columnwidth]{img/results-raw/pytorch/uvm_benchmark_comparison.pdf}
+\includegraphics[width=\columnwidth]{tex-revision/img/results-raw/revision/gnn-compact.pdf}
 
 \caption{GCN training epoch time vs graph size on PyTorch.}
 % PyTorch 上 GCN 训练的单轮时间随图规模的变化。
@@ -513,7 +514,7 @@ Attaching to a running process takes 273\,ms on average from \texttt{bpftime tra
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{tex-revision/img/results-raw/revision/obs-overhead-with-array.pdf}
+\includegraphics[width=\columnwidth,trim=0 5bp 0 3bp,clip]{tex-revision/img/results-raw/revision/obs-overhead-with-array.pdf}
 \caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B. Bars show means and whiskers in (b) show run ranges.}
 % 相对未插桩基线的预填充吞吐下降。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B。柱形为均值，（b）中的须线表示运行范围。
 \label{fig:obs-overhead}
