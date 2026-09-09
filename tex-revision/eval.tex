@@ -524,8 +524,8 @@ We evaluate device-side \sys mechanisms using a vector-add CUDA GPU kernel (32 e
 % \Cref{fig:microbench}(a) 将 gpubpf 的 SIMT 感知 warp 级执行与 eGPU~\cite{egpu} 对比，后者注入 eBPF 字节码而不进行面向 SIMT 的验证与优化。
 The baseline incurs overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead by approximately 60--80\% for most operations.
 % 基线因每线程执行和未合并的内存访问产生开销，而 gpubpf 的 warp 统一执行与合并 map 访问将多数操作的开销降低约 60--80\%。
-For compute-intensive synthetic kernels with 128--8,192 thread blocks, hooks with a lightweight map update incur 4.0--16.6\% runtime overhead, while shorter kernels incur higher relative overhead.
-% 对于包含 128--8,192 个线程块的计算密集合成内核，执行轻量 map 更新的钩子引入 4.0--16.6\% 的运行时开销，而较短内核的相对开销更高。
+For an arithmetic test kernel, trampoline overhead stays within 1.2--2.2~$\mu$s as active warps increase 8$\times$, while per-thread map-update cost grows roughly proportionally.
+% 对于一个整数运算测试内核，活跃 warp 数增加 8 倍时，仅执行返回的钩子开销保持在 1.2--2.2 微秒范围内，而逐线程 map 更新成本近似成比例增长。
 \Cref{fig:microbench}(b) shows CPU map access via PCIe is 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU.
 % \Cref{fig:microbench}(b) 显示，经 PCIe 的 CPU map 访问比 GPU 端操作慢 6000×，这促使 gpubpf 采用将热状态保留在 GPU 上的分层 map 设计。
 We do not compare policy-level performance against the prior workshop version or Neutrino because they are limited to read-only observability (\S\ref{sec:background}). %\arq{Do we need this experimentation?  I guess you're wanting to show that this current version of the system is better than the workshop version, but I wonder if that is entirely surprising.}
