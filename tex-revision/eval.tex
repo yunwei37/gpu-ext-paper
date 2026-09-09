@@ -19,8 +19,8 @@ We evaluate \sys on two machines: Server~A with Intel Core Ultra~9 285K (24 core
 % 我们在两台机器上评估 gpubpf：服务器 A 配备 Intel Core Ultra 9 285K（24 核）、128 GB DDR5 内存和 NVIDIA RTX 5090 GPU；服务器 B 配备双路 Intel Gold 6138（80 核）、256 GB 内存和 NVIDIA P40 GPU。
 Unless otherwise specified, experiments run on Server~A, averaging 10 trials using geometric mean.
 % 除非另有说明，实验均在服务器 A 上进行，每项结果取 10 次试验的几何平均值。
-We compare \sys{} against three classes of baselines: (1) driver defaults (UVM LRU/FIFO eviction, native GPU scheduler), (2) application-level hints (\texttt{cudaMemAdvise}), and (3) framework-managed policies (e.g., llama.cpp \texttt{ncmoe}, vLLM CPU offload, LMCache) where applicable.
-% 我们将 gpubpf 与三类基线对比：(1) 驱动默认行为（UVM LRU/FIFO 驱逐、原生 GPU 调度器），(2) 应用层提示（\texttt{cudaMemAdvise}），以及 (3) 框架管理的策略（如 llama.cpp 的 \texttt{ncmoe}、vLLM CPU offload、LMCache，在适用处）。
+We compare policies implemented with \sys{} against three classes of baselines: (1) driver defaults (UVM LRU/FIFO eviction, native GPU scheduler), (2) application-level hints (\texttt{cudaMemAdvise}), and (3) framework-managed policies (e.g., llama.cpp \texttt{ncmoe}, vLLM CPU offload, LMCache) where applicable.
+% 我们将通过 gpubpf 实现的策略与三类基线对比：(1) 驱动默认行为（UVM LRU/FIFO 驱逐、原生 GPU 调度器），(2) 应用层提示（\texttt{cudaMemAdvise}），以及 (3) 框架管理的策略（如 llama.cpp 的 \texttt{ncmoe}、vLLM CPU offload、LMCache，在适用处）。
 We use PyTorch (version 2.9.0) and vLLM (version 0.11.0) with custom allocators, llama.cpp (version 7101), and Faiss (version 1.13.0) with UVM build config.
 % 我们使用 PyTorch（版本 2.9.0）和 vLLM（版本 0.11.0，配自定义分配器）、llama.cpp（版本 7101）以及采用 UVM 构建配置的 Faiss（版本 1.13.0）。
 All tests with \sys policies require no application modifications.
@@ -94,14 +94,12 @@ We evaluate \sys on GPT-OSS-120B MXFP4 MoE (59~GB) in llama.cpp on RTX 5090 (32~
 % 我们在 RTX 5090（32 GB）上的 llama.cpp 中评估 GPT-OSS-120B MXFP4 MoE（59 GB），需要 1.84× 超订。
 We compare five configurations: framework-managed CPU offloading (\texttt{ncmoe=\allowbreak{}32/64}), default UVM, UVM with application-level hints (\texttt{cuda\-Mem\-Advise}), and \sys with eBPF-based host-device prefetching (\S\ref{sec:design-interfaces}).
 % 我们对比五种配置：框架管理的 CPU 卸载（\texttt{ncmoe=\allowbreak{}32/64}）、默认 UVM、带应用层提示的 UVM（\texttt{cuda\-Mem\-Advise}），以及采用基于 eBPF 的主机—设备预取的 gpubpf（\S\ref{sec:design-interfaces}）。
-\Cref{fig:llama-expert-offload} shows prefill and decode throughput.
-% \Cref{fig:llama-expert-offload} 给出了预填充与解码吞吐量。
-For decode (memory-bound), \sys achieves \textbf{1.76$\times$ speedup} over application-tuned UVM hints (\texttt{cuda\-Mem\-Advise}) and 4.8$\times$ over framework offloading (\texttt{ncmoe=64}).
-% 对于解码（内存受限），gpubpf 相比经应用调优的 UVM 提示（\texttt{cuda\-Mem\-Advise}）取得 \textbf{1.76× 加速}，相比框架卸载（\texttt{ncmoe=64}）取得 4.8× 加速。
-These hints improve decode over default UVM but require application modification and degrade prefill by 40\%; \sys outperforms hints on decode while preserving prefill within 4\% of default UVM, without application changes.
-% 这些提示相比默认 UVM 改善了解码，但需要修改应用，并使预填充性能下降 40\%；gpubpf 在解码上优于提示，同时将预填充保持在默认 UVM 的 4\% 以内，且无需修改应用。
-For prefill (compute-bound), framework offloading (\texttt{ncmoe=32}) achieves 13\% higher prefill throughput than \sys{}, but decode dominates end-to-end latency, so the decode improvement outweighs the prefill gap.%\arq{I don't understand the final data point. what has 13\% higher throughput? The graphed performance of UVM eBPF looks like it has worse performance compared to the alternatives. BTW---its very weird that none of the bars in Figure 8 are labeled "\sys"--I think that UVM eBPF is supposed to be that configuration but it does not make a lot of sense.}
-% 对于预填充（计算受限），框架卸载（\texttt{ncmoe=32}）比 gpubpf 的预填充吞吐量高 13\%，但解码主导端到端延迟，因此解码的改善超过了预填充的差距。
+For decode (memory-bound), the expert-offloading policy implemented with \sys{} achieves \textbf{1.76$\times$ speedup} over application-tuned UVM hints (\texttt{cuda\-Mem\-Advise}) and 4.8$\times$ over framework offloading (\texttt{ncmoe=64}) (\Cref{fig:llama-expert-offload}).
+% 对于解码（内存受限），通过 gpubpf 实现的专家卸载策略相比经应用调优的 UVM 提示（\texttt{cuda\-Mem\-Advise}）取得 \textbf{1.76× 加速}，相比框架卸载（\texttt{ncmoe=64}）取得 4.8× 加速（\Cref{fig:llama-expert-offload}）。
+These hints improve decode over default UVM but require application modification and degrade prefill by 40\%; this policy outperforms hints on decode while preserving prefill within 4\% of default UVM, without application changes.
+% 这些提示相比默认 UVM 改善了解码，但需要修改应用，并使预填充性能下降 40\%；该策略在解码上优于提示，同时将预填充保持在默认 UVM 的 4\% 以内，且无需修改应用。
+For prefill (compute-bound), framework offloading (\texttt{ncmoe=32}) achieves 13\% higher prefill throughput than this policy, but decode dominates end-to-end latency, so the decode improvement outweighs the prefill gap.%\arq{I don't understand the final data point. what has 13\% higher throughput? The graphed performance of UVM eBPF looks like it has worse performance compared to the alternatives. BTW---its very weird that none of the bars in Figure 8 are labeled "\sys"--I think that UVM eBPF is supposed to be that configuration but it does not make a lot of sense.}
+% 对于预填充（计算受限），框架卸载（\texttt{ncmoe=32}）比该策略的预填充吞吐量高 13\%，但解码主导端到端延迟，因此解码的改善超过了预填充的差距。
 
 The agent arrived at the final policy through iterative exploration: sequential prefetch degraded decode throughput due to mismatch with MoE stride patterns (consistent with the 8\% degradation in \Cref{fig:clc-policies}a), leading to stride-based prefetch aligned with regular weight layout within each expert layer.
 % 智能体通过迭代探索得出最终策略：顺序预取因与 MoE 步长模式不匹配而降低了解码吞吐量（与 \Cref{fig:clc-policies}a 中 8\% 的下降一致），于是改为与各专家层内规则权重布局对齐的步长预取。
@@ -134,12 +132,12 @@ We stress KV-cache growth by sending 100 concurrent requests from ShareGPT~\cite
 % 我们通过发送来自 ShareGPT~\cite{sharegpt} 的 100 个并发请求（单轮、无前缀缓存）施加 KV-cache 增长压力，总占用达 36--40GB（约 60K token 的 KV-cache）。
 Existing solutions offload KV-cache or experts but not both; UVM attempts on-demand migration of both, leading to thrashing.
 % 现有方案只卸载 KV-cache 或专家权重之一；UVM 则尝试对二者按需迁移，导致抖动。
-We compare vLLM's CPU-offload mode (\texttt{--cpu-offload-gb 8}) against \sys with UVM policy.
-% 我们将 vLLM 的 CPU 卸载模式（\texttt{--cpu-offload-gb 8}）与采用 UVM 的 gpubpf 进行对比。
-\sys improves mean and p99 time-to-first-token by 1.7--2$\times$ and decoding throughput by 1.3$\times$ over vLLM's default framework-managed offload (\Cref{fig:vllm-kv-offload}), matching LMCache~\cite{lmcache}, a state-of-the-art KV-cache offloading framework.
-% 相比 vLLM 默认的框架管理卸载，gpubpf 将平均和 p99 首 token 时间改善 1.7--2×，解码吞吐量提高 1.3×（\Cref{fig:vllm-kv-offload}），与最先进的 KV-cache 卸载框架 LMCache~\cite{lmcache} 持平。
-Notably, UVM without \sys policies performs worse than vLLM's offload, while \sys performs similarly to the best framework offloading, with better tail latency, dynamically and transparently.
-% 值得注意的是，没有 gpubpf 策略的 UVM 表现不如 vLLM 的卸载，而 gpubpf 以动态、透明的方式达到了与最佳框架卸载相当的效果，且尾延迟更优。
+We compare vLLM's CPU-offload mode (\texttt{--cpu-offload-gb 8}) against a UVM policy in \sys{}.
+% 我们将 vLLM 的 CPU 卸载模式（\texttt{--cpu-offload-gb 8}）与通过 gpubpf 实现的 UVM 策略进行对比。
+This policy improves mean and p99 time-to-first-token by 1.7--2$\times$ and decoding throughput by 1.3$\times$ over vLLM's default framework-managed offload (\Cref{fig:vllm-kv-offload}), matching LMCache~\cite{lmcache}, a state-of-the-art KV-cache offloading framework.
+% 相比 vLLM 默认的框架管理卸载，该策略将平均和 p99 首 token 时间改善 1.7--2×，解码吞吐量提高 1.3×（\Cref{fig:vllm-kv-offload}），与最先进的 KV-cache 卸载框架 LMCache~\cite{lmcache} 持平。
+Notably, UVM without \sys policies performs worse than vLLM's offload, while this policy performs similarly to the best framework offloading, with better tail latency, dynamically and transparently.
+% 值得注意的是，没有 gpubpf 策略的 UVM 表现不如 vLLM 的卸载，而该策略以动态、透明的方式达到了与最佳框架卸载相当的效果，且尾延迟更优。
 
 Under memory pressure, the main challenge is managing two competing data types: KV-cache, exhibiting temporal locality (recent tokens accessed frequently during attention) and per-request spatial locality, and model weights with stride patterns in matrix operations.
 % 在内存压力下，主要挑战是管理两类相互竞争的数据：具有时间局部性（最近的 token 在注意力计算中被频繁访问）和每请求空间局部性的 KV-cache，以及在矩阵运算中具有步长模式的模型权重。
@@ -171,23 +169,23 @@ The median paired reduction with \sys{} relative to FIFO is 61.9\%.
 % 图神经网络（GNN 训练）。
 We evaluate \sys on PyTorch-based GCN training with random graphs of varying sizes (1M--15M nodes, 10 edges/node).
 % 我们基于 PyTorch 的 GCN 训练评估 gpubpf，使用规模不一的随机图（1M--15M 节点，每节点 10 条边）。
-\Cref{fig:gnn-epoch} shows epoch time across five configurations: native GPU allocation (no UVM), UVM with and without user-space prefetching (\texttt{cudaMemPrefetchAsync}), and each UVM configuration with \sys eBPF-based optimization.
-% \Cref{fig:gnn-epoch} 展示了五种配置下的单轮时间：原生 GPU 分配（无 UVM）、带与不带用户态预取（\texttt{cudaMemPrefetchAsync}）的 UVM，以及各自叠加 gpubpf 基于 eBPF 优化的 UVM 配置。
+\Cref{fig:gnn-epoch} shows epoch time across five configurations: native GPU allocation (no UVM), UVM with and without user-space prefetching (\texttt{cudaMemPrefetchAsync}), and each UVM configuration with the prefetch policy in \sys{}.
+% \Cref{fig:gnn-epoch} 展示了五种配置下的单轮时间：原生 GPU 分配（无 UVM）、带与不带用户态预取（\texttt{cudaMemPrefetchAsync}）的 UVM，以及各自叠加通过 gpubpf 实现的预取策略的 UVM 配置。
 With UVM enabled via a custom allocator, each epoch allocates memory on CPU and migrates to GPU on demand, incurring overhead.
 % 通过自定义分配器启用 UVM 后，每轮先在 CPU 上分配内存再按需迁移到 GPU，带来开销。
 Developers can pre-migrate pages via \texttt{cudaMemPrefetchAsync}, achieving 5.5$\times$ speedup at moderate oversubscription, but this requires application modification.
 % 开发者可以通过 \texttt{cudaMemPrefetchAsync} 预迁移页面，在中等超订下获得 5.5× 加速，但这需要修改应用。
-Without user hints, eBPF optimizes page fault handling via aggressive prefetching, achieving 2.65$\times$ speedup transparently.
-% 在没有用户提示的情况下，eBPF 通过激进预取优化缺页处理，透明地取得 2.65× 加速。
-With both user-expressed prefetching and \sys, it achieves 1.44$\times$ additional speedup by prefetching larger regions and reducing blocking faults.
-% 当用户预取与 gpubpf 同时使用时，通过预取更大区域、减少阻塞缺页，又获得了 1.44× 的额外加速。
+Without user hints, this policy optimizes page fault handling via aggressive prefetching, achieving 2.65$\times$ speedup transparently.
+% 在没有用户提示的情况下，该策略通过激进预取优化缺页处理，透明地取得 2.65× 加速。
+Combined with user-expressed prefetching, this eBPF policy achieves 1.44$\times$ additional speedup by prefetching larger regions and reducing blocking faults.
+% 该策略与用户预取结合时，通过预取更大区域、减少阻塞缺页，又获得了 1.44× 的额外加速。
 Native GPU allocation (no UVM) achieves the highest performance when data fits in memory (1.89~s at 5M nodes) but fails with OOM beyond $\sim$8M nodes.
 % 当数据能放入内存时，原生 GPU 分配（无 UVM）性能最高（5M 节点时 1.89 秒），但在超过约 8M 节点时因 OOM 失败。
-UVM with \sys prefetching enables training at 15M nodes (2.17$\times$ oversubscription) with near-native performance and no application modification.
-% 采用 gpubpf 预取的 UVM 使训练能在 15M 节点（2.17× 超订）下进行，性能接近原生且无需修改应用。
+UVM with this prefetch policy enables training at 15M nodes (2.17$\times$ oversubscription) with near-native performance and no application modification.
+% 采用该预取策略的 UVM 使训练能在 15M 节点（2.17× 超订）下进行，性能接近原生且无需修改应用。
 
-\sys uses sequential prefetch (375~LOC) with a uprobe tracing PyTorch allocations, determining prefetch ranges via device-traced history.
-% gpubpf 使用带 uprobe 追踪 PyTorch 分配的顺序预取（375 LOC），并通过设备端追踪的历史确定预取范围。
+The policy uses sequential prefetch (375~LOC) with a uprobe tracing PyTorch allocations, determining prefetch ranges via device-traced history.
+% 该策略使用带 uprobe 追踪 PyTorch 分配的顺序预取（375 LOC），并通过设备端追踪的历史确定预取范围。
 The agent tested deeper lookahead after single-block-ahead prefetch (K=1) improved epoch time by 21\%, but found K=2 and K=3 degraded by 16\%, and adaptive K (up to 6) by 46\%.
 % 在单块提前预取（K=1）将单轮时间改善 21\% 之后，智能体测试了更深的前瞻，但发现 K=2 和 K=3 会使性能下降 16\%，自适应 K（最高 6）下降 46\%。
 Suspecting lock contention initially, the agent identified PCIe bandwidth saturation as the true bottleneck, confirming one-block lookahead as optimal.
@@ -209,10 +207,10 @@ We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4
 % 我们使用 SIFT 数据集和 IVF4096,Flat 索引评估向量相似度检索，规模从 20M（9.5GB）到 50M（24GB）再到 100M（48GB，超过 GPU 显存）。
 IVF indexes have a two-level structure: frequently-accessed centroids and larger posting lists, and Faiss operations have two distinct phases: BUILD performs sequential scans while SEARCH issues random accesses.
 % IVF 索引具有两级结构：被频繁访问的聚类中心和更大的 posting list；Faiss 操作有两个不同阶段：BUILD 执行顺序扫描，SEARCH 发起随机访问。
-\sys reduces build time by 21--29\% on 50M, scaling to 27--40\% on 100M as memory pressure grows.
-% 在 50M 规模上，gpubpf 将构建时间降低 21--29\%，在 100M 上随内存压力增大扩大到 27--40\%。
-For search workloads, \sys reduces latency by 10--16\% across different \texttt{nprobe} settings despite the random access patterns inherent in ANN search.
-% 对于检索工作负载，尽管 ANN 检索固有的随机访问模式，gpubpf 在不同 \texttt{nprobe} 设置下仍将延迟降低 10--16\%。
+The Faiss policy in \sys{} reduces build time by 21--29\% on 50M, scaling to 27--40\% on 100M as memory pressure grows.
+% 在 50M 规模上，通过 gpubpf 实现的 Faiss 策略将构建时间降低 21--29\%，在 100M 上随内存压力增大扩大到 27--40\%。
+For search workloads, this policy reduces latency by 10--16\% across different \texttt{nprobe} settings despite the random access patterns inherent in ANN search.
+% 对于检索工作负载，尽管 ANN 检索固有的随机访问模式，该策略在不同 \texttt{nprobe} 设置下仍将延迟降低 10--16\%。
 As shown in \Cref{fig:faiss-perf}, the converged policy ($\sim$890~LOC: sequential prefetch 375~LOC + stride prefetch 472~LOC + device-side 45~LOC) prefetches posting lists sequentially for oversubscribed datasets and uses stride prediction for K-means iterations during index construction; device-side eBPF programs also trigger prefetching of corresponding posting lists.
 % 如 \Cref{fig:faiss-perf} 所示，收敛后的策略（约 890 LOC：顺序预取 375 LOC + 步长预取 472 LOC + 设备端 45 LOC）对超订数据集顺序预取 posting list，并在索引构建期间对 K-means 迭代使用步长预测；设备端 eBPF 程序还会触发相应 posting list 的预取。
 
@@ -258,10 +256,10 @@ We evaluate \sys's eBPF struct\_ops scheduling policies on \emph{compute-bound} 
 % 2 个延迟关键（LC）进程与 4 个尽力型（BE）进程并发运行，每个进程通过 4 条 CUDA 流提交 50 个计算内核。
 We compare the native scheduler against \sys with differentiated timeslices (LC: 1s, BE: 200$\mu$s) using a preemption policy equivalent to GPREEMPT's~\cite{fan2025gpreempt} priority-based timeslice scheduling, implemented as a \sys eBPF program (925~LOC) without unsafe modification to the driver source.
 % 我们将原生调度器与采用差异化时间片的 gpubpf（LC：1 秒，BE：200$\mu$秒）对比，其抢占策略等价于 GPREEMPT~\cite{fan2025gpreempt} 的基于优先级的时间片调度，以 gpubpf eBPF 程序实现（925 LOC），无需对驱动源码进行不安全的修改。
-\sys reduces LC P99 launch latency by 96\% (1188$\mu$s $\to$ 53$\mu$s).
-% gpubpf 将 LC 的 P99 启动延迟降低 96\%（1188$\mu$秒 $\to$ 53$\mu$秒）。
-BE throughput remains nearly unchanged at 11.38 kernels/s with the native scheduler and 11.47 kernels/s with \sys{} (+0.8\%).
-% BE 吞吐量基本不变，原生调度器下为 11.38 kernels/s，\sys{} 下为 11.47 kernels/s（+0.8\%）。
+This scheduling policy reduces LC P99 launch latency by 96\% (1188$\mu$s $\to$ 53$\mu$s).
+% 该调度策略将 LC 的 P99 启动延迟降低 96\%（1188$\mu$秒 $\to$ 53$\mu$秒）。
+BE throughput remains nearly unchanged at 11.38 kernels/s with the native scheduler and 11.47 kernels/s with this policy (+0.8\%).
+% BE 吞吐量基本不变，原生调度器下为 11.38 kernels/s，该策略下为 11.47 kernels/s（+0.8\%）。
 
 % \begin{figure}
 % \centering
@@ -317,10 +315,8 @@ Each experiment runs two concurrent processes competing for GPU memory, with the
 We compare default execution (Default), scheduling alone (Sched), priority-based prefetching (Prefetch, 454~LOC), prefetching with priority-based eviction (Evict, 472~LOC), and their combination with scheduling (Mem + Sched).
 % 我们比较默认执行（Default）、仅调度（Sched）、基于优先级的预取（Prefetch，454 LOC）、结合优先级驱逐的预取（Evict，472 LOC），以及内存策略与调度的组合（Mem + Sched）。
 
-\Cref{fig:all-kernels-priority} reports high-priority completion speedup relative to Default.
-% \Cref{fig:all-kernels-priority} 报告高优先级任务相对 Default 的完成时间加速比。
-Both memory policies and scheduling alleviate the slowdown from memory contention, with scheduling yielding larger improvements in these workloads.
-% 内存策略和调度都能缓解显存争用带来的性能下降，调度在这些工作负载中带来的改善更大。
+Both memory policies and scheduling alleviate the slowdown from memory contention, with scheduling yielding larger improvements in these workloads (\Cref{fig:all-kernels-priority}).
+% 内存策略和调度都能缓解显存争用带来的性能下降，调度在这些工作负载中带来的改善更大（\Cref{fig:all-kernels-priority}）。
 Combining memory priority with scheduling further reduces high-priority completion time by 9.5--12.0\% for HotSpot, 2.3--3.1\% for GEMM, and 1.2--1.5\% for K-Means relative to scheduling alone across the evaluated ratios.
 % 在已评估的各超订比例下，相比仅调度，内存优先级与调度的组合进一步将 HotSpot、GEMM 和 K-Means 的高优先级完成时间分别缩短 9.5--12.0\%、2.3--3.1\% 和 1.2--1.5\%。
 
@@ -340,8 +336,8 @@ We compare default UVM (driver FIFO/LRU) against \sys per-tenant memory and sche
 % 我们将默认 UVM（驱动 FIFO/LRU）与 gpubpf 的每租户内存和调度器策略（约 926 LOC，结合 Quota LRU、基于树的预取和动态时间片）进行对比。
 \Cref{fig:two-tenant} shows mutual improvement: LC TPOT drops by 40--45\% and TTFT by 14--20\%, while GNN training simultaneously improves by 28\%, approaching the ideal fair share baseline.
 % \Cref{fig:two-tenant} 显示双方同时受益：LC 的 TPOT 下降 40--45\%，TTFT 下降 14--20\%，同时 GNN 训练也改善 28\%，接近理想的公平份额基线。
-This shows \sys reduces contention for both workloads rather than favoring one over the other.
-% 这说明 gpubpf 减轻了两种工作负载之间的竞争，而非偏袒其中一方。
+This shows the combined memory and scheduling policies in \sys{} reduce contention for both workloads rather than favoring one over the other.
+% 这说明内存与调度策略的组合减轻了两种工作负载之间的竞争，而非偏袒其中一方。
 
 \begin{figure}
 \centering
@@ -466,14 +462,14 @@ Against the baselines in \Cref{fig:matched-ports}(a--g), MoE-Infinity lowers TTF
 % 相比 \Cref{fig:matched-ports}(a--g) 中对应的基线，MoE-Infinity 将 TTFT 降低 22.1\%（原生）和 22.5\%（\sys{}）。
 Expert Buffering cuts full expert loads by 12.85\% in both implementations, with 0.7\% \sys{} overhead.
 % Expert Buffering 的两种实现均将完整专家加载次数减少 12.85\%，\sys{} 的开销为 0.7\%。
-FineMoE raises \sys{} throughput by 24.6\%, with a 0.21\% difference from native (95\% CI $[-0.17\%,+0.52\%]$).
-% FineMoE 将 \sys{} 吞吐提高 24.6\%，与原生实现相差 0.21\%（95\% CI $[-0.17\%,+0.52\%]$）。
+The FineMoE policy in \sys{} raises throughput by 24.6\%, with a 0.21\% difference from native (95\% CI $[-0.17\%,+0.52\%]$).
+% 通过 \sys{} 实现的 FineMoE 策略将吞吐提高 24.6\%，与原生实现相差 0.21\%（95\% CI $[-0.17\%,+0.52\%]$）。
 Hummingbird lowers LC response p99 by 7.5--8.2\% (native) and 5.9--9.1\% (\sys{}).
 % Hummingbird 将 LC 响应 p99 降低 7.5--8.2\%（原生）和 5.9--9.1\%（\sys{}）。
 POD-Attention reduces operator latency from 5.360~ms to 4.322~ms (native) and 4.344~ms (\sys{}).
 % POD-Attention 将算子延迟从 5.360 毫秒降至 4.322 毫秒（原生）和 4.344 毫秒（\sys{}）。
-Across shapes, \sys{} latency ranges from 0.44\% lower to 1.18\% higher than native.
-% 在不同形状下，\sys{} 延迟相比原生实现最多降低 0.44\% 或增加 1.18\%。
+Across shapes, operator latency with the \sys{} implementation of the POD-Attention policy ranges from 0.44\% lower to 1.18\% higher than native.
+% 在不同形状下，采用 POD-Attention 策略的 \sys{} 实现时，算子延迟相比原生实现最多降低 0.44\% 或增加 1.18\%。
 XSched lowers LC p99 latency from submission to first block execution from 76.9~s to 27.0~s (native) and 27.3~s (\sys{}).
 % XSched 将 LC 从提交到首个线程块执行的 p99 延迟从 76.9 秒降至 27.0 秒（原生）和 27.3 秒（\sys{}）。
 GPREEMPT lowers LC response p99 from 1.796~ms to 1.615~ms (native) and 1.610~ms (\sys{}).

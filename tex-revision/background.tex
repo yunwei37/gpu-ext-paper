@@ -18,7 +18,7 @@ GPU devices execute kernels via SIMT (Single Instruction, Multiple Threads); on 
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\columnwidth]{img/gpu_stack_figure.pdf}
+    \includegraphics[width=\columnwidth,trim=0 21bp 0 0,clip]{img/gpu_stack_figure.pdf}
     \caption{GPU system stack: user-space frameworks, kernel driver (memory and scheduling), and GPU hardware.}
     % GPU 系统栈：用户态框架、内核驱动（内存与调度）与 GPU 硬件。
     \label{fig:motivation_silos}
@@ -43,8 +43,8 @@ Yet current drivers and firmware enforce a single fixed policy.
 \begin{figure*}[t]
     \centering
     \includegraphics[width=\textwidth]{img/pattern/combined_patterns_1x5_v2.pdf}
-    \caption{Page-fault address traces over time across four workloads. Each pattern implies a different optimal prefetch/eviction strategy; no single policy fits all.}
-    % 四个负载随时间变化的缺页地址轨迹。每种模式对应不同的最优预取/淘汰策略；没有单一策略能适配所有负载。
+    \caption{Page-fault address traces over time across four workloads.}
+    % 四个负载随时间变化的缺页地址轨迹。
     \label{fig:access_patterns}
 \end{figure*}
 
