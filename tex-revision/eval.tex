@@ -12,9 +12,6 @@ Our evaluation addresses two research questions:
   % RQ2（机制代价）：gpubpf 的钩子、可观测功能和策略执行引入了多少运行时开销？
 \end{itemize}
 
-We answer RQ1 in \S\ref{sec:rq1} through policy microbenchmarks, agent-driven case studies on realistic workloads, multi-tenant settings, and comparisons with native implementations of published policies. \S\ref{sec:rq2-cost} answers RQ2.
-% 我们在 \S\ref{sec:rq1} 通过策略微基准、真实负载上的智能体驱动案例研究、多租户场景，以及与已发表策略的原生实现的比较回答 RQ1。\S\ref{sec:rq2-cost} 回答 RQ2。
-
 \subsection{Methodology and Setup}
 % 方法论与实验设置
 
@@ -137,8 +134,8 @@ We stress KV-cache growth by sending 100 concurrent requests from ShareGPT~\cite
 % 我们通过发送来自 ShareGPT~\cite{sharegpt} 的 100 个并发请求（单轮、无前缀缓存）施加 KV-cache 增长压力，总占用达 36--40GB（约 60K token 的 KV-cache）。
 Existing solutions offload KV-cache or experts but not both; UVM attempts on-demand migration of both, leading to thrashing.
 % 现有方案只卸载 KV-cache 或专家权重之一；UVM 则尝试对二者按需迁移，导致抖动。
-We compare vLLM's CPU-offload mode (\texttt{--cpu-offload-gb 8}) against \sys with UVM and a sequential prefetch policy.
-% 我们将 vLLM 的 CPU 卸载模式（\texttt{--cpu-offload-gb 8}）与采用 UVM 和顺序预取策略的 gpubpf 进行对比。
+We compare vLLM's CPU-offload mode (\texttt{--cpu-offload-gb 8}) against \sys with UVM policy.
+% 我们将 vLLM 的 CPU 卸载模式（\texttt{--cpu-offload-gb 8}）与采用 UVM 的 gpubpf 进行对比。
 \sys improves mean and p99 time-to-first-token by 1.7--2$\times$ and decoding throughput by 1.3$\times$ over vLLM's default framework-managed offload (\Cref{fig:vllm-kv-offload}), matching LMCache~\cite{lmcache}, a state-of-the-art KV-cache offloading framework.
 % 相比 vLLM 默认的框架管理卸载，gpubpf 将平均和 p99 首 token 时间改善 1.7--2×，解码吞吐量提高 1.3×（\Cref{fig:vllm-kv-offload}），与最先进的 KV-cache 卸载框架 LMCache~\cite{lmcache} 持平。
 Notably, UVM without \sys policies performs worse than vLLM's offload, while \sys performs similarly to the best framework offloading, with better tail latency, dynamically and transparently.
@@ -242,16 +239,6 @@ Only 2 of 8 policies yielded positive results.
 
 % Across all four case studies, \sys's programmable policies exploit workload structure (experts, KV-cache, graph structure, index layout) that existing UVM and framework-level mechanisms cannot leverage, and the agent's exploration followed a consistent pattern: broad initial policy, failure-driven refinement, and iterative convergence, with eBPF containment ensuring every failed attempt was recovered in seconds rather than requiring driver rebuilds or reboots.
 
-\par\medskip
-\noindent\fbox{%
-\begin{minipage}{\dimexpr\columnwidth-2\fboxsep-2\fboxrule\relax}
-\textbf{Summary.} With \sys{}, policies translate application access patterns and task priorities into coordinated decisions about execution, data residency, and transfer timing.
-% \textbf{总结。} 借助 \sys{}，策略将应用访问模式和任务优先级转化为对执行、数据驻留和传输时机的协调决策。
-Agent-developed policies specialize these decisions to the workload, enabling application needs to guide resource management across memory and scheduling.
-% 智能体开发的策略根据工作负载制定这些决策，使应用需求能够指导跨内存与调度的资源管理。
-\end{minipage}%
-}
-\par\medskip
 
 \subsubsection{Multi-Tenant Memory, Bandwidth, and Scheduling}
 % 多租户内存、带宽与调度
@@ -335,8 +322,6 @@ Both memory policies and scheduling alleviate the slowdown from memory contentio
 % 内存策略和调度都能缓解显存争用带来的性能下降，调度在这些工作负载中带来的改善更大。
 Combining memory priority with scheduling further reduces high-priority completion time by 9.5--12.0\% for HotSpot, 2.3--3.1\% for GEMM, and 1.2--1.5\% for K-Means relative to scheduling alone across the evaluated ratios.
 % 在已评估的各超订比例下，相比仅调度，内存优先级与调度的组合进一步将 HotSpot、GEMM 和 K-Means 的高优先级完成时间分别缩短 9.5--12.0\%、2.3--3.1\% 和 1.2--1.5\%。
-Combining memory prioritization with scheduling further improves high-priority completion time, demonstrating the benefit of coordinating the two policies.
-% 内存优先级与调度相结合，进一步改善高优先级任务的完成时间，说明协调两种策略能够带来额外收益。
 
 \begin{figure}[t]
 \centering
@@ -403,12 +388,23 @@ LatencyBudget (CLC) & Scheduling Block & Device & 19 \\
 \end{table}
 \end{comment}
 
+\par\medskip
+\noindent\fbox{%
+\begin{minipage}{\dimexpr\columnwidth-2\fboxsep-2\fboxrule\relax}
+\textbf{Summary.} With \sys{}, policies translate application access patterns and task priorities into coordinated decisions about execution, data residency, and transfer timing.
+% \textbf{总结。} 借助 \sys{}，策略将应用访问模式和任务优先级转化为对执行、数据驻留和传输时机的协调决策。
+Agent-developed policies specialize these decisions to the workload, enabling application needs to guide resource management across memory and scheduling.
+% 智能体开发的策略根据工作负载制定这些决策，使应用需求能够指导跨内存与调度的资源管理。
+\end{minipage}%
+}
+\par\medskip
+
 \subsubsection{Policies from Prior Systems}
 % 已发表系统的策略
 \label{sec:policy-mechanism}
 
-\Cref{tab:published-policies} summarizes the seven policies, their execution requirements, and their implementations through \sys{}.
-% \Cref{tab:published-policies} 汇总七种策略、其执行需求以及通过 \sys{} 实现的方式。
+We evaluate the seven policies in \Cref{tab:published-policies}.
+% 我们评估 \Cref{tab:published-policies} 中的七种策略。
 
 \begin{table*}[t]
 \centering
@@ -486,8 +482,7 @@ GPREEMPT lowers LC response p99 from 1.796~ms to 1.615~ms (native) and 1.610~ms 
 % RQ2：机制代价
 \label{sec:rq2-cost}
 
-We measure hook, observability, and map-placement overheads below. \S\ref{sec:policy-mechanism} compares the execution costs of native and \sys{} implementations of the same policies.
-% 下文测量钩子、可观测性和 map 放置开销。\S\ref{sec:policy-mechanism} 比较相同策略的原生实现与 \sys{} 实现的执行代价。
+We measure hook, observability, and map-placement overheads below.
 
 \paragraph{Verification Overhead.}
 % 验证开销。
