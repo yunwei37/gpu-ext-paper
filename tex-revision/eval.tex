@@ -19,8 +19,8 @@ We evaluate \sys on two machines: Server~A with Intel Core Ultra~9 285K (24 core
 % 我们在两台机器上评估 gpubpf：服务器 A 配备 Intel Core Ultra 9 285K（24 核）、128 GB DDR5 内存和 NVIDIA RTX 5090 GPU；服务器 B 配备双路 Intel Gold 6138（80 核）、256 GB 内存和 NVIDIA P40 GPU。
 Unless otherwise specified, experiments run on Server~A, averaging 10 trials using geometric mean.
 % 除非另有说明，实验均在服务器 A 上进行，每项结果取 10 次试验的几何平均值。
-We compare policies implemented with \sys{} against three classes of baselines: (1) driver defaults (UVM LRU/FIFO eviction, native GPU scheduler), (2) application-level hints (\texttt{cudaMemAdvise}), and (3) framework-managed policies (e.g., llama.cpp \texttt{ncmoe}, vLLM CPU offload, LMCache) where applicable.
-% 我们将通过 gpubpf 实现的策略与三类基线对比：(1) 驱动默认行为（UVM LRU/FIFO 驱逐、原生 GPU 调度器），(2) 应用层提示（\texttt{cudaMemAdvise}），以及 (3) 框架管理的策略（如 llama.cpp 的 \texttt{ncmoe}、vLLM CPU offload、LMCache，在适用处）。
+We compare \sys{} policies against three classes of baselines: (1) driver defaults (UVM LRU/FIFO eviction, native GPU scheduler), (2) application-level hints (\texttt{cudaMemAdvise}), and (3) framework-managed policies (e.g., llama.cpp \texttt{ncmoe}, vLLM CPU offload, LMCache) where applicable.
+% 我们将 gpubpf 策略与三类基线对比：(1) 驱动默认行为（UVM LRU/FIFO 驱逐、原生 GPU 调度器），(2) 应用层提示（\texttt{cudaMemAdvise}），以及 (3) 框架管理的策略（如 llama.cpp 的 \texttt{ncmoe}、vLLM CPU offload、LMCache，在适用处）。
 We use PyTorch (version 2.9.0) and vLLM (version 0.11.0) with custom allocators, llama.cpp (version 7101), and Faiss (version 1.13.0) with UVM build config.
 % 我们使用 PyTorch（版本 2.9.0）和 vLLM（版本 0.11.0，配自定义分配器）、llama.cpp（版本 7101）以及采用 UVM 构建配置的 Faiss（版本 1.13.0）。
 All tests with \sys policies require no application modifications.
@@ -92,10 +92,10 @@ We conclude with four case studies showing performance gains and the exploration
 % 专家卸载（llama.cpp GPT-OSS-120B）。
 We evaluate \sys on GPT-OSS-120B MXFP4 MoE (59~GB) in llama.cpp on RTX 5090 (32~GB), requiring 1.84$\times$ oversubscription.
 % 我们在 RTX 5090（32 GB）上的 llama.cpp 中评估 GPT-OSS-120B MXFP4 MoE（59 GB），需要 1.84× 超订。
-We compare five configurations: framework-managed CPU offloading (\texttt{ncmoe=\allowbreak{}32/64}), default UVM, UVM with application-level hints (\texttt{cuda\-Mem\-Advise}), and \sys with eBPF-based host-device prefetching (\S\ref{sec:design-interfaces}).
-% 我们对比五种配置：框架管理的 CPU 卸载（\texttt{ncmoe=\allowbreak{}32/64}）、默认 UVM、带应用层提示的 UVM（\texttt{cuda\-Mem\-Advise}），以及采用基于 eBPF 的主机—设备预取的 gpubpf（\S\ref{sec:design-interfaces}）。
-For decode (memory-bound), the expert-offloading policy implemented with \sys{} achieves \textbf{1.76$\times$ speedup} over application-tuned UVM hints (\texttt{cuda\-Mem\-Advise}) and 4.8$\times$ over framework offloading (\texttt{ncmoe=64}) (\Cref{fig:llama-expert-offload}).
-% 对于解码（内存受限），通过 gpubpf 实现的专家卸载策略相比经应用调优的 UVM 提示（\texttt{cuda\-Mem\-Advise}）取得 \textbf{1.76× 加速}，相比框架卸载（\texttt{ncmoe=64}）取得 4.8× 加速（\Cref{fig:llama-expert-offload}）。
+We compare five configurations: framework-managed CPU offloading (\texttt{ncmoe=\allowbreak{}32/64}), default UVM, UVM with application-level hints (\texttt{cuda\-Mem\-Advise}), and a \sys{} host-device prefetch policy (\S\ref{sec:design-interfaces}).
+% 我们对比五种配置：框架管理的 CPU 卸载（\texttt{ncmoe=\allowbreak{}32/64}）、默认 UVM、带应用层提示的 UVM（\texttt{cuda\-Mem\-Advise}），以及 gpubpf 主机—设备预取策略（\S\ref{sec:design-interfaces}）。
+For decode (memory-bound), the expert-offloading policy in \sys{} achieves \textbf{1.76$\times$ speedup} over application-tuned UVM hints (\texttt{cuda\-Mem\-Advise}) and 4.8$\times$ over framework offloading (\texttt{ncmoe=64}) (\Cref{fig:llama-expert-offload}).
+% 对于解码（内存受限），gpubpf 中的专家卸载策略相比经应用调优的 UVM 提示（\texttt{cuda\-Mem\-Advise}）取得 \textbf{1.76× 加速}，相比框架卸载（\texttt{ncmoe=64}）取得 4.8× 加速（\Cref{fig:llama-expert-offload}）。
 These hints improve decode over default UVM but require application modification and degrade prefill by 40\%; this policy outperforms hints on decode while preserving prefill within 4\% of default UVM, without application changes.
 % 这些提示相比默认 UVM 改善了解码，但需要修改应用，并使预填充性能下降 40\%；该策略在解码上优于提示，同时将预填充保持在默认 UVM 的 4\% 以内，且无需修改应用。
 For prefill (compute-bound), framework offloading (\texttt{ncmoe=32}) achieves 13\% higher prefill throughput than this policy, but decode dominates end-to-end latency, so the decode improvement outweighs the prefill gap.%\arq{I don't understand the final data point. what has 13\% higher throughput? The graphed performance of UVM eBPF looks like it has worse performance compared to the alternatives. BTW---its very weird that none of the bars in Figure 8 are labeled "\sys"--I think that UVM eBPF is supposed to be that configuration but it does not make a lot of sense.}
@@ -160,10 +160,10 @@ The resulting policy (totaling $\sim$680~LOC) effectively prevents thrashing see
 
 For LMCache's local-disk backend, an agent-developed policy prioritizes reads over background writes while limiting each write's total deferral to 200~ms.
 % 对 LMCache 的本地磁盘后端，智能体开发的策略优先处理读请求，并将每个后台写请求的累计推迟时间限制在 200 ms 内。
-Across five paired runs, median read p99, measured from scheduled request arrival, falls from 323.707~ms with FIFO to 123.141~ms with the native policy and 118.097~ms with the same policy implemented through \sys{}.
-% 在五组配对运行中，从请求的预定到达时刻起算的读请求 p99 延迟中位数，由 FIFO 下的 323.707 ms 降至原生策略下的 123.141 ms，以及同一策略通过 \sys{} 实现时的 118.097 ms。
-The median paired reduction with \sys{} relative to FIFO is 61.9\%.
-% \sys{} 相对 FIFO 的配对降幅中位数为 61.9\%。
+Across five paired runs, median read p99, measured from scheduled request arrival, falls from 323.707~ms with FIFO to 123.141~ms with the native policy and 118.097~ms with the same policy in \sys{}.
+% 在五组配对运行中，从请求的预定到达时刻起算的读请求 p99 延迟中位数，由 FIFO 下的 323.707 ms 降至原生策略下的 123.141 ms，以及同一策略在 \sys{} 中的 118.097 ms。
+The median paired reduction with the \sys{} policy relative to FIFO is 61.9\%.
+% \sys{} 策略相对 FIFO 的配对降幅中位数为 61.9\%。
 
 \paragraph{Graph Neural Networks (GNN Training).}
 % 图神经网络（GNN 训练）。
@@ -254,8 +254,8 @@ We evaluate \sys's eBPF struct\_ops scheduling policies on \emph{compute-bound} 
 % 我们在\emph{计算密集型}（SM 受限）的多租户工作负载上评估 gpubpf 基于 eBPF 的 struct\_ops 调度策略，不涉及内存超订。
 2 latency-critical (LC) processes and 4 best-effort (BE) processes run concurrently, each with 4 CUDA streams submitting 50 compute kernels.
 % 2 个延迟关键（LC）进程与 4 个尽力型（BE）进程并发运行，每个进程通过 4 条 CUDA 流提交 50 个计算内核。
-We compare the native scheduler against \sys with differentiated timeslices (LC: 1s, BE: 200$\mu$s) using a preemption policy equivalent to GPREEMPT's~\cite{fan2025gpreempt} priority-based timeslice scheduling, implemented as a \sys eBPF program (925~LOC) without unsafe modification to the driver source.
-% 我们将原生调度器与采用差异化时间片的 gpubpf（LC：1 秒，BE：200$\mu$秒）对比，其抢占策略等价于 GPREEMPT~\cite{fan2025gpreempt} 的基于优先级的时间片调度，以 gpubpf eBPF 程序实现（925 LOC），无需对驱动源码进行不安全的修改。
+We compare the native scheduler against a \sys{} preemption policy equivalent to GPREEMPT's~\cite{fan2025gpreempt} priority-based timeslice scheduling, with differentiated timeslices (LC: 1s, BE: 200$\mu$s), implemented as an eBPF program (925~LOC) without unsafe modification to the driver source.
+% 我们将原生调度器与 gpubpf 抢占策略对比，该策略等价于 GPREEMPT~\cite{fan2025gpreempt} 的基于优先级的时间片调度，采用差异化时间片（LC：1 秒，BE：200$\mu$秒），以 eBPF 程序实现（925 LOC），无需对驱动源码进行不安全的修改。
 This scheduling policy reduces LC P99 launch latency by 96\% (1188$\mu$s $\to$ 53$\mu$s).
 % 该调度策略将 LC 的 P99 启动延迟降低 96\%（1188$\mu$秒 $\to$ 53$\mu$秒）。
 BE throughput remains nearly unchanged at 11.38 kernels/s with the native scheduler and 11.47 kernels/s with this policy (+0.8\%).
@@ -442,8 +442,8 @@ GPREEMPT~\cite{fan2025gpreempt} & Uses task priority to decide which tasks may r
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{tex-revision/img/results-raw/revision/matched-policy-panels.pdf}
-\caption{Policy comparisons: workload baseline, native policy, and \sys. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) prefetching all positively predicted experts, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. In (d), Per. and Burst denote periodic and BurstGPT arrivals. Panel (e) uses Llama decode batch 128. Bars show medians over five runs per configuration, except (e) means and (f) ten runs. Whiskers in (b,f,g) show full ranges. Panel (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s.}
-% 策略比较：工作负载基线、原生策略与 gpubpf。基线为关闭预测的专家缓存（a）、固定 K 的 FIFO（b）、预取所有预测会用到的专家（c）、默认调度（d、g）、双流 FlashAttention（e）和原生 CUDA（f）。（d）中 Per. 和 Burst 分别表示周期性和 BurstGPT 到达模式。面板（e）使用 Llama 解码批量 128。柱形为每种配置五次运行的中位数，但（e）为均值、（f）使用十次运行。（b、f、g）的须线表示完整范围。（g）为每秒 100 个 VGG19 LC 请求，对应 ResNet152 BE 每秒 100 或 200 请求。
+\caption{Policy comparisons: workload baseline, native policy, and \sys{} policy. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) prefetching all positively predicted experts, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. In (d), Per. and Burst denote periodic and BurstGPT arrivals. Panel (e) uses Llama decode batch 128. Bars show medians over five runs per configuration, except (e) means and (f) ten runs. Whiskers in (b,f,g) show full ranges. Panel (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s.}
+% 策略比较：工作负载基线、原生策略与 gpubpf 策略。基线为关闭预测的专家缓存（a）、固定 K 的 FIFO（b）、预取所有预测会用到的专家（c）、默认调度（d、g）、双流 FlashAttention（e）和原生 CUDA（f）。（d）中 Per. 和 Burst 分别表示周期性和 BurstGPT 到达模式。面板（e）使用 Llama 解码批量 128。柱形为每种配置五次运行的中位数，但（e）为均值、（f）使用十次运行。（b、f、g）的须线表示完整范围。（g）为每秒 100 个 VGG19 LC 请求，对应 ResNet152 BE 每秒 100 或 200 请求。
 \label{fig:matched-ports}
 \end{figure*}
 
@@ -468,8 +468,8 @@ Hummingbird lowers LC response p99 by 7.5--8.2\% (native) and 5.9--9.1\% (\sys{}
 % Hummingbird 将 LC 响应 p99 降低 7.5--8.2\%（原生）和 5.9--9.1\%（\sys{}）。
 POD-Attention reduces operator latency from 5.360~ms to 4.322~ms (native) and 4.344~ms (\sys{}).
 % POD-Attention 将算子延迟从 5.360 毫秒降至 4.322 毫秒（原生）和 4.344 毫秒（\sys{}）。
-Across shapes, operator latency with the \sys{} implementation of the POD-Attention policy ranges from 0.44\% lower to 1.18\% higher than native.
-% 在不同形状下，采用 POD-Attention 策略的 \sys{} 实现时，算子延迟相比原生实现最多降低 0.44\% 或增加 1.18\%。
+Across shapes, operator latency with the POD-Attention policy in \sys{} ranges from 0.44\% lower to 1.18\% higher than native.
+% 在不同形状下，采用 \sys{} 中的 POD-Attention 策略时，算子延迟相比原生实现最多降低 0.44\% 或增加 1.18\%。
 XSched lowers LC p99 latency from submission to first block execution from 76.9~s to 27.0~s (native) and 27.3~s (\sys{}).
 % XSched 将 LC 从提交到首个线程块执行的 p99 延迟从 76.9 秒降至 27.0 秒（原生）和 27.3 秒（\sys{}）。
 GPREEMPT lowers LC response p99 from 1.796~ms to 1.615~ms (native) and 1.610~ms (\sys{}).
