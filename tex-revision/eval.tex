@@ -272,20 +272,20 @@ We evaluate \sys's eBPF struct\_ops scheduling policies on \emph{compute-bound} 
 % 2 个延迟关键（LC）进程与 4 个尽力型（BE）进程并发运行，每个进程通过 4 条 CUDA 流提交 50 个计算内核。
 We compare the native scheduler against \sys with differentiated timeslices (LC: 1s, BE: 200$\mu$s) using a preemption policy equivalent to GPREEMPT's~\cite{fan2025gpreempt} priority-based timeslice scheduling, implemented as a \sys eBPF program (925~LOC) without unsafe modification to the driver source.
 % 我们将原生调度器与采用差异化时间片的 gpubpf（LC：1 秒，BE：200$\mu$秒）对比，其抢占策略等价于 GPREEMPT~\cite{fan2025gpreempt} 的基于优先级的时间片调度，以 gpubpf eBPF 程序实现（925 LOC），无需对驱动源码进行不安全的修改。
-\Cref{fig:scheduler-latency} shows that \sys reduces LC P99 launch latency by 96\% (1188$\mu$s $\to$ 53$\mu$s).
-% \Cref{fig:scheduler-latency} 显示，gpubpf 将 LC 的 P99 启动延迟降低 96\%（1188$\mu$秒 $\to$ 53$\mu$秒）。
-BE throughput remains unchanged.
-% BE 吞吐量保持不变。
+\sys reduces LC P99 launch latency by 96\% (1188$\mu$s $\to$ 53$\mu$s).
+% gpubpf 将 LC 的 P99 启动延迟降低 96\%（1188$\mu$秒 $\to$ 53$\mu$秒）。
+BE throughput remains nearly unchanged at 11.38 kernels/s with the native scheduler and 11.47 kernels/s with \sys{} (+0.8\%).
+% BE 吞吐量基本不变，原生调度器下为 11.38 kernels/s，\sys{} 下为 11.47 kernels/s（+0.8\%）。
 
-\begin{figure}
-\centering
-\includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/scheduler_latency_throughput.pdf}
-
-\caption{Multi-tenant GPU scheduling with \sys{} (LC: latency-critical, BE: best-effort).}
-% 使用 gpubpf 的多租户 GPU 调度（LC：延迟关键型，BE：尽力型）。
-\label{fig:scheduler-latency}
-% \vspace{-1.5em}
-\end{figure}
+% \begin{figure}
+% \centering
+% \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/scheduler_latency_throughput.pdf}
+%
+% \caption{Multi-tenant GPU scheduling with \sys{} (LC: latency-critical, BE: best-effort).}
+% % 使用 gpubpf 的多租户 GPU 调度（LC：延迟关键型，BE：尽力型）。
+% \label{fig:scheduler-latency}
+% % \vspace{-1.5em}
+% \end{figure}
 
 % Previous comparison retained below.
 % \paragraph{Memory-bound Priority Differentiation.}
