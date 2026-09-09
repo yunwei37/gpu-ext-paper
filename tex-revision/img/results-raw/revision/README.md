@@ -84,6 +84,38 @@ are workload transfers, counted identically in all five cohorts per arm.
 The original throughput values remain in `port-panels.json`. MoE-Infinity
 latency is displayed in seconds instead of milliseconds.
 
+### MoE-Infinity TTFT statistics
+
+The plot and the paper's percentage reductions summarize the same five paired
+runs in different ways. The source is
+`workloads/moe-infinity/results-paper-v3-protected-575.md` in the enclosing
+gpu_ext checkout, under **Results**.
+
+The bars in `matched-policy-panels.json` show the median TTFT for each mode:
+
+| Mode | Plotted median TTFT (s) |
+|---|---:|
+| Prediction-disabled baseline | 1.97594 |
+| Native policy | 1.51344 |
+| gpubpf policy | 1.53596 |
+
+Dividing these separately computed medians gives reductions of **23.41%**
+(native) and **22.27%** (gpubpf). These are not the estimators used for the
+percentage reductions in the paper's Results paragraph.
+
+For those reductions, first divide each policy's TTFT by its baseline TTFT
+within the same paired run, then take the geometric mean of the five ratios.
+The reported ratios are **0.778947** (native/baseline) and **0.775152**
+(gpubpf/baseline). Applying `100 * (1 - ratio)` gives **22.11%** and
+**22.48%**, reported as **22.1%** and **22.5%** in the paper.
+
+A ratio of medians need not equal a geometric mean of paired ratios; even the
+native/gpubpf ordering can differ. To reproduce the paragraph, use the paired
+ratios. To reproduce the figure, use the per-mode medians. Neither the raw
+measurements nor the plotted values need changing to reconcile the two.
+
+### Scheduling panels
+
 XSched and GPREEMPT medians are derived from the per-run samples in
 `workloads/gpreempt/figures/scheduling-comparison-2x2.points.json`. The merged
 figure keeps both previously plotted BE rates and adds the already measured
