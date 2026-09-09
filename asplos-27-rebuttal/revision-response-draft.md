@@ -17,9 +17,9 @@ Thank you for the detailed feedback. We organized the revision around the main i
 3. Evaluation
 
    - Reorganized the evaluation around policy benefits (RQ1, Section 5.2) and mechanism cost (RQ2, Section 5.3).
-   - Added matched baseline/native/gpubpf comparisons for seven published policies to measure policy benefits and gpubpf overhead (Section 5.2.4, Fig. 15).
-   - Added LMCache local-disk read-latency results (Section 5.2.2).
-   - Expanded the memory/scheduling experiments across five configurations, three workloads, and oversubscription ratios (Section 5.2.3, Fig. 12).
-   - Added RTX 5090 comparisons (Fig. 16) and trampoline-scaling measurements (Section 5.3).
+   - To address whether the gains come from policies or the mechanism, and what performance cost gpubpf adds, we added comparisons for seven policies from prior systems (e.g., MoE-Infinity, Expert Buffering, and XSched; Section 5.2.4, Fig. 15). For each policy, we compare the workload baseline, its native implementation, and its gpubpf implementation. The results show that gpubpf preserves the evaluated policies’ benefits with near-native performance; for example, the difference in main metrics ranges from approximately -0.4% to +1.2% across the evaluated configurations.
    - Highlighted agent-developed policies and added a Summary of their insights and the benefits of coordinating memory and scheduling (Sections 5.2.2–5.2.3).
-   - Fixed duplicate periods in paragraph headings and stray braces in the bibliography.
+   - Expanded the memory/scheduling experiments across five configurations, three workloads, and oversubscription ratios (Section 5.2.3, Fig. 12), and added LMCache local-disk read-latency results (Section 5.2.2).
+   - Added RTX 5090 comparisons (Fig. 16) and trampoline-scaling measurements (Section 5.3).
+
+fixed duplicate periods in paragraph headings and stray braces in the bibliography.
