@@ -1,41 +1,75 @@
+% AUTHORS_VERSION_CHECKED covers bibliographic authorship and the cited edition only.
+% It does not certify claim-citation alignment, retraction status, or completion of the full citation skill.
+
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/cluster-launch-control.html
+% METADATA_NOTE: NVIDIA documentation; current page gives last update 2026-05-27.
 @misc{cuda-clc,
-  author = {NVIDIA},
+  author = {{NVIDIA}},
   title = {Work Stealing with Cluster Launch Control --- {CUDA} Programming Guide},
-  year = {2025},
+  year = {2026},
   url = {https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/cluster-launch-control.html},
-  note = {Accessed: 2026}
+  note = {Last updated May 27, 2026; accessed September 9, 2026}
 }
 
+% VERIFIED: unverified
+% REAL: yes
+% PDF: docs/paper/asplos-27-rebuttal/ref/gcaps.pdf
+% ABSTRACT: GCAPS provides context-aware preemptive priority scheduling and schedulability analysis for real-time GPU tasks.
+% USED_FOR: GPU priority scheduling; broad statements about policy updates still need claim-level review.
+% CHECK_NOTE: Metadata checked against the Dagstuhl publication record on 2026-09-09: LIPIcs volume 298, pages 14:1--14:25.
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.ECRTS.2024.14
+% METADATA_NOTE: Dagstuhl final ECRTS 2024 edition, volume 298, article 14, 25 pages. The archived arXiv draft has different provisional article numbering.
 @inproceedings{wang2024gcaps,
   title = {{GCAPS}: {GPU} Context-Aware Preemptive Priority-Based Scheduling for Real-Time Tasks},
   author = {Wang, Yidi and Liu, Cong and Wong, Daniel and Kim, Hyoseung},
   booktitle = {36th Euromicro Conference on Real-Time Systems (ECRTS 2024)},
   series = {Leibniz International Proceedings in Informatics (LIPIcs)},
-  volume = {262},
+  volume = {298},
+  pages = {14:1--14:25},
+  publisher = {Schloss Dagstuhl -- Leibniz-Zentrum f{\"u}r Informatik},
   year = {2024},
   doi = {10.4230/LIPIcs.ECRTS.2024.14},
   url = {https://doi.org/10.4230/LIPIcs.ECRTS.2024.14}
 }
 
-@inproceedings{sharegpt,
-  title = {{OpenChat}: Advancing Open-source Language Models with Mixed-Quality Data},
-  author = {Wang, Guan and Cheng, Sijie and Zhan, Xianyuan and Li, Xiangang and Song, Sen and Liu, Yang},
-  booktitle = {The Twelfth International Conference on Learning Representations (ICLR)},
-  year = {2024},
-  url = {https://arxiv.org/abs/2309.11235}
+% VERIFIED: 2026-09-09
+% REAL: yes
+% PDF: not available
+% ABSTRACT: A cleaned ShareGPT conversation dataset distributed for Vicuna training.
+% USED_FOR: Origin of the ShareGPT_V3_unfiltered_cleaned_split.json workload used in vLLM evaluation.
+% CHECK_NOTE: Dataset publisher and creation year checked against the Hugging Face dataset API; file name checked against workloads/vllm/configs/serve_bench.py.
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered
+% METADATA_NOTE: Dataset release, not the OpenChat paper. The listed author is the public dataset uploader; created in 2023.
+@misc{sharegpt,
+  title = {{ShareGPT} Vicuna Unfiltered Dataset},
+  author = {{anon8231489123}},
+  howpublished = {Hugging Face dataset},
+  year = {2023},
+  url = {https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered},
+  note = {File: \texttt{ShareGPT\_V3\_unfiltered\_cleaned\_split.json}}
 }
 
-@article{lmcache,
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://arxiv.org/pdf/2510.09665v2 ; https://mlsys.org/virtual/2026/invited-talk/3646
+% METADATA_NOTE: Use the v2 PDF author order: Liu, Yao, Cheng, followed by the other eight authors. arXiv abstract metadata orders the equal contributors differently. MLSys 2026 event 3646 is an invited talk, not a proceedings paper; no formal edition located.
+@misc{lmcache,
   title = {{LMCache}: An Efficient {KV} Cache Layer for Enterprise-Scale {LLM} Inference},
-  author = {Liu, Yuhan and Cheng, Yihua and Yao, Jiayi and An, Yuwei and Chen, Xiaokun and Feng, Shaoting and Huang, Yuyang and Shen, Samuel and Zhang, Rui and Du, Kuntai and Jiang, Junchen},
-  journal={arXiv preprint arXiv:2510.09665},
+  author = {Liu, Yuhan and Yao, Jiayi and Cheng, Yihua and An, Yuwei and Chen, Xiaokun and Feng, Shaoting and Huang, Yuyang and Shen, Samuel and Zhang, Rui and Du, Kuntai and Jiang, Junchen},
+  eprint = {2510.09665v2},
+  archivePrefix = {arXiv},
   year={2025},
-  url = {https://arxiv.org/abs/2510.09665}
+  url = {https://arxiv.org/abs/2510.09665v2}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/3600006.3613163
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{ng2023paella,
   title={Paella: Low-latency model serving with software-defined {GPU} scheduling},
-  author={Ng, Kelvin KW and Demoulin, Henri Maxime and Liu, Vincent},
+  author={Ng, Kelvin K. W. and Demoulin, Henri Maxime and Liu, Vincent},
   booktitle={Proceedings of the 29th Symposium on Operating Systems Principles},
   pages={595--610},
   year={2023},
@@ -43,6 +77,7 @@
   url = {https://doi.org/10.1145/3600006.3613163}
 }
 
+% STATUS: unused
 @article{agrawal2024vidur,
   title={Vidur: A large-scale simulation framework for llm inference},
   author={Agrawal, Amey and Kedia, Nitin and Mohan, Jayashree and Panwar, Ashish and Kwatra, Nipun and Gulavani, Bhargav S and Ramjee, Ramachandran and Tumanov, Alexey},
@@ -52,6 +87,9 @@
   year={2024}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://www.usenix.org/conference/osdi24/presentation/agrawal
+% METADATA_NOTE: Full author sequence and the cited publication venue, year and available page range checked against the official publication page.
 @inproceedings{agrawal2024taming,
   title={Taming {Throughput-Latency} tradeoff in {LLM} inference with {Sarathi-Serve}},
   author={Agrawal, Amey and Kedia, Nitin and Panwar, Ashish and Mohan, Jayashree and Kwatra, Nipun and Gulavani, Bhargav and Tumanov, Alexey and Ramjee, Ramachandran},
@@ -61,6 +99,9 @@
   url = {https://www.usenix.org/conference/osdi24/presentation/agrawal}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.14778/3632093.3632107
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @article{cao2023gpu,
   title={{GPU} database systems characterization and optimization},
   author={Cao, Jiashen and Sen, Rathijit and Interlandi, Matteo and Arulraj, Joy and Kim, Hyesoon},
@@ -75,6 +116,9 @@
 }
 
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1007/s00778-024-00864-x
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @article{pan2024survey,
   title={Survey of vector database management systems},
   author={Pan, James Jie and Wang, Jianguo and Li, Guoliang},
@@ -88,6 +132,7 @@
   url = {https://doi.org/10.1007/s00778-024-00864-x}
 }
 
+% STATUS: unused
 @article{chen2020pangolin,
   title={Pangolin: An efficient and flexible graph mining system on cpu and gpu},
   author={Chen, Xuhao and Dathathri, Roshan and Gill, Gurbinder and Pingali, Keshav},
@@ -99,6 +144,9 @@
   publisher={VLDB Endowment}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.14778/3712221.3712228
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @article{lin2024towards,
   title={Towards Sufficient GPU-accelerated Dynamic Graph Management: Survey and Experiment},
   author={Lin, Yinnian and Zou, Lei and Su, Xunbin},
@@ -112,6 +160,7 @@
   url = {https://doi.org/10.14778/3712221.3712228}
 }
 
+% STATUS: unused
 @inproceedings{jayaram2023sia,
   title={Sia: Heterogeneity-aware, goodput-optimized ML-cluster scheduling},
   author={Jayaram Subramanya, Suhas and Arfeen, Daiyaan and Lin, Shouxu and Qiao, Aurick and Jia, Zhihao and Ganger, Gregory R},
@@ -120,6 +169,7 @@
   year={2023}
 }
 
+% STATUS: unused
 @inproceedings{li2022miso,
   title={Miso: exploiting multi-instance gpu capability on multi-tenant gpu clusters},
   author={Li, Baolin and Patel, Tirthak and Samsi, Siddharth and Gadepally, Vijay and Tiwari, Devesh},
@@ -128,6 +178,7 @@
   year={2022}
 }
 
+% STATUS: unused
 @inproceedings{hu2023lucid,
   title={Lucid: A non-intrusive, scalable and interpretable scheduler for deep learning training jobs},
   author={Hu, Qinghao and Zhang, Meng and Sun, Peng and Wen, Yonggang and Zhang, Tianwei},
@@ -136,6 +187,7 @@
   year={2023}
 }
 
+% STATUS: unused
 @inproceedings{strati2024orion,
   title={Orion: Interference-aware, fine-grained gpu sharing for ml applications},
   author={Strati, Foteini and Ma, Xianzhe and Klimovic, Ana},
@@ -144,6 +196,7 @@
   year={2024}
 }
 
+% STATUS: unused
 @inproceedings{shubha2024usher,
   title={{USHER}: Holistic interference avoidance for resource optimized {ML} inference},
   author={Shubha, Sudipta Saha and Shen, Haiying and Iyer, Anand},
@@ -152,6 +205,7 @@
   year={2024}
 }
 
+% STATUS: unused
 @inproceedings{patel2024splitwise,
   title={Splitwise: Efficient generative llm inference using phase splitting},
   author={Patel, Pratyush and Choukse, Esha and Zhang, Chaojie and Shah, Aashaka and Goiri, {\'I}{\~n}igo and Maleki, Saeed and Bianchini, Ricardo},
@@ -161,6 +215,7 @@
   organization={IEEE}
 }
 
+% STATUS: unused
 @inproceedings{jeon2019analysis,
   title={Analysis of {Large-Scale}{Multi-Tenant}{GPU} clusters for {DNN} training workloads},
   author={Jeon, Myeongjae and Venkataraman, Shivaram and Phanishayee, Amar and Qian, Junjie and Xiao, Wencong and Yang, Fan},
@@ -169,6 +224,7 @@
   year={2019}
 }
 
+% STATUS: unused
 @inproceedings{zhong2024distserve,
   title={{DistServe}: Disaggregating prefill and decoding for goodput-optimized large language model serving},
   author={Zhong, Yinmin and Liu, Shengyu and Chen, Junda and Hu, Jianbo and Zhu, Yibo and Liu, Xuanzhe and Jin, Xin and Zhang, Hao},
@@ -177,6 +233,7 @@
   year={2024}
 }
 
+% STATUS: unused
 @inproceedings{fu2024serverlessllm,
   title={{ServerlessLLM}:{Low-Latency} serverless inference for large language models},
   author={Fu, Yao and Xue, Leyang and Huang, Yeqi and Brabete, Andrei-Octavian and Ustiugov, Dmitrii and Patel, Yuvraj and Mai, Luo},
@@ -185,6 +242,7 @@
   year={2024}
 }
 
+% STATUS: unused
 @inproceedings{sun2024llumnix,
   title={Llumnix: Dynamic scheduling for large language model serving},
   author={Sun, Biao and Huang, Ziming and Zhao, Hanyu and Xiao, Wencong and Zhang, Xinyi and Li, Yong and Lin, Wei},
@@ -193,19 +251,24 @@
   year={2024}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://github.com/NVIDIA/open-gpu-kernel-modules
+% METADATA_NOTE: NVIDIA source repository, initially released in 2022; this entry identifies the project, not a research paper or a pinned driver version.
 @misc{nvidia-open-gpu,
-  author = {NVIDIA},
+  author = {{NVIDIA}},
   title = {{NVIDIA} Open GPU Kernel Modules},
   year = {2022},
   url = {https://github.com/NVIDIA/open-gpu-kernel-modules},
   note = {Accessed: 2025}
 }
+% STATUS: unused
 @book{gupta2012study,
   title={A study of persistent threads style GPU programming for GPGPU workloads},
   author={Gupta, Kshitij and Stuart, Jeff A and Owens, John D},
   year={2012},
   publisher={IEEE}
 }
+% STATUS: unused
 @misc{cupti,
   author       = {NVIDIA},
   title        = {CUDA Profiling Tools Interface (CUPTI)},
@@ -213,6 +276,7 @@
   url          = {https://developer.nvidia.com/cupti},
   note         = {Accessed: 2025-03-02}
 }
+% STATUS: unused
 @inproceedings{stocks2024breaking,
   title={Breaking the Million-Electron and 1 EFLOP/s Barriers: Biomolecular-Scale Ab Initio Molecular Dynamics Using MP2 Potentials},
   author={Stocks, Ryan and Vallejo, Jorge L Galvez and Fiona, CY and Snowdon, Calum and Palethorpe, Elise and Kurzak, Jakub and Bykov, Dmytro and Barca, Giuseppe MJ},
@@ -221,6 +285,7 @@
   year={2024},
   organization={IEEE}
 }
+% STATUS: unused
 @inproceedings{das2023large,
   title={Large-scale materials modeling at quantum accuracy: Ab initio simulations of quasicrystals and interacting extended defects in metallic alloys},
   author={Das, Sambit and Kanungo, Bikash and Subramanian, Vishal and Panigrahi, Gourab and Motamarri, Phani and Rogers, David and Zimmerman, Paul and Gavini, Vikram},
@@ -228,6 +293,7 @@
   pages={1--12},
   year={2023}
 }
+% STATUS: unused
 @inproceedings{fedeli2022pushing,
   title={Pushing the frontier in the design of laser-based electron accelerators with groundbreaking mesh-refined particle-in-cell simulations on exascale-class supercomputers},
   author={Fedeli, Luca and Huebl, Axel and Boillod-Cerneux, France and Clark, Thomas and Gott, Kevin and Hillairet, Conrad and Jaure, Stephan and Leblanc, Adrien and Lehe, R{\'e}mi and Myers, Andrew and others},
@@ -236,6 +302,7 @@
   year={2022},
   organization={IEEE}
 }
+% STATUS: unused
 @inproceedings{liu2021closing,
   title={Closing the" quantum supremacy" gap: achieving real-time simulation of a random quantum circuit using a new sunway supercomputer},
   author={Liu, Yong and Liu, Xin and Li, Fang and Fu, Haohuan and Yang, Yuling and Song, Jiawei and Zhao, Pengpeng and Wang, Zhen and Peng, Dajia and Chen, Huarong and others},
@@ -243,6 +310,7 @@
   pages={1--12},
   year={2021}
 }
+% STATUS: unused
 @article{hong2017gpu,
   title={GPU virtualization and scheduling methods: A comprehensive survey},
   author={Hong, Cheol-Ho and Spence, Ivor and Nikolopoulos, Dimitrios S},
@@ -253,6 +321,7 @@
   year={2017},
   publisher={ACM New York, NY, USA}
 }
+% STATUS: unused
 @inproceedings{kim2022comparative,
   title={Comparative analysis of gpu stream processing between persistent and non-persistent kernels},
   author={Kim, Suhwan and Jung, Changue and Kim, Younghoon},
@@ -261,6 +330,7 @@
   year={2022},
   organization={IEEE}
 }
+% STATUS: unused
 @inproceedings{zhang2023perks,
   title={PERKS: a Locality-Optimized Execution Model for Iterative Memory-bound GPU Applications},
   author={Zhang, Lingqi and Wahib, Mohamed and Chen, Peng and Meng, Jintao and Wang, Xiao and Endo, Toshio and Matsuoka, Satoshi},
@@ -268,6 +338,7 @@
   pages={167--179},
   year={2023}
 }
+% STATUS: unused
 @misc{ai-observability,
   author       = {Valentin Andrei},
   title        = {System@Scale: AI Observability},
@@ -275,6 +346,7 @@
   note         = {Retrieved January 2024},
   year         = {2024}
 }
+% STATUS: unused
 @inproceedings{kousha2019designing,
   title={Designing a profiling and visualization tool for scalable and in-depth analysis of high-performance GPU clusters},
   author={Kousha, Pouya and Ramesh, Bharath and Suresh, Kaushik Kandadi and Chu, Ching-Hsiang and Jain, Arpan and Sarkauskas, Nick and Subramoni, Hari and Panda, Dhabaleswar K},
@@ -283,6 +355,7 @@
   year={2019},
   organization={IEEE}
 }
+% STATUS: unused
 @inproceedings{han2022microsecond,
   title={Microsecond-scale preemption for concurrent {GPU-accelerated}{DNN} inferences},
   author={Han, Mingcong and Zhang, Hanze and Chen, Rong and Chen, Haibo},
@@ -290,6 +363,7 @@
   pages={539--558},
   year={2022}
 }
+% STATUS: unused
 @inproceedings{tan2025pipellm,
   title={Pipellm: Fast and confidential large language model services with speculative pipelined encryption},
   author={Tan, Yifan and Tan, Cheng and Mi, Zeyu and Chen, Haibo},
@@ -297,6 +371,9 @@
   pages={843--857},
   year={2025}
 }
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://www.usenix.org/conference/usenixatc11/timegraph-gpu-scheduling-real-time-multi-tasking-environments
+% METADATA_NOTE: USENIX ATC 2011. Four authors confirmed from the page author list; ignore university affiliations erroneously exported as authors in the website BibTeX.
 @inproceedings{kato2011timegraph,
   title = {{TimeGraph}: {GPU} Scheduling for {Real-Time} {Multi-Tasking} Environments},
   author={Kato, Shinpei and Lakshmanan, Karthik and Rajkumar, Ragunathan and Ishikawa, Yutaka},
@@ -306,6 +383,7 @@
 }
 
 
+% STATUS: unused
 @inproceedings{shen2018cudaadvisor,
   title={Cudaadvisor: Llvm-based runtime profiling for modern gpus},
   author={Shen, Du and Song, Shuaiwen Leon and Li, Ang and Liu, Xu},
@@ -313,6 +391,7 @@
   pages={214--227},
   year={2018}
 }
+% STATUS: unused
 @inproceedings{gu2023fast,
   title={FaST-GShare: Enabling efficient spatio-temporal GPU sharing in serverless computing for deep learning inference},
   author={Gu, Jianfeng and Zhu, Yichao and Wang, Puxuan and Chadha, Mohak and Gerndt, Michael},
@@ -321,6 +400,7 @@
   year={2023}
 }
 
+% STATUS: unused
 @inproceedings{elis2024mechanism,
   title={A Mechanism to Generate Interception Based Tools for HPC Libraries},
   author={Elis, Bengisu and Boehme, David and Pearce, Olga and Schulz, Martin},
@@ -331,12 +411,14 @@
 }
 
 
+% STATUS: unused
 @article{huang2024parallelgpuos,
   title={PARALLELGPUOS: A Concurrent OS-level GPU Checkpoint and Restore System using Validated Speculation},
   author={Huang, Zhuobin and Wei, Xingda and Hao, Yingyi and Chen, Rong and Han, Mingcong and Gu, Jinyu and Chen, Haibo},
   journal={arXiv preprint arXiv:2405.12079},
   year={2024}
 }
+% STATUS: unused
 @inproceedings{condia2022multi,
   title={A multi-level approach to evaluate the impact of GPU permanent faults on CNN's reliability},
   author={Condia, Josie E Rodriguez and Guerrero-Balaguera, Juan-David and Dos Santos, Fernando F and Reorda, Matteo Sonza and Rech, Paolo},
@@ -345,6 +427,7 @@
   year={2022},
   organization={IEEE}
 }
+% STATUS: unused
 @inproceedings{pankratz2021vulkan,
   title={Vulkan Vision: Ray tracing workload characterization using automatic graphics instrumentation},
   author={Pankratz, David and Nowicki, Tyler and Eltantawy, Ahmed and Amaral, Jos{\'e} Nelson},
@@ -353,6 +436,7 @@
   year={2021},
   organization={IEEE}
 }
+% STATUS: unused
 @inproceedings{kamath2021iguard,
   title={IGUARD: In-GPU advanced race detection},
   author={Kamath, Aditya K and Basu, Arkaprava},
@@ -360,12 +444,14 @@
   pages={49--65},
   year={2021}
 }
+% STATUS: unused
 @article{han2024microsecond,
   title={Microsecond-scale Dynamic Validation of Idempotency for GPU Kernels},
   author={Han, Mingcong and Shen, Weihang and Peng, Guanwen and Chen, Rong and Chen, Haibo},
   journal={arXiv preprint arXiv:2410.23661},
   year={2024}
 }
+% STATUS: unused
 @inproceedings{zhong2022xrp,
   title={{XRP}:{In-Kernel} Storage Functions with {EBPF}},
   author={Zhong, Yuhong and Li, Haoyu and Wu, Yu Jian and Zarkadas, Ioannis and Tao, Jeffrey and Mesterhazy, Evan and Makris, Michael and Yang, Junfeng and Tai, Amy and Stutsman, Ryan and others},
@@ -374,6 +460,7 @@
   year={2022}
 }
 
+% STATUS: unused
 @inproceedings{ghigoff2021bmc,
   title={{BMC}: Accelerating memcached using safe in-kernel caching and pre-stack processing},
   author={Ghigoff, Yoann and Sopena, Julien and Lazri, Kahina and Blin, Antoine and Muller, Gilles},
@@ -381,6 +468,7 @@
   pages={487--501},
   year={2021}
 }
+% STATUS: unused
 @article{zhou2021measurement,
   title={Measurement and analysis of GPU-accelerated applications with HPCToolkit},
   author={Zhou, Keren and Adhianto, Laksono and Anderson, Jonathon and Cherian, Aaron and Grubisic, Dejan and Krentel, Mark and Liu, Yumeng and Meng, Xiaozhu and Mellor-Crummey, John},
@@ -390,6 +478,7 @@
   year={2021},
   publisher={Elsevier}
 }
+% STATUS: unused
 @inproceedings{guan2024amanda,
   title={Amanda: Unified Instrumentation Framework for Deep Neural Networks},
   author={Guan, Yue and Qiu, Yuxian and Leng, Jingwen and Yang, Fan and Yu, Shuo and Liu, Yunxin and Feng, Yu and Zhu, Yuhao and Zhou, Lidong and Liang, Yun and others},
@@ -397,6 +486,7 @@
   pages={1--18},
   year={2024}
 }
+% STATUS: unused
 @misc{fosdem25,
     title = {Auto-instrumentation for GPU performance using eBPF},
     organization = {FOSDEM 2025},
@@ -406,12 +496,14 @@
 }
 
 
+% STATUS: unused
 @article{yang2023cxlmemsim,
   title={CXLMemSim: A pure software simulated CXL. mem for performance characterization},
   author={Yang, Yiwei and Safayenikoo, Pooneh and Ma, Jiacheng and Khan, Tanvir Ahmed and Quinn, Andrew},
   journal={arXiv preprint arXiv:2303.06153},
   year={2023}
 }
+% STATUS: unused
 @article{neurosurgeon,
   title={Neurosurgeon: Collaborative intelligence between the cloud and mobile edge},
   author={Kang, Yiping and Hauswald, Johann and Gao, Cao and Rovinski, Austin and Mudge, Trevor and Mars, Jason and Tang, Lingjia},
@@ -423,6 +515,7 @@
   publisher={ACM New York, NY, USA}
 }
 
+% STATUS: unused
 @inproceedings{pavlidakis2024guardian,
   title={Guardian: Safe GPU Sharing in Multi-Tenant Environments},
   author={Pavlidakis, Manos and Vasiliadis, Giorgos and Mavridis, Stelios and Argyros, Anargyros and Chazapis, Antony and Bilas, Angelos},
@@ -431,6 +524,7 @@
   year={2024}
 }
 
+% STATUS: unused
 @inproceedings{chung2024reducing,
   title={Reducing energy bloat in large model training},
   author={Chung, Jae-Won and Gu, Yile and Jang, Insu and Meng, Luoxi and Bansal, Nikhil and Chowdhury, Mosharaf},
@@ -438,6 +532,7 @@
   pages={144--159},
   year={2024}
 }
+% STATUS: unused
 @inproceedings{you2023zeus,
   title={Zeus: Understanding and optimizing {GPU} energy consumption of {DNN} training},
   author={You, Jie and Chung, Jae-Won and Chowdhury, Mosharaf},
@@ -445,6 +540,7 @@
   pages={119--139},
   year={2023}
 }
+% STATUS: unused
 @inproceedings{wu2025vep,
   title={{VEP}: A Two-stage Verification Toolchain for Full {eBPF} Programmability},
   author={Wu, Xiwei and Feng, Yueyang and Huang, Tianyi and Lu, Xiaoyang and Lin, Shengkai and Xie, Lihan and Zhao, Shizhen and Cao, Qinxiang},
@@ -452,6 +548,7 @@
   pages={277--299},
   year={2025}
 }
+% STATUS: unused
 @inproceedings{chen2025etran,
   title={{eTran}: Extensible Kernel Transport with {eBPF}},
   author={Chen, Zhongjie and Meng, Qingkai and Lao, ChonLam and Liu, Yifan and Ren, Fengyuan and Yu, Minlan and Zhou, Yang},
@@ -459,6 +556,7 @@
   pages={407--425},
   year={2025}
 }
+% STATUS: unused
 @inproceedings{xu2025state,
   title={{State-Compute} Replication: Parallelizing {High-Speed} Stateful Packet Processing},
   author={Xu, Qiongwen and Miano, Sebastiano and Gao, Xiangyu and Wang, Tao and Murugadass, Adithya and Zhang, Songyuan and Sivaraman, Anirudh and Antichi, Gianni and Narayana, Srinivas},
@@ -466,6 +564,9 @@
   pages={937--957},
   year={2025}
 }
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://www.usenix.org/conference/osdi25/presentation/zheng-yusheng
+% METADATA_NOTE: Full author sequence and the cited publication venue, year and available page range checked against the official publication page.
 @inproceedings{bpftime,
   title={Extending Applications Safely and Efficiently},
   author = {Zheng, Yusheng and Yu, Tong and Yang, Yiwei and Hu, Yanpeng and Lai, Xiaozheng and Williams, Dan and Quinn, Andi},
@@ -474,6 +575,7 @@
   pages = {557--574},
   url = {https://www.usenix.org/conference/osdi25/presentation/zheng-yusheng}
 }
+% STATUS: unused
 @inproceedings{jin2024beebox,
   title={{BeeBox}: Hardening {BPF} against Transient Execution Attacks},
   author={Jin, Di and Gaidis, Alexander J and Kemerlis, Vasileios P},
@@ -481,6 +583,7 @@
   pages={613--630},
   year={2024}
 }
+% STATUS: unused
 @inproceedings{benson2024netedit,
   title={NetEdit: An Orchestration Platform for eBPF Network Functions at Scale},
   author={Benson, Theophilus A and Kannan, Prashanth and Gupta, Prankur and Madhavan, Balasubramanian and Arora, Kumar Saurabh and Meng, Jie and Lau, Martin and Dhamija, Abhishek and Krishnamurthy, Rajiv and Sundaresan, Srikanth and others},
@@ -488,6 +591,7 @@
   pages={721--734},
   year={2024}
 }
+% STATUS: unused
 @book{sellers2016vulkan,
   title={Vulkan programming guide: The official guide to learning vulkan},
   author={Sellers, Graham and Kessenich, John},
@@ -495,6 +599,7 @@
   publisher={Addison-Wesley Professional}
 }
 
+% STATUS: unused
 @inproceedings{mao2024merlin,
   title={Merlin: Multi-tier Optimization of eBPF Code for Performance and Compactness},
   author={Mao, Jinsong and Ding, Hailun and Zhai, Juan and Ma, Shiqing},
@@ -502,6 +607,7 @@
   pages={639--653},
   year={2024}
 }
+% STATUS: unused
 @inproceedings{zhou2024dint,
   title={{DINT}: Fast {In-Kernel} Distributed Transactions with {eBPF}},
   author={Zhou, Yang and Xiang, Xingyu and Kiley, Matthew and Dharanipragada, Sowmya and Yu, Minlan},
@@ -509,6 +615,7 @@
   pages={401--417},
   year={2024}
 }
+% STATUS: unused
 @inproceedings{wang2024seak,
   title={{SeaK}: Rethinking the Design of a Secure Allocator for {OS} Kernel},
   author={Wang, Zicheng and Guang, Yicheng and Chen, Yueqi and Lin, Zhenpeng and Le, Michael and Le, Dang K and Williams, Dan and Xing, Xinyu and Gu, Zhongshu and Jamjoom, Hani},
@@ -516,42 +623,50 @@
   pages={1171--1188},
   year={2024}
 }
+% STATUS: unused
 @phdthesis{lin2021mitigating,
   title={Mitigating bank conflicts in main memory via selective data duplication and migration},
   author={Lin, Ching-Pei},
   year={2021}
 }
+% STATUS: unused
 @misc{fuzzing,
   author = {fuzzing book author},
   title = {The fuzzing book: Concolic Fuzzing},
   note={\url{https://www.fuzzingbook.org/beta/html/SymbolicFuzzer.html}}
 }
+% STATUS: unused
 @article{minted,
   title={Mint: Evaluating llms in multi-turn interaction with tools and language feedback},
   author={Wang, Xingyao and Wang, Zihan and Liu, Jiateng and Chen, Yangyi and Yuan, Lifan and Peng, Hao and Ji, Heng},
   journal={arXiv preprint arXiv:2309.10691},
   year={2023}
 }
+% STATUS: unused
 @misc{gemini,
   author = {The Google Brain Team},
   title = {Google’s Gemini AI is a Serious Threat to ChatGPT – Here’s Why},
   note={\url{https://www.techopedia.com/google-gemini-is-a-serious-threat-to-chatgpt-heres-why}}
 }
+% STATUS: unused
 @misc{lwn-verifier,
   author = {The Linux Team},
   title = {The eBPF verifier},
   note={\url{https://static.lwn.net/kerneldoc/bpf/verifier.html}}
 }
+% STATUS: unused
 @misc{lwn-runtime,
   author = {The Linux Team},
   title = {The runtime verification subsystem},
   note={\url{https://lwn.net/Articles/857862/}}
 }
+% STATUS: unused
 @misc{harmony-wiki,
   author = {Wikipedia},
   title = {The Wikipedia of HarmonyOS},
   note={\url{https://en.wikipedia.org/wiki/HarmonyOS}}
 }
+% STATUS: unused
 @misc{instruct-gpt,
   author = {OpenAI},
   title = {InstructGPT: Aligning language models to follow instructions},
@@ -559,22 +674,26 @@
 }
 
 
+% STATUS: unused
 @misc{db-gpt,
   author = {magic.chen, etc.},
   title = {DB-GPT: Revolutionizing Database Interactions with Private LLM Technology},
   note={\url{https://github.com/eosphoros-ai/DB-GPT}}
 }
+% STATUS: unused
 @article{sun2023survey,
   title={A Survey of Reasoning with Foundation Models},
   author={Sun, Jiankai and Zheng, Chuanyang and Xie, Enze and Liu, Zhengying and Chu, Ruihang and Qiu, Jianing and Xu, Jiaqi and Ding, Mingyu and Li, Hongyang and Geng, Mengzhe and others},
   journal={arXiv preprint arXiv:2312.11562},
   year={2023}
 }
+% STATUS: unused
 @misc{chat-gpt,
   author = {OpenAI team},
   title = {InternLM: Chat Models tailored for practical scenarios and the training system},
   note={\url{https://chat.openai.com/}}
 }
+% STATUS: unused
 @online{cnet2023microsoft,
     author = {Lisa Eadicicco},
     title = {What Microsoft's AI Push Means for Your Windows Laptop},
@@ -582,59 +701,69 @@
     url = {https://www.cnet.com/tech/services-and-software/what-microsofts-ai-push-means-for-your-windows-laptop/},
     note = {Accessed: 2023-09-25}
 }
+% STATUS: unused
 @misc{gpt4,
   author = {OpenAI},
   title = {GPT-4},
   note={\url{https://openai.com/research/gpt-4}}
 }
 
+% STATUS: unused
 @misc{langchain,
     author = {Robusta Intellegence},
 title = {LangChain},
 note= {\url{https://www.langchain.com/}}
 }
+% STATUS: unused
 @article{human-eval,
   title={Evaluating large language models trained on code},
   author={Chen, Mark and Tworek, Jerry and Jun, Heewoo and Yuan, Qiming and Pinto, Henrique Ponde de Oliveira and Kaplan, Jared and Edwards, Harri and Burda, Yuri and Joseph, Nicholas and Brockman, Greg and others},
   journal={arXiv preprint arXiv:2107.03374},
   year={2021}
 }
+% STATUS: unused
 @article{roziere2023code,
   title={Code Llama: Open Foundation Models for Code},
   author={Rozi{\`e}re, Baptiste and Gehring, Jonas and Gloeckle, Fabian and Sootla, Sten and Gat, Itai and Tan, Xiaoqing Ellen and Adi, Yossi and Liu, Jingyu and Remez, Tal and Rapin, J{\'e}r{\'e}my and others},
   journal={arXiv preprint arXiv:2308.12950},
   year={2023}
 }
+% STATUS: unused
 @article{zhang2023understanding,
   title={Understanding Large Language Model Based Fuzz Driver Generation},
   author={Zhang, Cen and Bai, Mingqiang and Zheng, Yaowen and Li, Yeting and Xie, Xiaofei and Li, Yuekang and Ma, Wei and Sun, Limin and Liu, Yang},
   journal={arXiv preprint arXiv:2307.12469},
   year={2023}
 }
+% STATUS: unused
 @article{charalambous2023new,
   title={A New Era in Software Security: Towards Self-Healing Software via Large Language Models and Formal Verification},
   author={Charalambous, Yiannis and Tihanyi, Norbert and Jain, Ridhi and Sun, Youcheng and Ferrag, Mohamed Amine and Cordeiro, Lucas C},
   journal={arXiv preprint arXiv:2305.14752},
   year={2023}
 }
+% STATUS: unused
 @article{chen2023teaching,
   title={Teaching large language models to self-debug},
   author={Chen, Xinyun and Lin, Maxwell and Sch{\"a}rli, Nathanael and Zhou, Denny},
   journal={arXiv preprint arXiv:2304.05128},
   year={2023}
 }
+% STATUS: unused
 @article{liu2023your,
   title={Is your code generated by chatgpt really correct? rigorous evaluation of large language models for code generation},
   author={Liu, Jiawei and Xia, Chunqiu Steven and Wang, Yuyao and Zhang, Lingming},
   journal={arXiv preprint arXiv:2305.01210},
   year={2023}
 }
+% STATUS: unused
 @article{chang2023chipgpt,
   title={ChipGPT: How far are we from natural language hardware design},
   author={Chang, Kaiyan and Wang, Ying and Ren, Haimeng and Wang, Mengdi and Liang, Shengwen and Han, Yinhe and Li, Huawei and Li, Xiaowei},
   journal={arXiv preprint arXiv:2305.14019},
   year={2023}
 }
+% STATUS: unused
 @article{ouyang2022training,
   title={Training language models to follow instructions with human feedback},
   author={Ouyang, Long and Wu, Jeffrey and Jiang, Xu and Almeida, Diogo and Wainwright, Carroll and Mishkin, Pamela and Zhang, Chong and Agarwal, Sandhini and Slama, Katarina and Ray, Alex and others},
@@ -643,6 +772,7 @@ note= {\url{https://www.langchain.com/}}
   pages={27730--27744},
   year={2022}
 }
+% STATUS: unused
 @article{luo2023wizardcoder,
   title={WizardCoder: Empowering Code Large Language Models with Evol-Instruct},
   author={Luo, Ziyang and Xu, Can and Zhao, Pu and Sun, Qingfeng and Geng, Xiubo and Hu, Wenxiang and Tao, Chongyang and Ma, Jing and Lin, Qingwei and Jiang, Daxin},
@@ -650,12 +780,14 @@ note= {\url{https://www.langchain.com/}}
   year={2023}
 }
 
+% STATUS: unused
 @article{thakur2023verigen,
   title={VeriGen: A Large Language Model for Verilog Code Generation},
   author={Thakur, Shailja and Ahmad, Baleegh and Pearce, Hammond and Tan, Benjamin and Dolan-Gavitt, Brendan and Karri, Ramesh and Garg, Siddharth},
   journal={arXiv preprint arXiv:2308.00708},
   year={2023}
 }
+% STATUS: unused
 @inproceedings{leviathan2023fast,
   title={Fast inference from transformers via speculative decoding},
   author={Leviathan, Yaniv and Kalman, Matan and Matias, Yossi},
@@ -664,35 +796,41 @@ note= {\url{https://www.langchain.com/}}
   year={2023},
   organization={PMLR}
 }
+% STATUS: unused
 @misc{exllamav2,
   author = {The exllama Authors},
   title = {exllamav2: A fast inference library for running LLMs locally on modern consumer-class GPUs},
   note={\url{https://github.com/turboderp/exllamav2}}
 }
+% STATUS: unused
 @article{peng2023rwkv,
   title={RWKV: Reinventing RNNs for the Transformer Era},
   author={Peng, Bo and Alcaide, Eric and Anthony, Quentin and Albalak, Alon and Arcadinho, Samuel and Cao, Huanqi and Cheng, Xin and Chung, Michael and Grella, Matteo and GV, Kranthi Kiran and others},
   journal={arXiv preprint arXiv:2305.13048},
   year={2023}
 }
+% STATUS: unused
 @article{wang2023recursively,
   title={Recursively Summarizing Enables Long-Term Dialogue Memory in Large Language Models},
   author={Wang, Qingyue and Ding, Liang and Cao, Yanan and Tian, Zhiliang and Wang, Shi and Tao, Dacheng and Guo, Li},
   journal={arXiv preprint arXiv:2308.15022},
   year={2023}
 }
+% STATUS: unused
 @article{chen2023accelerating,
   title={Accelerating large language model decoding with speculative sampling},
   author={Chen, Charlie and Borgeaud, Sebastian and Irving, Geoffrey and Lespiau, Jean-Baptiste and Sifre, Laurent and Jumper, John},
   journal={arXiv preprint arXiv:2302.01318},
   year={2023}
 }
+% STATUS: unused
 @article{chen2023diffrate,
   title={DiffRate: Differentiable Compression Rate for Efficient Vision Transformers},
   author={Chen, Mengzhao and Shao, Wenqi and Xu, Peng and Lin, Mingbao and Zhang, Kaipeng and Chao, Fei and Ji, Rongrong and Qiao, Yu and Luo, Ping},
   journal={arXiv preprint arXiv:2305.17997},
   year={2023}
 }
+% STATUS: unused
 @inproceedings{gurfinkel2015seahorn,
   title={SeaHorn: A framework for verifying C programs (competition contribution)},
   author={Gurfinkel, Arie and Kahsai, Temesghen and Navas, Jorge A},
@@ -702,6 +840,7 @@ note= {\url{https://www.langchain.com/}}
   organization={Springer}
 }
 
+% STATUS: unused
 @inproceedings{chipounov2009selective,
   title={Selective symbolic execution},
   author={Chipounov, Vitaly and Georgescu, Vlad and Zamfir, Cristian and Candea, George},
@@ -709,6 +848,7 @@ note= {\url{https://www.langchain.com/}}
   number={CONF},
   year={2009}
 }
+% STATUS: unused
 @inproceedings{poeplau2020symbolic,
   title={Symbolic execution with {SymCC}: Don't interpret, compile!},
   author={Poeplau, Sebastian and Francillon, Aur{\'e}lien},
@@ -717,47 +857,56 @@ note= {\url{https://www.langchain.com/}}
   year={2020}
 }
 
+% STATUS: unused
 @article{huang2023survey,
   title={A Survey of Safety and Trustworthiness of Large Language Models through the Lens of Verification and Validation},
   author={Huang, Xiaowei and Ruan, Wenjie and Huang, Wei and Jin, Gaojie and Dong, Yi and Wu, Changshun and Bensalem, Saddek and Mu, Ronghui and Qi, Yi and Zhao, Xingyu and others},
   journal={arXiv preprint arXiv:2305.11391},
   year={2023}
 }
+% STATUS: unused
 @misc{haybale,
   author = {The haybale Authors},
   title = {haybale: Symbolic execution of LLVM IR, written in Rust},
   note={\url{https://github.com/PLSysSec/haybale}}
 }
+% STATUS: unused
 @misc{fuscia,
   author = {The Fuchsia Authors},
   title = {Fuchsia: Google IoT Micro Kernel Operating System},
   note={\url{https://fuchsia.googlesource.com/fuchsia/}}
 }
+% STATUS: unused
 @misc{tpu,
   author = {Agam Shah},
   title = {Google TPU v5e AI Chip Debuts after Controversial Origins},
   note={\url{https://www.enterpriseai.news/2023/08/31/google-tpu-v5e-ai-chip-debuts-after-controversial-origins/}}
 }
+% STATUS: unused
 @misc{harmony,
   author = {The HarmonyOS Authors},
   title = {HarmonyOS: Huawei Phone Micro Kernel Operating System},
   note={\url{}}
 }
+% STATUS: unused
 @misc{bpf-next,
   author = {The Linux Team},
   title = {The source code of Linux bpf-next kernel},
   note={\url{https://git.kernel.org/pub/scm/linux/kernel/git/bpf/bpf-next.git/}}
 }
+% STATUS: unused
 @misc{bpf-strace,
   author = {Gregg Brandon},
   title = {strace Wow Much Syscall},
   note={\url{https://www.brendangregg.com/blog/2014-05-11/strace-wow-much-syscall.html}}
 }
+% STATUS: unused
 @misc{pixel6,
   author = {The Google Pixelf6 Team},
   title = {The source code of Google Pixel6 Android kernel},
   note={\url{https://android.googlesource.com/device/google/raviole-kernel/}}
 }
+% STATUS: unused
 @inproceedings{humphries2021ghost,
   title={ghost: Fast \& flexible user-space delegation of linux scheduling},
   author={Humphries, Jack Tigar and Natu, Neel and Chaugule, Ashwin and Weisse, Ofir and Rhoden, Barret and Don, Josh and Rizzo, Luigi and Rombakh, Oleg and Turner, Paul and Kozyrakis, Christos},
@@ -765,6 +914,7 @@ note= {\url{https://www.langchain.com/}}
   pages={588--604},
   year={2021}
 }
+% STATUS: unused
 @inproceedings{yang2023lambda,
   title={{$\lambda$-IO}: A Unified {IO} Stack for Computational Storage},
   author={Yang, Zhe and Lu, Youyou and Liao, Xiaojian and Chen, Youmin and Li, Junru and He, Siyu and Shu, Jiwu},
@@ -772,6 +922,7 @@ note= {\url{https://www.langchain.com/}}
   pages={347--362},
   year={2023}
 }
+% STATUS: unused
 @inproceedings{zhou2023electrode,
   title={Electrode: Accelerating Distributed Protocols with {eBPF}},
   author={Zhou, Yang and Wang, Zezhou and Dharanipragada, Sowmya and Yu, Minlan},
@@ -779,6 +930,7 @@ note= {\url{https://www.langchain.com/}}
   pages={1391--1407},
   year={2023}
 }
+% STATUS: unused
 @inproceedings{klein2009sel4,
   title={seL4: Formal verification of an OS kernel},
   author={Klein, Gerwin and Elphinstone, Kevin and Heiser, Gernot and Andronick, June and Cock, David and Derrin, Philip and Elkaduwe, Dhammika and Engelhardt, Kai and Kolanski, Rafal and Norrish, Michael and others},
@@ -786,6 +938,7 @@ note= {\url{https://www.langchain.com/}}
   pages={207--220},
   year={2009}
 }
+% STATUS: unused
 @inproceedings{Jia23,
   title={f},
   author={Jia, Jinghao and Sahu, Raj and Oswald, Adam and Williams, Dan and Le, Michael V and Xu, Tianyin},
@@ -793,6 +946,7 @@ note= {\url{https://www.langchain.com/}}
   pages={150--157},
   year={2023}
 }
+% STATUS: unused
 @inproceedings{she2019neuzz,
   title={Neuzz: Efficient fuzzing with neural program smoothing},
   author={She, Dongdong and Pei, Kexin and Epstein, Dave and Yang, Junfeng and Ray, Baishakhi and Jana, Suman},
@@ -801,6 +955,7 @@ note= {\url{https://www.langchain.com/}}
   year={2019},
   organization={IEEE}
 }
+% STATUS: unused
 @inproceedings{sun2021healer,
   title={Healer: Relation learning guided kernel fuzzing},
   author={Sun, Hao and Shen, Yuheng and Wang, Cong and Liu, Jianzhong and Jiang, Yu and Chen, Ting and Cui, Aiguo},
@@ -808,6 +963,7 @@ note= {\url{https://www.langchain.com/}}
   pages={344--358},
   year={2021}
 }
+% STATUS: unused
 @inproceedings{klee,
   title={Klee: Unassisted and automatic generation of high-coverage tests for complex systems programs.},
   author={Cadar, Cristian and Dunbar, Daniel and Engler, Dawson R and others},
@@ -816,30 +972,35 @@ note= {\url{https://www.langchain.com/}}
   pages={209--224},
   year={2008}
 }
+% STATUS: unused
 @article{nijkamp2022codegen,
   title={Codegen: An open large language model for code with multi-turn program synthesis},
   author={Nijkamp, Erik and Pang, Bo and Hayashi, Hiroaki and Tu, Lifu and Wang, Huan and Zhou, Yingbo and Savarese, Silvio and Xiong, Caiming},
   journal={arXiv preprint arXiv:2203.13474},
   year={2022}
 }
+% STATUS: unused
 @article{poesia2023certified,
   title={Certified Reasoning with Language Models},
   author={Poesia, Gabriel and Gandhi, Kanishk and Zelikman, Eric and Goodman, Noah D},
   journal={arXiv preprint arXiv:2306.04031},
   year={2023}
 }
+% STATUS: unused
 @article{yang2023large,
   title={Large Language Models as Optimizers},
   author={Yang, Chengrun and Wang, Xuezhi and Lu, Yifeng and Liu, Hanxiao and Le, Quoc V and Zhou, Denny and Chen, Xinyun},
   journal={arXiv preprint arXiv:2309.03409},
   year={2023}
 }
+% STATUS: unused
 @article{NL2Code,
   title={Natural Language to Code: How Far Are We?},
   author={Kaiyan Chang, Ying Wang, Haimeng Ren, Mengdi Wang, Shengwen Liang, Yinhe Han, Huawei Li, Xiaowei Li},
   journal={The 31st ACM Joint European Software Engineering},
   year={2023}
 }
+% STATUS: unused
 @article{alpha-zero,
   title={A general reinforcement learning algorithm that masters chess, shogi, and Go through self-play},
   author={Silver, David and Hubert, Thomas and Schrittwieser, Julian and Antonoglou, Ioannis and Lai, Matthew and Guez, Arthur and Lanctot, Marc and Sifre, Laurent and Kumaran, Dharshan and Graepel, Thore and others},
@@ -850,6 +1011,7 @@ note= {\url{https://www.langchain.com/}}
   year={2018},
   publisher={American Association for the Advancement of Science}
 }
+% STATUS: unused
 @misc{bcc,
   author = {IO Visor Project},
   title = {BPF Compiler Collection (bcc)},
@@ -857,6 +1019,7 @@ note= {\url{https://www.langchain.com/}}
   note = {Available: \url{https://github.com/iovisor/bcc}},
 }
 
+% STATUS: unused
 @inproceedings {Zhong22,
 author = {Yuhong Zhong and Haoyu Li and Yu Jian Wu and Ioannis Zarkadas and Jeffrey Tao and Evan Mesterhazy and Michael Makris and Junfeng Yang and Amy Tai and Ryan Stutsman and Asaf Cidon},
 title = {{XRP}: {In-Kernel} Storage Functions with {eBPF}},
@@ -870,12 +1033,14 @@ publisher = {USENIX Association},
 month = jul
 }
 
+% STATUS: unused
 @misc{eBPFWindows,
 author = {eBPF for Windows Contributors},
 title = {eBPF for Windows},
 year = {2023}, 
 note = {\url{https://github.com/microsoft/ebpf-for-windows}}}
 
+% STATUS: unused
 @misc{Gregg16,
 author = {Brenden Gregg},
 title = {Linux Extended BPF (eBPF) Tracing Tools},
@@ -883,6 +1048,7 @@ year = {2016},
 note = {\url{https://www.brendangregg.com/ebpf.html}}
 }
 
+% STATUS: unused
 @misc{Gregg20,
 author = {Brenden Gregg},
 title = {BPF binaries: BTF, CO-RE, and the future of BPF perl tools},
@@ -892,6 +1058,7 @@ note = {\url{https://www.brendangregg.com/blog/2020-11-04/bpf-co-re-btf-libbpf.h
 
 
 
+% STATUS: unused
 @misc{Gregg01,
 author = {Brenden Gregg},
 title = {Brenden Gregg's Homepage},
@@ -899,17 +1066,20 @@ year = {2001},
 note = {\url{https://www.brendangregg.com/}}
 }
 
+% STATUS: unused
 @misc{Alibaba23,
 author = {Alibaba Cloud Native Community},
 title = {Seven Core Issues about eBPF},
 year = {2023}, 
 note = {\url{https://www.alibabacloud.com/blog/seven-core-issues-about-ebpf_599668}}}
+% STATUS: unused
 @misc{seccomp,
 author = {Seccomp using eBPF Filter},
 title = {Seven Core Issues about eBPF},
 year = {2023}, 
 note = {\url{https://www.kernel.org/doc/html/next/userspace-api/seccomp_filter.html}}}
 
+% STATUS: unused
 @inproceedings{zhou2023userspace,
   title={Userspace Bypass: Accelerating Syscall-intensive Applications},
   author={Zhou, Zhe and Bi, Yanxiang and Wan, Junpeng and Zhou, Yangfan and Li, Zhou},
@@ -918,47 +1088,55 @@ note = {\url{https://www.kernel.org/doc/html/next/userspace-api/seccomp_filter.h
   year={2023}
 }
 
+% STATUS: unused
 @article{sun2023codemark,
   title={CodeMark: Imperceptible Watermarking for Code Datasets against Neural Code Completion Models},
   author={Sun, Zhensu and Du, Xiaoning and Song, Fu and Li, Li},
   journal={arXiv preprint arXiv:2308.14401},
   year={2023}
 }
+% STATUS: unused
 @article{dhuliawala2023chain,
   title={Chain-of-Verification Reduces Hallucination in Large Language Models},
   author={Dhuliawala, Shehzaad and Komeili, Mojtaba and Xu, Jing and Raileanu, Roberta and Li, Xian and Celikyilmaz, Asli and Weston, Jason},
   journal={arXiv preprint arXiv:2309.11495},
   year={2023}
 }
+% STATUS: unused
 @article{gregg2021computing,
   title={Computing Performance},
   author={Gregg, Brendan},
   year={2021}
 }
+% STATUS: unused
 @article{cummins2023large,
   title={Large Language Models for Compiler Optimization},
   author={Cummins, Chris and Seeker, Volker and Grubisic, Dejan and Elhoushi, Mostafa and Liang, Youwei and Roziere, Baptiste and Gehring, Jonas and Gloeckle, Fabian and Hazelwood, Kim and Synnaeve, Gabriel and others},
   journal={arXiv preprint arXiv:2309.07062},
   year={2023}
 }
+% STATUS: unused
 @article{jia2023programmable,
   title={Programmable System Call Security with eBPF},
   author={Jia, Jinghao and Zhu, YiFei and Williams, Dan and Arcangeli, Andrea and Canella, Claudio and Franke, Hubertus and Feldman-Fitzthum, Tobin and Skarlatos, Dimitrios and Gruss, Daniel and Xu, Tianyin},
   journal={arXiv preprint arXiv:2302.10366},
   year={2023}
 }
+% STATUS: unused
 @article{wu2021recursively,
   title={Recursively summarizing books with human feedback},
   author={Wu, Jeff and Ouyang, Long and Ziegler, Daniel M and Stiennon, Nisan and Lowe, Ryan and Leike, Jan and Christiano, Paul},
   journal={arXiv preprint arXiv:2109.10862},
   year={2021}
 }
+% STATUS: unused
 @article{ziegler2019fine,
   title={Fine-tuning language models from human preferences},
   author={Ziegler, Daniel M and Stiennon, Nisan and Wu, Jeffrey and Brown, Tom B and Radford, Alec and Amodei, Dario and Christiano, Paul and Irving, Geoffrey},
   journal={arXiv preprint arXiv:1909.08593},
   year={2019}
 }
+% STATUS: unused
 @inproceedings{li2022path,
   title={Path-sensitive and alias-aware typestate analysis for detecting os bugs},
   author={Li, Tuo and Bai, Jia-Ju and Sui, Yulei and Hu, Shi-Min},
@@ -966,12 +1144,14 @@ note = {\url{https://www.kernel.org/doc/html/next/userspace-api/seccomp_filter.h
   pages={859--872},
   year={2022}
 }
+% STATUS: unused
 @misc{amx,
   author = {Julien Simon},
   title = {Accelerating PyTorch Transformers with Intel Sapphire Rapids, part 1},
   note={\url{https://huggingface.co/blog/intel-sapphire-rapids}}
 }
 
+% STATUS: unused
 @article{Mayer21,
 title = {Performance Monitoring with Hˆ2: Hybrid Kernel/eBPF data plane for SRv6 based Hybrid SDN},
 journal = {Computer Networks},
@@ -986,6 +1166,7 @@ keywords = {Linux networking, eBPF, XDP, SRv6, Performance Monitoring, Loss Moni
 }
 
 
+% STATUS: unused
 @inproceedings{Xu21,
 author = {Xu, Qiongwen and Wong, Michael D. and Wagle, Tanvi and Narayana, Srinivas and Sivaraman, Anirudh},
 title = {Synthesizing Safe and Efficient Kernel Extensions for Packet Processing},
@@ -1003,6 +1184,7 @@ location = {Virtual Event, USA},
 series = {SIGCOMM '21}
 }
 
+% STATUS: unused
 @inproceedings{jia2023practical,
   title={Practical and Flexible Kernel CFI Enforcement using eBPF},
   author={Jia, Jinghao and Le, Michael V and Ahmed, Salman and Williams, Dan and Jamjoom, Hani},
@@ -1012,6 +1194,7 @@ series = {SIGCOMM '21}
 }
 
 
+% STATUS: unused
 @misc{austin21,
       title={Program Synthesis with Large Language Models}, 
       author={Jacob Austin and Augustus Odena and Maxwell Nye and Maarten Bosma and Henryk Michalewski and David Dohan and Ellen Jiang and Carrie Cai and Michael Terry and Quoc Le and Charles Sutton},
@@ -1020,12 +1203,14 @@ series = {SIGCOMM '21}
       archivePrefix={arXiv},
       primaryClass={cs.PL}
 }
+% STATUS: unused
 @article{wang2023mint,
   title={Mint: Evaluating llms in multi-turn interaction with tools and language feedback},
   author={Wang, Xingyao and Wang, Zihan and Liu, Jiateng and Chen, Yangyi and Yuan, Lifan and Peng, Hao and Ji, Heng},
   journal={arXiv preprint arXiv:2309.10691},
   year={2023}
 }
+% STATUS: unused
 @inproceedings{feng20,
 author = {Feng, Zhangyin and Guo, Daya and Tang, Duyu and Duan, Nan and Feng, Xiaocheng and Gong (YIMING), Ming and Shou, Linjun and Qin, Bing and Liu, Ting and Jiang, Daxin and Zhou, Ming},
 title = {CodeBERT: A Pre-Trained Model for Programming and Natural Languages},
@@ -1035,6 +1220,7 @@ month = {September},
 url = {https://www.microsoft.com/en-us/research/publication/codebert-a-pre-trained-model-for-programming-and-natural-languages/},
 }
 
+% STATUS: unused
 @article{chen21,
   title={Evaluating large language models trained on code},
   author={Chen, Mark and Tworek, Jerry and Jun, Heewoo and Yuan, Qiming and Pinto, Henrique Ponde de Oliveira and Kaplan, Jared and Edwards, Harri and Burda, Yuri and Joseph, Nicholas and Brockman, Greg and others},
@@ -1044,6 +1230,7 @@ url = {https://www.microsoft.com/en-us/research/publication/codebert-a-pre-train
 
 
 
+% STATUS: unused
 @inproceedings{SolarLezama06,
 author = {Solar-Lezama, Armando and Tancau, Liviu and Bodik, Rastislav and Seshia, Sanjit and Saraswat, Vijay},
 title = {Combinatorial Sketching for Finite Programs},
@@ -1062,6 +1249,7 @@ location = {San Jose, California, USA},
 series = {ASPLOS XII}
 }
 
+% STATUS: unused
 @inproceedings{li2020closed,
   title={Closed loop neural-symbolic learning via integrating neural perception, grammar parsing, and symbolic reasoning},
   author={Li, Qing and Huang, Siyuan and Hong, Yining and Chen, Yixin and Wu, Ying Nian and Zhu, Song-Chun},
@@ -1072,6 +1260,7 @@ series = {ASPLOS XII}
 }
 
 
+% STATUS: unused
 @inproceedings{Jha10,
 author = {Jha, Susmit and Gulwani, Sumit and Seshia, Sanjit A. and Tiwari, Ashish},
 title = {Oracle-Guided Component-Based Program Synthesis},
@@ -1089,6 +1278,7 @@ location = {Cape Town, South Africa},
 series = {ICSE '10}
 }
 
+% STATUS: unused
 @article{Li22,
 	doi = {10.1126/science.abq1158},
 	url = {https://doi.org/10.1126%2Fscience.abq1158},
@@ -1105,6 +1295,7 @@ series = {ICSE '10}
 }
 
 
+% STATUS: unused
 @inproceedings{Torlak13,
 author = {Torlak, Emina and Bodik, Rastislav},
 title = {Growing Solver-Aided Languages with Rosette},
@@ -1121,6 +1312,7 @@ keywords = {solver-aided languages},
 location = {Indianapolis, Indiana, USA},
 series = {Onward! 2013}
 }
+% STATUS: unused
 @InProceedings{10.1007/978-3-030-16722-6_4,
 author="Zhang, Min
 and Song, Fu
@@ -1137,12 +1329,14 @@ pages="61--78",
 abstract="The Clock Constraint Specification Language (CCSL) is a formalism for specifying logical-time constraints on events for the design of real-time embedded systems. A central verification problem of CCSL is to check whether events are schedulable under logical constraints. Although many efforts have been made addressing this problem, the problem is still open. In this paper, we show that the bounded scheduling problem is NP-complete and then propose an efficient SMT-based decision procedure which is sound and complete. Based on this decision procedure, we present a sound algorithm for the general scheduling problem. We implement our algorithm in a prototype tool and illustrate its utility in schedulability analysis in designing real-world systems and automatic proving of algebraic properties of CCSL constraints. Experimental results demonstrate its effectiveness and efficiency.",
 isbn="978-3-030-16722-6"
 }
+% STATUS: unused
 @article{li2023starcoder,
   title={StarCoder: may the source be with you!},
   author={Li, Raymond and Allal, Loubna Ben and Zi, Yangtian and Muennighoff, Niklas and Kocetkov, Denis and Mou, Chenghao and Marone, Marc and Akiki, Christopher and Li, Jia and Chim, Jenny and others},
   journal={arXiv preprint arXiv:2305.06161},
   year={2023}
 }
+% STATUS: unused
 @inproceedings{berger2023triangulating,
   title={Triangulating Python Performance Issues with {SCALENE}},
   author={Berger, Emery D and Stern, Sam and Pizzorno, Juan Altmayer},
@@ -1151,12 +1345,14 @@ isbn="978-3-030-16722-6"
   year={2023}
 }
 
+% STATUS: unused
 @article{tan2023security,
   title={Security Verification of Low-Trust Architectures},
   author={Tan, Qinhan and Fisseha, Yonathan and Chen, Shibo and Biernacki, Lauren and Jeannin, Jean-Baptiste and Malik, Sharad and Austin, Todd},
   journal={arXiv preprint arXiv:2309.00181},
   year={2023}
 }
+% STATUS: unused
 @article{10.1145/1993316.1993506,
 author = {Gulwani, Sumit and Jha, Susmit and Tiwari, Ashish and Venkatesan, Ramarathnam},
 title = {Synthesis of Loop-Free Programs},
@@ -1177,6 +1373,7 @@ numpages = {12},
 keywords = {smt, program synthesis, component-based synthesis}
 }
 
+% STATUS: unused
 @inproceedings{Gulwani11,
 author = {Gulwani, Sumit and Jha, Susmit and Tiwari, Ashish and Venkatesan, Ramarathnam},
 title = {Synthesis of Loop-Free Programs},
@@ -1194,6 +1391,7 @@ location = {San Jose, California, USA},
 series = {PLDI '11}
 }
 
+% STATUS: unused
 @article{Alur18,
 author = {Alur, Rajeev and Singh, Rishabh and Fisman, Dana and Solar-Lezama, Armando},
 title = {Search-Based Program Synthesis},
@@ -1212,6 +1410,7 @@ month = {nov},
 pages = {84–93},
 numpages = {10}
 }
+% STATUS: unused
 @misc{bpftime2,
       title={bpftime: userspace eBPF Runtime for Uprobe, Syscall and Kernel-User Interactions}, 
       author={Yusheng Zheng and Tong Yu and Yiwei Yang and Yanpeng Hu and Xiaozheng Lai and Andrew Quinn},
@@ -1220,6 +1419,7 @@ numpages = {10}
       archivePrefix={arXiv},
       primaryClass={cs.OS}
 }
+% STATUS: unused
 @misc{ebpf-exporter,
     author = {Cloudflare},
     title = {ebpf\_exporter: eBPF-based exporter for Prometheus},
@@ -1228,6 +1428,7 @@ numpages = {10}
     howpublished = {GitHub repository}
 }
 
+% STATUS: unused
 @misc{bpftrace,
     author = {IO Visor},
     title = {bpftrace: High-level tracing language for Linux eBPF},
@@ -1236,6 +1437,7 @@ numpages = {10}
     howpublished = {GitHub repository}
 }
 
+% STATUS: unused
 @inproceedings{Necula96,
 author = {Necula, George C. and Lee, Peter},
 title = {Safe Kernel Extensions without Run-Time Checking},
@@ -1252,6 +1454,7 @@ location = {Seattle, Washington, USA},
 series = {OSDI '96}
 }
 
+% STATUS: unused
 @inproceedings{Bershad95,
 author = {Bershad, B. N. and Savage, S. and Pardyak, P. and Sirer, E. G. and Fiuczynski, M. E. and Becker, D. and Chambers, C. and Eggers, S.},
 title = {Extensibility Safety and Performance in the SPIN Operating System},
@@ -1269,6 +1472,7 @@ series = {SOSP '95}
 }
 
 
+% STATUS: unused
 @inproceedings{Swift03,
 author = {Swift, Michael M. and Bershad, Brian N. and Levy, Henry M.},
 title = {Improving the Reliability of Commodity Operating Systems},
@@ -1287,6 +1491,7 @@ series = {SOSP '03}
 }
 
 
+% STATUS: unused
 @inproceedings{Jia23_cfi,
 author = {Jia, Jinghao and Le, Michael V. and Ahmed, Salman and Williams, Dan and Jamjoom, Hani},
 title = {Practical and Flexible Kernel CFI Enforcement Using EBPF},
@@ -1305,6 +1510,7 @@ series = {eBPF '23}
 }
 
 
+% STATUS: unused
 @inproceedings{Chipounov11,
 author = {Chipounov, Vitaly and Kuznetsov, Volodymyr and Candea, George},
 title = {S2E: A Platform for in-Vivo Multi-Path Analysis of Software Systems},
@@ -1323,6 +1529,7 @@ series = {ASPLOS XVI}
 }
 
 
+% STATUS: unused
 @InProceedings{Clarke82,
 author="Clarke, Edmund M.
 and Emerson, E. Allen",
@@ -1337,6 +1544,7 @@ abstract="We have shown that it is possible to automatically synthesize the sync
 isbn="978-3-540-39047-3"
 }
 
+% STATUS: unused
 @InProceedings{Queille82,
 author="Queille, J. P.
 and Sifakis, J.",
@@ -1352,6 +1560,7 @@ abstract="The aim of this paper is to illustrate by an example, the alternating 
 isbn="978-3-540-39184-5"
 }
 
+% STATUS: unused
 @inproceedings{jouppi2023tpu,
   title={Tpu v4: An optically reconfigurable supercomputer for machine learning with hardware support for embeddings},
   author={Jouppi, Norm and Kurian, George and Li, Sheng and Ma, Peter and Nagarajan, Rahul and Nai, Lifeng and Patil, Nishant and Subramanian, Suvinay and Swing, Andy and Towles, Brian and others},
@@ -1361,6 +1570,7 @@ isbn="978-3-540-39184-5"
 }
 
 
+% STATUS: unused
 @article{Zugner21,
   title={Language-agnostic representation learning of source code from structure and context},
   author={Z{\"u}gner, Daniel and Kirschstein, Tobias and Catasta, Michele and Leskovec, Jure and G{\"u}nnemann, Stephan},
@@ -1369,6 +1579,7 @@ isbn="978-3-540-39184-5"
 }
 
 
+% STATUS: unused
 @inproceedings{Ahmad21,
     title = "Unified Pre-training for Program Understanding and Generation",
     author = "Ahmad, Wasi  and
@@ -1385,6 +1596,7 @@ isbn="978-3-540-39184-5"
     pages = "2655--2668",
 }
 
+% STATUS: unused
 @article{Wu20,
   title={Code summarization with structure-induced transformer},
   author={Wu, Hongqiu and Zhao, Hai and Zhang, Min},
@@ -1392,6 +1604,7 @@ isbn="978-3-540-39184-5"
   year={2020}
 }
 
+% STATUS: unused
 @article{Phan21,
   title={Cotext: Multi-task learning with code-text transformer},
   author={Phan, Long and Tran, Hieu and Le, Daniel and Nguyen, Hieu and Anibal, James and Peltekian, Alec and Ye, Yanfang},
@@ -1399,6 +1612,7 @@ isbn="978-3-540-39184-5"
   year={2021}
 }
 
+% STATUS: unused
 @misc{Elnaggar21,
       title={CodeTrans: Towards Cracking the Language of Silicon's Code Through Self-Supervised Deep Learning and High Performance Computing}, 
       author={Ahmed Elnaggar and Wei Ding and Llion Jones and Tom Gibbs and Tamas Feher and Christoph Angerer and Silvia Severini and Florian Matthes and Burkhard Rost},
@@ -1408,6 +1622,7 @@ isbn="978-3-540-39184-5"
       primaryClass={cs.SE}
 }
 
+% STATUS: unused
 @article{Wang20,
   title={Generalizing from a few examples: A survey on few-shot learning},
   author={Wang, Yaqing and Yao, Quanming and Kwok, James T and Ni, Lionel M},
@@ -1419,6 +1634,7 @@ isbn="978-3-540-39184-5"
   publisher={ACM New York, NY, USA}
 }
 
+% STATUS: unused
 @inproceedings{Wang21,
   title={Milvus: A purpose-built vector data management system},
   author={Wang, Jianguo and Yi, Xiaomeng and Guo, Rentong and Jin, Hai and Xu, Peng and Li, Shengjun and Wang, Xiangyu and Guo, Xiangzhou and Li, Chengming and Xu, Xiaohai and others},
@@ -1428,6 +1644,7 @@ isbn="978-3-540-39184-5"
 }
 
 
+% STATUS: unused
 @inproceedings{Perkins04,
 author = {Perkins, Jeff H. and Ernst, Michael D.},
 title = {Efficient Incremental Algorithms for Dynamic Detection of Likely Invariants},
@@ -1446,6 +1663,7 @@ location = {Newport Beach, CA, USA},
 series = {SIGSOFT '04/FSE-12}
 }
 
+% STATUS: unused
 @inproceedings{DeMoura08,
   title={Z3: An efficient SMT solver},
   author={De Moura, Leonardo and Bj{\o}rner, Nikolaj},
@@ -1454,6 +1672,7 @@ series = {SIGSOFT '04/FSE-12}
   year={2008},
   organization={Springer}
 }
+% STATUS: unused
 @INPROCEEDINGS{1550984,
   author={Patil, H. and Cohn, R. and Charney, M. and Kapoor, R. and Sun, A. and Karunanidhi, A.},
   booktitle={37th International Symposium on Microarchitecture (MICRO-37'04)}, 
@@ -1464,6 +1683,7 @@ series = {SIGSOFT '04/FSE-12}
   pages={81-92},
   doi={10.1109/MICRO.2004.28}}
 
+% STATUS: unused
 @inproceedings{shen2022soter,
   title={{SOTER}: Guarding black-box inference for general neural networks at the edge},
   author={Shen, Tianxiang and Qi, Ji and Jiang, Jianyu and Wang, Xian and Wen, Siyuan and Chen, Xusheng and Zhao, Shixiong and Wang, Sen and Chen, Li and Luo, Xiapu and others},
@@ -1471,6 +1691,7 @@ series = {SIGSOFT '04/FSE-12}
   pages={723--738},
   year={2022}
 }
+% STATUS: unused
 @inproceedings{mai2023honeycomb,
   title={Honeycomb: Secure and efficient {GPU} executions via static validation},
   author={Mai, Haohui and Zhao, Jiacheng and Zheng, Hongren and Zhao, Yiyang and Liu, Zibin and Gao, Mingyu and Wang, Cong and Cui, Huimin and Feng, Xiaobing and Kozyrakis, Christos},
@@ -1478,6 +1699,9 @@ series = {SIGSOFT '04/FSE-12}
   pages={155--172},
   year={2023}
 }
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/3600006.3613165
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{kwon2023efficient,
   title={Efficient memory management for large language model serving with pagedattention},
   author={Kwon, Woosuk and Li, Zhuohan and Zhuang, Siyuan and Sheng, Ying and Zheng, Lianmin and Yu, Cody Hao and Gonzalez, Joseph and Zhang, Hao and Stoica, Ion},
@@ -1488,13 +1712,18 @@ series = {SIGSOFT '04/FSE-12}
   url = {https://doi.org/10.1145/3600006.3613165}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://rocm.docs.amd.com/en/docs-6.2.0/conceptual/gpu-memory.html
+% METADATA_NOTE: AMD ROCm documentation, explicitly version docs-6.2.0; publisher copyright 2024.
 @manual{rocm-gpu-memory,
+  author       = {{Advanced Micro Devices}},
   title        = {GPU memory},
   organization = {AMD ROCm Documentation},
   year         = {2024},
   url          = {https://rocm.docs.amd.com/en/docs-6.2.0/conceptual/gpu-memory.html},
   }
 
+% STATUS: unused
 @manual{gpu-memory,
   title        = {Unified memory management},
   organization = {AMD ROCm HIP Runtime API},
@@ -1503,6 +1732,7 @@ series = {SIGSOFT '04/FSE-12}
   note         = {\url{https://rocm.docs.amd.com/projects/HIP/en/docs-6.3.0/how-to/hip_runtime_api/memory_management/unified_memory.html}}
 }
 
+% STATUS: unused
 @misc{amd-node-memory-model,
   author       = {AMD},
   title        = {AMD Node Memory Model},
@@ -1510,6 +1740,7 @@ series = {SIGSOFT '04/FSE-12}
   year         = {2022}
 }
 
+% STATUS: unused
 @misc{kuehling-kfd-svm,
   author       = {Felix Kuehling and others},
   title        = {Heterogeneous Memory Management and KFD Shared Virtual Memory for AMD GPUs},
@@ -1518,20 +1749,37 @@ series = {SIGSOFT '04/FSE-12}
   note         = {\url{https://github.com/RadeonOpenCompute/ROCK-Kernel-Driver}}
 }
 
+% VERIFIED: unverified
+% REAL: yes
+% PDF: not available
+% ABSTRACT: Documents Linux heterogeneous memory management, shared address spaces, and migration between system and device memory.
+% USED_FOR: Portability of the host-side memory-management interfaces.
+% CHECK_NOTE: The checker flags a title-prefix collision with the unused KFD talk entry; these are different resources.
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://docs.kernel.org/mm/hmm.html
+% METADATA_NOTE: Linux documentation, undated current page. Collective project attribution; 2026 is the access year, not an asserted first-publication year.
 @manual{linux-gpusvm-doc,
+  author       = {{The Linux Kernel Contributors}},
   title = {Heterogeneous Memory Management (HMM)},
   organization = {The Linux Kernel Documentation},
-  year         = {2023},
+  year         = {2026},
   url = {https://docs.kernel.org/mm/hmm.html},
-  }
+  note = {Online documentation; year denotes access year. Accessed September 9, 2026}
+}
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://docs.kernel.org/gpu/drm-mm.html#gpu-scheduler
+% METADATA_NOTE: GPU Scheduler section of DRM Memory Management. Undated current Linux documentation; 2026 denotes access year.
 @manual{drm-gpu-sched,
+  author       = {{The Linux Kernel Contributors}},
   title        = {DRM GPU scheduler},
   organization = {The Linux Kernel Documentation},
-  year         = {2024},
-  url          = {https://docs.kernel.org/gpu/drm-mm.html},
-  }
+  year         = {2026},
+  url          = {https://docs.kernel.org/gpu/drm-mm.html#gpu-scheduler},
+  note = {Online documentation; year denotes access year. Accessed September 9, 2026}
+}
 
+% STATUS: unused
 @misc{deshmukh-gsoc-sched,
   author       = {Nayan Deshmukh},
   title        = {Improving the Linux/DRM GPU scheduler},
@@ -1540,13 +1788,19 @@ series = {SIGSOFT '04/FSE-12}
   note         = {\url{https://xdc2018.x.org/slides/Nayan_XDC.pdf}}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://docs.kernel.org/gpu/amdgpu/userq.html
+% METADATA_NOTE: User Mode Queues in current Linux documentation. Undated page; 2026 denotes access year.
 @manual{amdgpu-userq-doc,
+  author       = {{The Linux Kernel Contributors}},
   title        = {User Mode Queues},
   organization = {The Linux Kernel Documentation},
-  year = {2025},
+  year = {2026},
   url          = {https://docs.kernel.org/gpu/amdgpu/userq.html},
-  }
+  note = {Online documentation; year denotes access year. Accessed September 9, 2026}
+}
 
+% STATUS: unused
 @manual{rocm-dbgapi,
   title        = {AMD Debugger API Specification},
   organization = {AMD ROCm DBGAPI},
@@ -1555,6 +1809,7 @@ series = {SIGSOFT '04/FSE-12}
   note         = {\url{https://rocm.docs.amd.com/projects/ROCdbgapi/en/docs-5.5.1/doxygen/docBin/html/index.html}}
 }
 
+% STATUS: unused
 @manual{amd-oversubscription,
   title        = {Oversubscription of hardware resources in AMD Instinct GPUs},
   organization = {AMD Instinct Documentation},
@@ -1563,6 +1818,7 @@ series = {SIGSOFT '04/FSE-12}
   note         = {\url{https://instinct.docs.amd.com/projects/amdgpu-docs/en/latest/conceptual/oversubscription.html}}
 }
 
+% STATUS: unused
 @manual{llvm-amdgpu-backend,
   title        = {User Guide for AMDGPU Backend},
   organization = {LLVM Project},
@@ -1571,6 +1827,7 @@ series = {SIGSOFT '04/FSE-12}
   note         = {\url{https://llvm.org/docs/AMDGPUUsage.html}}
 }
 
+% STATUS: unused
 @manual{llvm-offload-design,
   title        = {Proposed design for offloading model},
   organization = {oneAPI DPC++/LLVM},
@@ -1579,15 +1836,21 @@ series = {SIGSOFT '04/FSE-12}
   note         = {\url{https://intel.github.io/llvm/design/OffloadDesign.html}}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://discourse.llvm.org/t/rfc-spirv-ir-as-a-vendor-agnostic-gpu-representation/85115
+% METADATA_NOTE: Original post by Jon Chesterfield, 2025-03-11; profile confirms full name. This is an RFC discussion, not an adopted LLVM standard; author discontinued the proposal on 2025-03-17.
 @misc{spirv-ir-rfc,
-  author       = {LLVM Community},
-  title        = {RFC: SPIR-V IR as a vendor agnostic GPU representation},
+  author       = {Chesterfield, Jon},
+  title        = {{RFC}: {SPIRV} {IR} as a vendor agnostic {GPU} representation},
   howpublished = {LLVM Discourse},
   year         = {2025},
-  note         = {\url{https://discourse.llvm.org/t/rfc-spirv-ir-as-a-vendor-agnostic-gpu-representation/85115}}
+  url          = {https://discourse.llvm.org/t/rfc-spirv-ir-as-a-vendor-agnostic-gpu-representation/85115}
 }
 
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://www.usenix.org/conference/atc12/technical-sessions/presentation/kato
+% METADATA_NOTE: Full author sequence and the cited publication venue, year and available page range checked against the official publication page.
 @inproceedings{kato2012gdev,
   title = {{Gdev}: {First-Class} {GPU} Resource Management in the Operating System},
   author={Kato, Shinpei and McThrow, Michael and Maltzahn, Carlos and Brandt, Scott},
@@ -1598,6 +1861,7 @@ series = {SIGSOFT '04/FSE-12}
 }
 
 
+% STATUS: unused
 @inproceedings{pilot,
   author    = {Jayanth Ravi and Tri Nguyen and Michela Becchi},
   title     = {{PILOT}: a Runtime System to Manage Multi-tenant {GPU} Unified Memory Footprint},
@@ -1605,15 +1869,21 @@ series = {SIGSOFT '04/FSE-12}
   year      = {2021},
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://www.usenix.org/conference/atc25/presentation/zhang-shulai
+% METADATA_NOTE: Full author sequence and the cited publication venue, year and available page range checked against the official publication page.
 @inproceedings{kernelintercept,
   author    = {Zhang, Shulai and Xu, Ao and Chen, Quan and Zhao, Han and Cui, Weihao and Wang, Zhen and Li, Yan and Xiao, Limin and Guo, Minyi},
   title     = {Efficient Performance-Aware {GPU} Sharing with Compatibility and Isolation through Kernel Space Interception},
-  booktitle = {USENIX Annual Technical Conference (ATC)},
+  booktitle = {2025 USENIX Annual Technical Conference (USENIX ATC 25)},
+  pages = {1003--1019},
+  publisher = {USENIX Association},
   year      = {2025},
   url = {https://www.usenix.org/conference/atc25/presentation/zhang-shulai}
 }
 
 
+% STATUS: unused
 @inproceedings{tiresias,
   author    = {Jianguo Gu and others},
   title     = {Tiresias: A {GPU} Cluster Manager for Distributed Deep Learning},
@@ -1621,6 +1891,7 @@ series = {SIGSOFT '04/FSE-12}
   year      = {2019},
 }
 
+% STATUS: unused
 @inproceedings{optimus,
   author    = {Yihui Peng and others},
   title     = {Optimus: An Efficient Dynamic Resource Scheduler for Deep Learning Clusters},
@@ -1628,6 +1899,7 @@ series = {SIGSOFT '04/FSE-12}
   year      = {2018},
 }
 
+% STATUS: unused
 @article{astraea,
   author  = {Zhisheng Ye and others},
   title   = {{ASTRAEA}: A Fair Deep Learning Scheduler for Multi-tenant {GPU} Clusters},
@@ -1635,6 +1907,9 @@ series = {SIGSOFT '04/FSE-12}
   year    = {2022},
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/3352460.3358307
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{villa2019nvbit,
   title = {{NVBit}: A Dynamic Binary Instrumentation Framework for {NVIDIA} {GPUs}},
   author={Villa, Oreste and Stephenson, Mark and Nellans, David and Keckler, Stephen W},
@@ -1643,6 +1918,9 @@ series = {SIGSOFT '04/FSE-12}
   year={2019},
   doi = {10.1145/3352460.3358307}
 }
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://www.usenix.org/conference/osdi25/presentation/huang-songlin
+% METADATA_NOTE: Full author sequence and the cited publication venue, year and available page range checked against the official publication page.
 @inproceedings{neutrino,
   title={Neutrino: Fine-grained {GPU} Kernel Profiling via Programmable Probing},
   author={Huang, Songlin and Wu, Chenshu},
@@ -1652,6 +1930,9 @@ series = {SIGSOFT '04/FSE-12}
   url = {https://www.usenix.org/conference/osdi25/presentation/huang-songlin}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/3723851.3726984
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{egpu,
   title={eGPU: Extending eBPF Programmability and Observability to GPUs},
   author={Yang, Yiwei and Yu, Tong and Zheng, Yusheng and Quinn, Andrew},
@@ -1662,6 +1943,7 @@ series = {SIGSOFT '04/FSE-12}
   url = {https://doi.org/10.1145/3723851.3726984}
 }
 
+% STATUS: unused
 @inproceedings{lithos,
   title={LithOS: An operating system for efficient machine learning on GPUs},
   author={Coppock, Patrick H and Zhang, Brian and Solomon, Eliot H and Kypriotis, Vasilis and Yang, Leon and Sharma, Bikash and Schatzberg, Dan and Mowry, Todd C and Skarlatos, Dimitrios},
@@ -1671,6 +1953,7 @@ series = {SIGSOFT '04/FSE-12}
 }
 
 
+% STATUS: unused
 @inproceedings{yu2024orca,
   title={Orca: A distributed serving system for {Transformer-Based} generative models},
   author={Yu, Gyeong-In and Jeong, Joo Seong and Kim, Geon-Woo and Kim, Soojeong and Chun, Byung-Gon},
@@ -1679,6 +1962,9 @@ series = {SIGSOFT '04/FSE-12}
   year={2022}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://www.usenix.org/conference/osdi18/presentation/xiao
+% METADATA_NOTE: Full author sequence and the cited publication venue, year and available page range checked against the official publication page.
 @inproceedings{xiao2018gandiva,
   title={Gandiva: Introspective cluster scheduling for deep learning},
   author={Xiao, Wencong and Bhardwaj, Romil and Ramjee, Ramachandran and Sivathanu, Muthian and Kwatra, Nipun and Han, Zhenhua and Patel, Pratyush and Peng, Xuan and Zhao, Hanyu and Zhang, Quanlu and Yang, Fan and Zhou, Lidong},
@@ -1688,6 +1974,9 @@ series = {SIGSOFT '04/FSE-12}
   url = {https://www.usenix.org/conference/osdi18/presentation/xiao}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://proceedings.mlsys.org/paper_files/paper/2020/hash/d9cd83bc91b8c36a0c7c0fcca59228f2-Abstract.html
+% METADATA_NOTE: Full author sequence and the cited publication venue, year and available page range checked against the official publication page.
 @article{yu2020fine,
   title={Fine-grained GPU sharing primitives for deep learning applications},
   author={Yu, Peifeng and Chowdhury, Mosharaf},
@@ -1698,6 +1987,9 @@ series = {SIGSOFT '04/FSE-12}
   url = {https://proceedings.mlsys.org/paper_files/paper/2020/hash/d9cd83bc91b8c36a0c7c0fcca59228f2-Abstract.html}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://proceedings.mlr.press/v202/sheng23a.html
+% METADATA_NOTE: Full author sequence and the cited publication venue, year and available page range checked against the official publication page.
 @inproceedings{sheng2023flexgen,
   title={Flexgen: High-throughput generative inference of large language models with a single gpu},
   author={Sheng, Ying and Zheng, Lianmin and Yuan, Binhang and Li, Zhuohan and Ryabinin, Max and Chen, Beidi and Liang, Percy and R{\'e}, Christopher and Stoica, Ion and Zhang, Ce},
@@ -1708,14 +2000,21 @@ series = {SIGSOFT '04/FSE-12}
   url = {https://proceedings.mlr.press/v202/sheng23a.html}
 }
 
-@article{shoeybi2019megatron,
-  title={Megatron-lm: Training multi-billion parameter language models using model parallelism},
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://arxiv.org/abs/1909.08053
+% METADATA_NOTE: Six authors match arXiv. Cite the 2019 preprint; latest arXiv revision is v4 (2020-03-13). No separate formal proceedings edition located.
+@misc{shoeybi2019megatron,
+  title={{Megatron-LM}: Training Multi-Billion Parameter Language Models Using Model Parallelism},
   author={Shoeybi, Mohammad and Patwary, Mostofa and Puri, Raul and LeGresley, Patrick and Casper, Jared and Catanzaro, Bryan},
-  journal={arXiv preprint arXiv:1909.08053},
+  eprint = {1909.08053},
+  archivePrefix = {arXiv},
   year={2019},
   url = {https://arxiv.org/abs/1909.08053}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/3394486.3406703
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{rasley2020deepspeed,
   title={Deepspeed: System optimizations enable training deep learning models with over 100 billion parameters},
   author={Rasley, Jeff and Rajbhandari, Samyam and Ruwase, Olatunji and He, Yuxiong},
@@ -1726,6 +2025,9 @@ series = {SIGSOFT '04/FSE-12}
   url = {https://doi.org/10.1145/3394486.3406703}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/2851141.2851145
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{wang2016gunrock,
   title={Gunrock: A high-performance graph processing library on the GPU},
   author={Wang, Yangzihao and Davidson, Andrew and Pan, Yuechao and Wu, Yuduo and Riffel, Andy and Owens, John D},
@@ -1736,6 +2038,7 @@ series = {SIGSOFT '04/FSE-12}
   url = {https://doi.org/10.1145/2851141.2851145}
 }
 
+% STATUS: unused
 @article{moreland2016vtk,
   title={Vtk-m: Accelerating the visualization toolkit for massively threaded architectures},
   author={Moreland, Kenneth and Sewell, Christopher and Usher, William and Lo, Li-ta and Meredith, Jeremy and Pugmire, David and Kress, James and Schroots, Hendrik and Ma, Kwan-Liu and Childs, Hank and others},
@@ -1747,6 +2050,7 @@ series = {SIGSOFT '04/FSE-12}
   publisher={IEEE}
 }
 
+% STATUS: unused
 @article{delimitrou2013paragon,
   title={Paragon: QoS-aware scheduling for heterogeneous datacenters},
   author={Delimitrou, Christina and Kozyrakis, Christos},
@@ -1758,6 +2062,7 @@ series = {SIGSOFT '04/FSE-12}
   publisher={ACM New York, NY, USA}
 }
 
+% STATUS: unused
 @article{delimitrou2014quasar,
   title={Quasar: Resource-efficient and qos-aware cluster management},
   author={Delimitrou, Christina and Kozyrakis, Christos},
@@ -1769,6 +2074,7 @@ series = {SIGSOFT '04/FSE-12}
   publisher={ACM New York, NY, USA}
 }
 
+% STATUS: unused
 @inproceedings{lo2015heracles,
   title={Heracles: Improving resource efficiency at scale},
   author={Lo, David and Cheng, Liqun and Govindaraju, Rama and Ranganathan, Parthasarathy and Kozyrakis, Christos},
@@ -1777,6 +2083,7 @@ series = {SIGSOFT '04/FSE-12}
   year={2015}
 }
 
+% STATUS: unused
 @inproceedings{qiao2021pollux,
   title={Pollux: Co-adaptive cluster scheduling for goodput-optimized deep learning},
   author={Qiao, Aurick and Choe, Sang Keun and Subramanya, Suhas Jayaram and Neiswanger, Willie and Ho, Qirong and Zhang, Hao and Ganger, Gregory R and Xing, Eric P},
@@ -1784,6 +2091,7 @@ series = {SIGSOFT '04/FSE-12}
   year={2021}
 }
 
+% STATUS: unused
 @inproceedings{narayanan2020heterogeneity,
   title={{Heterogeneity-Aware} cluster scheduling policies for deep learning workloads},
   author={Narayanan, Deepak and Santhanam, Keshav and Kazhamiaka, Fiodar and Phanishayee, Amar and Zaharia, Matei},
@@ -1792,6 +2100,7 @@ series = {SIGSOFT '04/FSE-12}
   year={2020}
 }
 
+% STATUS: unused
 @inproceedings{wu2024streambox,
   title={{StreamBox}: A Lightweight {GPU}{SandBox} for Serverless Inference Workflow},
   author={Wu, Hao and Yu, Yue and Deng, Junxiao and Ibrahim, Shadi and Wu, Song and Fan, Hao and Cheng, Ziyue and Jin, Hai},
@@ -1800,6 +2109,9 @@ series = {SIGSOFT '04/FSE-12}
   year={2024}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://www.usenix.org/conference/atc25/presentation/fan
+% METADATA_NOTE: Full author sequence and the cited publication venue, year and available page range checked against the official publication page.
 @inproceedings{fan2025gpreempt,
   title={{GPREEMPT}: {GPU} Preemptive Scheduling Made General and Efficient},
   author={Fan, Ruwen and Ren, Tingxu and Xie, Minhui and Gao, Shiwei and Shu, Jiwu and Lu, Youyou},
@@ -1811,17 +2123,23 @@ series = {SIGSOFT '04/FSE-12}
 
 
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://docs.kernel.org/scheduler/sched-ext.html
+% METADATA_NOTE: Current Linux scheduler documentation. Undated page; 2026 denotes access year, not the introduction date of sched_ext.
 @misc{schedext-docs,
   title = {sched\_ext: Extensible Scheduler Class},
-  author = {Meta and Linux Kernel Community},
-  howpublished = {\url{https://github.com/sched-ext/scx}},
-  year = {2023}
+  author = {{The Linux Kernel Contributors}},
+  howpublished = {The Linux Kernel Documentation},
+  url = {https://docs.kernel.org/scheduler/sched-ext.html},
+  year = {2026},
+  note = {Online documentation; year denotes access year. Accessed September 9, 2026}
 }
 
 
 
 
 
+% STATUS: unused
 @article{gale2023megablocks,
   title={Megablocks: Efficient sparse training with mixture-of-experts},
   author={Gale, Trevor and Narayanan, Deepak and Young, Cliff and Zaharia, Matei},
@@ -1831,12 +2149,16 @@ series = {SIGSOFT '04/FSE-12}
   year={2023}
 }
 
+% STATUS: unused
 @article{he2021fastmoe,
   title={Fastmoe: A fast mixture-of-expert training system},
   author={He, Jiaao and Qiu, Jiezhong and Zeng, Aohan and Yang, Zhilin and Zhai, Jidong and Tang, Jie},
   journal={arXiv preprint arXiv:2103.13262},
   year={2021}
 }
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/3731569.3764820
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{zussman2025cache_ext,
   title={cache\_ext: Customizing the Page Cache with eBPF},
   author={Zussman, Tal and Zarkadas, Ioannis and Carin, Jeremy and Cheng, Andrew and Franke, Hubertus and Pfefferle, Jonas and Cidon, Asaf},
@@ -1848,6 +2170,7 @@ series = {SIGSOFT '04/FSE-12}
 }
 
 
+% STATUS: unused
 @article{bachl2021flow,
   title={A flow-based IDS using Machine Learning in eBPF},
   author={Bachl, Maximilian and Fabini, Joachim and Zseby, Tanja},
@@ -1856,6 +2179,9 @@ series = {SIGSOFT '04/FSE-12}
 }
 
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/3731569.3764843
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{chen2025ktransformers,
   title={KTransformers: Unleashing the Full Potential of CPU/GPU Hybrid Inference for MoE Models},
   author={Chen, Hongtao and Xie, Weiyu and Zhang, Boxin and Tang, Jingqi and Wang, Jiahao and Dong, Jianwei and Chen, Shaoyuan and Yuan, Ziwei and Lin, Chen and Qiu, Chengyu and Zhu, Yuening and Ou, Qingliang and Liao, Jiaqi and Chen, Xianglin and Ai, Zhiyuan and Wu, Yongwei and Zhang, Mingxing},
@@ -1866,6 +2192,9 @@ series = {SIGSOFT '04/FSE-12}
   url = {https://doi.org/10.1145/3731569.3764843}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/3731569.3764814
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{gim2025pie,
   title={Pie: A Programmable Serving System for Emerging LLM Applications},
   author={Gim, In and Ma, Zhiyao and Lee, Seung-seob and Zhong, Lin},
@@ -1876,6 +2205,15 @@ series = {SIGSOFT '04/FSE-12}
   url = {https://doi.org/10.1145/3731569.3764814}
 }
 
+% VERIFIED: unverified
+% REAL: yes
+% PDF: not available
+% ABSTRACT: PILOT manages the unified-memory footprint of multiple GPU tenants.
+% USED_FOR: Application-aware GPU memory management.
+% CHECK_NOTE: The checker also compares against unused entry pilot; only ravi2021pilot is cited in main.tex.
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1109/HiPC53243.2021.00063
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{ravi2021pilot,
   title={PILOT: a Runtime System to Manage Multi-tenant GPU Unified Memory Footprint},
   author={Ravi, John and Nguyen, Tri and Zhou, Huiyang and Becchi, Michela},
@@ -1887,6 +2225,9 @@ series = {SIGSOFT '04/FSE-12}
   url = {https://doi.org/10.1109/HiPC53243.2021.00063}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://www.usenix.org/conference/osdi25/presentation/shen-weihang
+% METADATA_NOTE: Full author sequence and the cited publication venue, year and available page range checked against the official publication page.
 @inproceedings{shen2025xsched,
   title={{XSched}: Preemptive scheduling for diverse {XPUs}},
   author={Shen, Weihang and Han, Mingcong and Liu, Jialong and Chen, Rong and Chen, Haibo},
@@ -1896,6 +2237,15 @@ series = {SIGSOFT '04/FSE-12}
   url = {https://www.usenix.org/conference/osdi25/presentation/shen-weihang}
 }
 
+% VERIFIED: unverified
+% REAL: yes
+% PDF: docs/paper-material/policy-expressibility-papers/55-sosp25-lithos.pdf
+% ABSTRACT: LithOS combines TPC scheduling, kernel atomization, hardware right-sizing, and power management for GPU sharing.
+% USED_FOR: GPU resource-management comparison; cross-application visibility and driver-modification claims require correction.
+% CHECK_NOTE: The checker also compares against unused entry lithos; only coppock2025lithos is cited in main.tex.
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/3731569.3764818
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{coppock2025lithos,
   title={LithOS: An operating system for efficient machine learning on GPUs},
   author={Coppock, Patrick H and Zhang, Brian and Solomon, Eliot H and Kypriotis, Vasilis and Yang, Leon and Sharma, Bikash and Schatzberg, Dan and Mowry, Todd C and Skarlatos, Dimitrios},
@@ -1906,6 +2256,9 @@ series = {SIGSOFT '04/FSE-12}
   url = {https://doi.org/10.1145/3731569.3764818}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1109/IISWC.2009.5306797
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{che2009rodinia,
   title={Rodinia: A benchmark suite for heterogeneous computing},
   author={Che, Shuai and Boyer, Michael and Meng, Jiayuan and Tarjan, David and Sheaffer, Jeremy W and Lee, Sang-Ha and Skadron, Kevin},
@@ -1916,6 +2269,9 @@ series = {SIGSOFT '04/FSE-12}
   doi = {10.1109/IISWC.2009.5306797}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1109/InPar.2012.6339595
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{grauer2012auto,
   title={Auto-tuning a high-level language targeted to GPU codes},
   author={Grauer-Gray, Scott and Xu, Lifan and Searles, Robert and Ayalasomayajula, Sudhee and Cavazos, John},
@@ -1925,14 +2281,27 @@ series = {SIGSOFT '04/FSE-12}
   organization = {IEEE},
   doi = {10.1109/InPar.2012.6339595}
 }
-@article{gu2020uvmbench,
+% VERIFIED: 2026-09-09
+% REAL: yes
+% PDF: docs/reference/2020-gu-uvmbench.pdf
+% ABSTRACT: UVMBench collects 32 GPU benchmarks with UVM implementations and diverse memory-access patterns.
+% USED_FOR: Origin of the K-Means UVM benchmark.
+% CHECK_NOTE: The official v2 PDF lists all four authors. The checker warning for the words "A Comprehensive" is a title heuristic, not evidence of a fabricated paper.
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://arxiv.org/abs/2007.09822 ; https://web.engr.oregonstate.edu/~chenliz/publications.html ; https://www.american-cse.org/static/CSCE21%20book%20abstracts.pdf
+% METADATA_NOTE: Four authors match arXiv v2 and the author laboratory publication list. Also listed in the CSCE 2021 program and abstract book; a full proceedings edition was not established, so retain the 2020 full preprint.
+@misc{gu2020uvmbench,
   title = {{UVMBench}: A Comprehensive Benchmark Suite for Researching Unified Virtual Memory in {GPUs}},
   author={Gu, Yongbin and Wu, Wenxuan and Li, Yunfan and Chen, Lizhong},
-  journal={arXiv preprint arXiv:2007.09822},
+  eprint = {2007.09822},
+  archivePrefix = {arXiv},
   year={2020},
   url = {https://arxiv.org/abs/2007.09822}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://github.com/NVIDIA/cuda-samples
+% METADATA_NOTE: NVIDIA sample-code repository. The existing entry cites its 2025 access, not a claimed original publication date.
 @misc{nvidia_cuda_samples,
   title        = {NVIDIA CUDA Samples},
   author       = {{NVIDIA}},
@@ -1942,6 +2311,9 @@ series = {SIGSOFT '04/FSE-12}
   organization = {NVIDIA}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/3695053.3731047
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{lin2025forest,
   author = {Lin, Mao and Feng, Yuan and Cox, Guilherme and Jeon, Hyeran},
   title = {Forest: Access-aware GPU UVM Management},
@@ -1956,6 +2328,9 @@ series = {SIGSOFT '04/FSE-12}
   series = {ISCA '25}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1109/MICRO61859.2024.00030
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{wang2024suv,
   author = {B, Pratheek and Cox, Guilherme and Vesely, Jan and Basu, Arkaprava},
   title = {{SUV}: Static Analysis Guided Unified Virtual Memory},
@@ -1968,6 +2343,9 @@ series = {SIGSOFT '04/FSE-12}
   series = {MICRO '24}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/3721145.3725748
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{kim2025dream,
   author = {Nazaraliyev, Nurlan and Sadredini, Elaheh and Abu-Ghazaleh, Nael},
   title = {{DREAM}: Device-Driven Efficient Access to Virtual Memory},
@@ -1982,6 +2360,7 @@ series = {SIGSOFT '04/FSE-12}
   series = {ICS '25}
 }
 
+% STATUS: unused
 @inproceedings{liao2024svm,
   author = {Cooper, Bennett and Scogland, Thomas RW and Ge, Rong},
   title = {Shared Virtual Memory: Its Design and Performance Implications for Diverse Applications},
@@ -1996,6 +2375,9 @@ series = {SIGSOFT '04/FSE-12}
   series = {ICS '24}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/3712285.3759812
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{park2025helm,
   author = {Jones, Nathan and Allen, Tyler and Ge, Rong},
   title = {{HELM}: Characterizing Unified Memory Accesses to Improve GPU Performance under Memory Oversubscription},
@@ -2010,14 +2392,20 @@ series = {SIGSOFT '04/FSE-12}
   series = {SC '25}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://www.sigops.org/2025/barbarians-at-the-gate-how-ai-is-upending-systems-research/
+% METADATA_NOTE: ACM SIGOPS blog byline names four individuals AND the ADRS team; retain the collective coauthor. Blog post dated 2025-10-17, subsequently updated.
 @misc{cheng2025barbarians,
   title={Barbarians at The Gate: How AI is Upending Systems Research},
-  author={Audrey Cheng and Shu Liu and Melissa Pan and Ion Stoica},
+  author={Audrey Cheng and Shu Liu and Melissa Pan and Ion Stoica and {ADRS team}},
   year={2025},
   howpublished={ACM SIGOPS Blog},
   url={https://www.sigops.org/2025/barbarians-at-the-gate-how-ai-is-upending-systems-research/}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://www.sigops.org/2025/glia-a-human-inspired-ai-for-systems-design-and-optimization/
+% METADATA_NOTE: All eight authors match the ACM SIGOPS blog byline; blog publication 2025-12-05, not a conference paper.
 @misc{hamadanian2025glia,
   title={Glia: A Human-Inspired AI for Systems Design and Optimization},
   author={Pouya Hamadanian and Pantea Karimi and Arash Nash-Esfahany and Kimia Noorbakhsh and Joseph Chandler and Ali Parandeh and Mohammad Alizadeh and Hari Balakrishnan},
@@ -2026,6 +2414,7 @@ series = {SIGSOFT '04/FSE-12}
   url={https://www.sigops.org/2025/glia-a-human-inspired-ai-for-systems-design-and-optimization/}
 }
 
+% STATUS: unused
 @misc{liu2025systemint,
   title={Defining System Intelligence},
   author={Shu Liu and Ion Stoica and Audrey Cheng and Zhifei Li and Bowen Wang and Maaz Bin Safeer},
@@ -2034,30 +2423,46 @@ series = {SIGSOFT '04/FSE-12}
   url={https://www.sigops.org/2025/defining-system-intelligence/}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://neurips.cc/virtual/2025/loc/san-diego/129092
+% METADATA_NOTE: All four authors match the NeurIPS 2025 ML for Systems workshop event. Cite the workshop page, not a NeurIPS main-conference proceeding.
 @inproceedings{zheng2025schedcp,
   title={Towards Agentic OS: An LLM Agent Framework for Linux Schedulers},
   author={Yusheng Zheng and YanPeng Hu and Wei Zhang and Andi Quinn},
   year={2025},
   booktitle={ML for Systems Workshop at NeurIPS},
-  url = {https://arxiv.org/abs/2509.01245}
+  url = {https://neurips.cc/virtual/2025/loc/san-diego/129092}
 }
 
+% VERIFIED: 2026-09-09
+% REAL: yes
+% PDF: not available
+% ABSTRACT: Describes an evolutionary coding agent and its applications to algorithms, datacenter scheduling, and compiler optimization.
+% USED_FOR: AI agents generating optimization algorithms and compiler heuristics.
+% CHECK_NOTE: The entry now describes the linked official blog post, rather than combining its URL with a different technical-report title.
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://deepmind.google/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/
+% METADATA_NOTE: Official Google DeepMind blog, AlphaEvolve team byline, 2025-05-14. This entry cites the blog rather than the separate technical report.
 @misc{alphaevolve2025,
-  title={AlphaEvolve: A Coding Agent for Scientific and Algorithmic Discovery},
-  author={{Google DeepMind}},
+  title={{AlphaEvolve}: A {Gemini}-powered Coding Agent for Designing Advanced Algorithms},
+  author={{AlphaEvolve team}},
   year={2025},
-  howpublished={Google DeepMind Technical Report},
-  url={https://deepmind.google/discover/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/}
+  howpublished={Google DeepMind Blog},
+  url={https://deepmind.google/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://neurips.cc/virtual/2025/loc/san-diego/129091
+% METADATA_NOTE: All four authors match the NeurIPS 2025 ML for Systems workshop event; this is a workshop contribution, not a main-conference paper.
 @inproceedings{ding2025asap,
   title={ASAP: an Agentic Solution to Auto-optimize Performance of Large-Scale LLM Training},
   author={Yuran Ding and Xinwei Chen and Xiaofan Zhang and Zongwei Zhou},
   year={2025},
   booktitle={ML for Systems Workshop at NeurIPS},
-  url = {https://arxiv.org/abs/2511.03844}
+  url = {https://neurips.cc/virtual/2025/loc/san-diego/129091}
 }
 
+% STATUS: unused
 @misc{lin2025osr1,
   title={OS-R1: Agentic OS Kernel Tuning with Reinforcement Learning},
   author={Hongyu Lin and Yuchen Li and Haoran Luo and Kaichun Yao and Libo Zhang and Mingjie Xing and Yanjun Wu},
@@ -2066,6 +2471,7 @@ series = {SIGSOFT '04/FSE-12}
   archivePrefix={arXiv}
 }
 
+% STATUS: unused
 @inproceedings{liargkovas2025expert,
   title={An Expert in Residence: LLM Agents for Always-On OS Tuning},
   author={Liargkovas and others},
@@ -2073,6 +2479,7 @@ series = {SIGSOFT '04/FSE-12}
   booktitle={ML for Systems Workshop at NeurIPS}
 }
 
+% STATUS: unused
 @inproceedings{confucius2025sigcomm,
   title={Confucius: Intent-Driven Network Management with Multi-Agent LLMs},
   author={{Meta AI}},
@@ -2080,6 +2487,9 @@ series = {SIGSOFT '04/FSE-12}
   booktitle={ACM SIGCOMM}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/3297858.3304044
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{kehne2019etc,
   title = {A Framework for Memory Oversubscription Management in Graphics Processing Units},
   author = {Li, Chen and Ausavarungnirun, Rachata and Rossbach, Christopher J. and Zhang, Youtao and Mutlu, Onur and Guo, Yang and Yang, Jun},
@@ -2090,6 +2500,9 @@ series = {SIGSOFT '04/FSE-12}
   url = {https://doi.org/10.1145/3297858.3304044}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/3307650.3322224
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{ganguly2019interplay,
   title={Interplay between Hardware Prefetcher and Page Eviction Policy in CPU-GPU Unified Virtual Memory},
   author={Debashis Ganguly and Ziyu Zhang and Jun Yang and Rami Melhem},
@@ -2100,6 +2513,10 @@ series = {SIGSOFT '04/FSE-12}
   pages = {224--235}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/3772356.3772413
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
+% CLAIM_REVIEW: Pending correction in intro.tex: PolicySmith evaluates web caching and TCP congestion control, not CPU scheduling.
 @inproceedings{dwivedula2025policysmith,
   title={Man-Made Heuristics Are Dead. Long Live Code Generators!},
   author={Rohit Dwivedula and Divyanshu Saxena and Aditya Akella and Swarat Chaudhuri and Daehyeok Kim},
@@ -2110,6 +2527,15 @@ series = {SIGSOFT '04/FSE-12}
   pages = {51--60}
 }
 
+% VERIFIED: unverified
+% REAL: yes
+% PDF: docs/paper-material/policy-expressibility-papers/20-2024-moe-infinity.pdf
+% ABSTRACT: MoE-Infinity uses sparsity-aware expert caching and activation traces to guide replacement and prefetching on personal machines.
+% USED_FOR: The expert prefetch and cache-replacement policy described in Table 2.
+% CHECK_NOTE: The cited v3 PDF is dated March 12, 2025 and lists six authors including Chuanhao Sun. The checker drops the version suffix and compares against the 2024 initial-submission year; retain the version-specific metadata.
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://arxiv.org/pdf/2401.14361v3
+% METADATA_NOTE: All six authors match the v3 PDF (including Chuanhao Sun); the abstract page still lists five. Version v3 is dated 2025-03-12; no later formal edition located.
 @misc{xue2025moeinfinity,
   title={{MoE-Infinity}: Efficient {MoE} Inference on Personal Machines with Sparsity-Aware Expert Cache},
   author={Xue, Leyang and Fu, Yao and Lu, Zhan and Sun, Chuanhao and Mai, Luo and Marina, Mahesh},
@@ -2118,6 +2544,9 @@ series = {SIGSOFT '04/FSE-12}
   url={https://arxiv.org/abs/2401.14361v3}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://arxiv.org/abs/2303.06182
+% METADATA_NOTE: All nine authors match the arXiv record, latest version v2 (2023-06-18); no later formal edition located.
 @misc{huang2023towards,
   title        = {Towards {MoE} Deployment: Mitigating Inefficiencies in Mixture-of-Expert ({MoE}) Inference},
   author       = {Haiyang Huang and Newsha Ardalani and Anna Sun and Liu Ke and Hsien-Hsin S. Lee and Anjali Sridhar and Shruti Bhosale and Carole-Jean Wu and Benjamin Lee},
@@ -2128,6 +2557,9 @@ series = {SIGSOFT '04/FSE-12}
   url = {https://arxiv.org/abs/2303.06182}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/3767295.3769319
+% METADATA_NOTE: EuroSys 2026 final publication, pages 176--191. The two Hao Wang entries are two distinct coauthors and must both remain.
 @inproceedings{yu2026finemoe,
   title={Taming Latency-Memory Trade-Off in {MoE}-Based {LLM} Serving via Fine-Grained Expert Offloading},
   author={Yu, Hanfei and Cui, Xingqi and Zhang, Hong and Wang, Hao and Wang, Hao},
@@ -2138,6 +2570,7 @@ series = {SIGSOFT '04/FSE-12}
   pages = {176--191}
 }
 
+% STATUS: unused
 @misc{semianalysis2025partitioning,
   author={{SemiAnalysis}},
   title={{AMD} Advancing {AI}: {MI350X} and {MI400} {UALoE72}, {MI500} {UAL256}},
@@ -2146,6 +2579,9 @@ series = {SIGSOFT '04/FSE-12}
   url={https://newsletter.semianalysis.com/p/amd-advancing-ai-mi350x-and-mi400-ualoe72-mi500-ual256}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://github.com/vbpf/prevail
+% METADATA_NOTE: PREVAIL software repository, attributed collectively to its contributors and cited at the stated 2026 access; not the author list of a separate verifier research paper.
 @misc{prevail-verifier,
   author={{PREVAIL contributors}},
   title={{PREVAIL}: An {eBPF} Verifier Based on Abstract Interpretation},
@@ -2154,6 +2590,9 @@ series = {SIGSOFT '04/FSE-12}
   year = {2026}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://arxiv.org/abs/2601.04071v2
+% METADATA_NOTE: All twelve authors match arXiv and the v2 PDF, dated 2026-02-10; no formal proceedings edition located.
 @misc{hu2026hummingbird,
   title={{Hummingbird}: {SLO}-Oriented {GPU} Preemption at Microsecond-scale},
   author={Hu, Tiancheng and Wang, Chenxi and Cao, Ting and Qin, Jin and Chen, Lei and Xiao, Xinyu and Hu, Junhao and Tian, Hongliang and Yan, Shoumeng and Cui, Huimin and Chen, Quan and Xie, Tao},
@@ -2163,6 +2602,9 @@ series = {SIGSOFT '04/FSE-12}
   url={https://arxiv.org/abs/2601.04071v2}
 }
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/3676641.3715996
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{kamath2025pod,
   title={{POD-Attention}: Unlocking Full Prefill-Decode Overlap for Faster {LLM} Inference},
   author={Kamath, Aditya K and Prabhu, Ramya and Mohan, Jayashree and Peter, Simon and Ramjee, Ramachandran and Panwar, Ashish},
@@ -2177,6 +2619,9 @@ series = {SIGSOFT '04/FSE-12}
 }
 
 
+% AUTHORS_VERSION_CHECKED: 2026-09-09
+% METADATA_SOURCE: https://doi.org/10.1145/3281411.3281443
+% METADATA_NOTE: Full author sequence and the cited published title, venue, year and pages checked against publisher-deposited DOI metadata.
 @inproceedings{hoiland2018xdp,
   title = {The {eXpress} Data Path: Fast Programmable Packet Processing in the Operating System Kernel},
   author = {H{\o}iland-J{\o}rgensen, Toke and Brouer, Jesper Dangaard and Borkmann, Daniel and Fastabend, John and Herbert, Tom and Ahern, David and Miller, David},
