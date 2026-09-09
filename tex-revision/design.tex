@@ -138,37 +138,37 @@ Before applying a request, the driver checks resource ownership, whether the obs
 % 在应用请求前，驱动检查资源归属、观测状态是否仍然有效，以及请求的转移是否被允许。
 The driver must prevent other operations from invalidating these checks before it applies the request.
 % 驱动必须防止其他操作在请求执行前使上述检查失效。
-For mutable resources such as eviction queues, the driver synchronizes validation and the resulting state change as one step (\Cref{fig:transition-validation}).
-% 对于驱逐队列等可变资源，驱动通过同步机制将验证与后续状态变更作为一个步骤执行（\Cref{fig:transition-validation}）。
+For mutable resources such as eviction queues, the driver synchronizes validation and the resulting state change as one step.
+% 对于驱逐队列等可变资源，驱动通过同步机制将验证与后续状态变更作为一个步骤执行。
 Long-running transfers remain asynchronous under the native driver's control.
 % 耗时较长的传输仍由原生驱动异步执行。
 
 Within one callback, repeating an identical request has the same effect as issuing it once.
 % 在同一次回调内，重复提交同一请求与提交一次具有相同效果。
-Conflicting requests within one callback are rejected.
-% 同一回调中的冲突请求会被拒绝。
+If one callback requests incompatible actions on the same resource, the driver rejects those requests.
+% 如果同一回调对同一资源请求不兼容的操作，驱动会拒绝这些请求。
 The driver leaves the eviction order unchanged when it rejects a reordering request and uses native prefetch behavior for invalid prefetch actions or ranges.
 % 驱动拒绝重排请求时保持驱逐顺序不变，并对非法的预取动作或范围采用原生预取行为。
 
-\begin{figure}[t]
-\begin{minipage}{\columnwidth}
-\begin{lstlisting}[language={},xleftmargin=0pt,numbers=none,columns=fullflexible,keepspaces=true]
-apply(resource, observed, request):
-  with driver synchronization for resource:
-    current = resource state
-    if request is absent or conflicting:
-      return operation fallback(current)
-    if ownership or observed state is invalid:
-      return operation fallback(current)
-    if transition(request, current) is forbidden:
-      return operation fallback(current)
-    initiate native transition(request, current)
-\end{lstlisting}
-\caption{Transition validation. State checks and transition initiation share one protected step. Transfer completion remains asynchronous.}
-% 转移验证。状态检查与转移发起共享一个受保护的步骤。传输完成仍为异步过程。
-\label{fig:transition-validation}
-\end{minipage}
-\end{figure}
+% \begin{figure}[t]
+% \begin{minipage}{\columnwidth}
+% \begin{lstlisting}[language={},xleftmargin=0pt,numbers=none,columns=fullflexible,keepspaces=true]
+% apply(resource, observed, request):
+%   with driver synchronization for resource:
+%     current = resource state
+%     if request is absent or conflicting:
+%       return operation fallback(current)
+%     if ownership or observed state is invalid:
+%       return operation fallback(current)
+%     if transition(request, current) is forbidden:
+%       return operation fallback(current)
+%     initiate native transition(request, current)
+% \end{lstlisting}
+% \caption{Transition validation. State checks and transition initiation share one protected step. Transfer completion remains asynchronous.}
+% % 转移验证。状态检查与转移发起共享一个受保护的步骤。传输完成仍为异步过程。
+% \label{fig:transition-validation}
+% \end{minipage}
+% \end{figure}
 
 \subsubsection{SIMT-aware Verification}
 % SIMT 感知验证
