@@ -85,8 +85,6 @@ We documented 50 safety events (24 logic bugs, 18 performance regressions, 2 ver
 % 我们记录了 50 起安全事件（24 个逻辑错误、18 个性能回退、2 次验证器拒绝、2 起 GPU 验证器捕获的溢出、4 起其他事件），均在无 OS 恐慌、无数据损坏的情况下恢复，通常在几分钟内完成且无需重启应用。
 Equivalent bugs in modified GPU drivers risk kernel panics, requiring recompilation and service interruptions rather than instant policy detachment.
 % 同等缺陷若出现在修改过的 GPU 驱动中则可能导致内核恐慌，需要重新编译和服务中断，而无法即时分离策略。
-We conclude with four case studies showing performance gains and the exploration process.
-% 最后我们通过四个案例研究展示性能收益与探索过程。
 
 \paragraph{Expert Offloading (llama.cpp GPT-OSS-120B)}
 % 专家卸载（llama.cpp GPT-OSS-120B）。
@@ -211,8 +209,8 @@ IVF indexes have a two-level structure: frequently-accessed centroids and larger
 % IVF 索引具有两级结构：被频繁访问的聚类中心和更大的 posting list；Faiss 操作有两个不同阶段：BUILD 执行顺序扫描，SEARCH 发起随机访问。
 The Faiss policy in \sys{} reduces build time by 21--29\% on 50M, scaling to 27--40\% on 100M as memory pressure grows.
 % 在 50M 规模上，通过 gpubpf 实现的 Faiss 策略将构建时间降低 21--29\%，在 100M 上随内存压力增大扩大到 27--40\%。
-For search workloads, this policy reduces latency by 10--16\% across different \texttt{nprobe} settings despite the random access patterns inherent in ANN search.
-% 对于检索工作负载，尽管 ANN 检索固有的随机访问模式，该策略在不同 \texttt{nprobe} 设置下仍将延迟降低 10--16\%。
+For search workloads, this policy reduces latency by 10--16\% across different \texttt{nprobe} settings.
+% 对于检索工作负载，该策略在不同 \texttt{nprobe} 设置下将延迟降低 10--16\%。
 As shown in \Cref{fig:faiss-perf}, the converged policy ($\sim$890~LOC: sequential prefetch 375~LOC + stride prefetch 472~LOC + device-side 45~LOC) prefetches posting lists sequentially for oversubscribed datasets and uses stride prediction for K-means iterations during index construction; device-side eBPF programs also trigger prefetching of corresponding posting lists.
 % 如 \Cref{fig:faiss-perf} 所示，收敛后的策略（约 890 LOC：顺序预取 375 LOC + 步长预取 472 LOC + 设备端 45 LOC）对超订数据集顺序预取 posting list，并在索引构建期间对 K-means 迭代使用步长预测；设备端 eBPF 程序还会触发相应 posting list 的预取。
 

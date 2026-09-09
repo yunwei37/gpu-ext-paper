@@ -4,7 +4,7 @@ Thank you for the detailed feedback. We organized the revision around the main i
 
 1. Policy vs. mechanism and prior systems
 
-   - Clarified which gains come from policies and how gpubpf compares with native implementations of the same policies (Abstract, Sections 1 and 7).
+   - Clarified which gains come from policies and how gpubpf compares with native implementations of the same policies (Abstract, Sections 1 and 7). The headline application gains come from workload-specific policies, while gpubpf provides the safe, programmable mechanism for implementing them.
    - Added Policies from Prior Systems and a policy-expressibility table explaining seven prior policies, their original mechanisms, and how gpubpf implements them (Section 5.2.4, Table 2).
 
 2. Safety, verification, and implementation
