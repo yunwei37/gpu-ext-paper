@@ -444,7 +444,7 @@ GPREEMPT~\cite{fan2025gpreempt} & Uses task priority to decide which tasks may r
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{tex-revision/img/results-raw/revision/matched-policy-panels.pdf}
-\caption{Policy comparisons: workload baseline, native policy, and \sys{} policy. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) prefetching all positively predicted experts, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. In (d), Per. and Burst denote periodic and BurstGPT arrivals. Panel (e) uses Llama decode batch 128. Bars show medians over five runs per configuration, except (e) means and (f) ten runs. Whiskers in (b,f,g) show full ranges. Panel (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s.}
+\caption{Policy comparisons. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) prefetching all positively predicted experts, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. In (d), Per. and Burst denote periodic and BurstGPT arrivals. Panel (e) uses Llama decode batch 128. Bars show medians, whiskers show full ranges. Panel (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s.}
 % 策略比较：工作负载基线、原生策略与 gpubpf 策略。基线为关闭预测的专家缓存（a）、固定 K 的 FIFO（b）、预取所有预测会用到的专家（c）、默认调度（d、g）、双流 FlashAttention（e）和原生 CUDA（f）。（d）中 Per. 和 Burst 分别表示周期性和 BurstGPT 到达模式。面板（e）使用 Llama 解码批量 128。柱形为每种配置五次运行的中位数，但（e）为均值、（f）使用十次运行。（b、f、g）的须线表示完整范围。（g）为每秒 100 个 VGG19 LC 请求，对应 ResNet152 BE 每秒 100 或 200 请求。
 \label{fig:matched-ports}
 \end{figure*}
@@ -513,7 +513,7 @@ Attaching to a running process takes 273\,ms on average from \texttt{bpftime tra
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth,trim=0 5bp 0 3bp,clip]{tex-revision/img/results-raw/revision/obs-overhead-with-array.pdf}
-\caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B. Bars show means and whiskers in (b) show run ranges.}
+\caption{Prefill throughput loss relative to an uninstrumented baseline. (a) P40, Llama 1B. (b) RTX~5090, TinyLlama-1.1B.}
 % 相对未插桩基线的预填充吞吐下降。(a) P40，Llama 1B。(b) RTX~5090，TinyLlama-1.1B。柱形为均值，（b）中的须线表示运行范围。
 \label{fig:obs-overhead}
 \end{figure}
