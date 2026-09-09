@@ -98,12 +98,8 @@ For example, a uprobe on \texttt{cudaLaunchKernel} concurrently initiates a 6.6\
 
 To ensure OS kernel safety, verified kfuncs restrict policy actions to two dimensions: \emph{selection} (choosing resources, e.g., eviction order, tenant preemption priority) and \emph{timing} (when to act, e.g., proactive prefetch).
 % 为保证 OS 内核安全，经验证的 kfunc 将策略动作限制在两个维度：\emph{选择}（选择资源，如逐出顺序、租户抢占优先级）和\emph{时机}（何时行动，如主动预取）。
-The driver controls the underlying state machines.
-% 驱动掌控底层状态机。
-Policies select the ordering and timing of driver-managed operations, but cannot allocate memory or remove tasks.
-% 策略选择驱动所管理操作的顺序与时机，但不能分配内存或移除任务。
-Invalid requests follow the operation-specific rules in \S\ref{sec:verification}.
-% 非法请求遵循 \S\ref{sec:verification} 中针对各操作的规则。
+The driver always controls underlying state machines, so policies only select ordering and timing of driver-managed operations, cannot allocate memory or remove tasks, and revert to FIFO defaults under resource pressure or misconfiguration.
+% 驱动始终掌控底层状态机；策略只能选择驱动管理的操作的顺序和时机，不能分配内存或移除任务，并在资源压力或配置错误时回退到 FIFO 默认行为。
 Currently, a single policy program is loaded system-wide but may internally differentiate tenant treatment for priorities, similar to sched\_ext; per-tenant isolation is future work.
 % 目前，单个策略程序系统级加载，但可在内部按优先级区分对待租户，类似 sched\_ext；按租户隔离是未来工作。
 Independent tenant policies would attach to separate cgroups, with permissions controlling policy installation and map access and budgets limiting each tenant's policy execution.
@@ -132,8 +128,6 @@ Policy safety assumes correct operation of the GPU hardware and this TCB.
 \subsubsection{Transition Validation}
 % 驱动持有的转移验证
 
-Policy callbacks submit requests through restricted interfaces. The driver retains exclusive authority to change resource state.
-% 策略回调通过受限接口提交请求。驱动保留修改资源状态的独占权限。
 Before applying a request, the driver checks resource ownership, whether the observed state is still current, and whether the requested transition is allowed.
 % 在应用请求前，驱动检查资源归属、观测状态是否仍然有效，以及请求的转移是否被允许。
 The driver must prevent other operations from invalidating these checks before it applies the request.
@@ -238,16 +232,14 @@ Following eBPF's philosophy, \sys{} maps use eventual consistency: periodically 
 % 遵循 eBPF 的理念，\sys{} 的 map 采用最终一致性：在 GPU 内核完成时周期性地将设备本地分片合并为权威快照。
 This model suffices as policies rely on approximate statistics; occasional staleness may affect optimality but cannot violate correctness invariants like memory integrity.
 % 该模型足够用，因为策略依赖近似统计；偶尔的过期可能影响最优性，但不会违反内存完整性等正确性不变量。
-When access patterns change faster than the synchronization interval, policies can issue synchronization operations more frequently, trading overhead for freshness, while transition validation (\S\ref{sec:verification}) prevents stale requests from corrupting driver state.
-% 当访问模式变化快于同步周期时，策略可以提高同步频率，以开销换取新鲜度。同时转移验证（\S\ref{sec:verification}）防止过期请求破坏驱动状态。
+When access patterns change faster than the synchronization interval, policies can synchronize more frequently, trading overhead for freshness.
+% 当访问模式变化快于同步周期时，策略可以提高同步频率，以开销换取数据新鲜度。
 When application heuristics interfere with a policy, the policy can adjust its prefetch aggressiveness using observed access patterns and memory pressure.
 % 当应用自身的优化策略与资源策略相互干扰时，资源策略可以根据观测到的访存模式和内存压力调整预取强度。
 Counters can be combined across shards using associative operations such as addition.
 % 计数器可以通过加法等满足结合律的运算跨分片合并。
-Policies can also store individual records in memory for the host or GPU to read.
-% 策略也可以将单条访存记录保存在 GPU 全局内存中，供主机读取。
-The driver retains control over changes to eviction order and resource ownership.
-% 驱动保留对驱逐顺序和资源归属变更的控制权。
+Maps can also store individual records for the host or GPU to read.
+% Map 也可以保存单条记录。
 
 \subsection{Example: MoE Expert Offloading}
 % 示例：MoE 专家卸载
