@@ -412,7 +412,7 @@ We evaluate the seven policies in \Cref{tab:published-policies}.
 \setlength{\tabcolsep}{4pt}
 \begin{tabularx}{\textwidth}{@{} >{\hsize=0.5\hsize\raggedright\arraybackslash}X >{\hsize=0.9\hsize\raggedright\arraybackslash}X >{\hsize=1.6\hsize\raggedright\arraybackslash}X @{}}
 \toprule
-System & Original policy & Original mechanism and \sys{} implementation \\
+System & Original policy & Original and \sys{} implementation \\
 % 系统。原有策略。原有机制与 gpubpf 实现。
 \midrule
 MoE-Infinity~\cite{xue2025moeinfinity} & Uses predicted expert accesses to prioritize prefetching and choose which experts to evict. & The original system uses a user-space runtime to manage expert transfers. \sys{} implements cache decisions as host-side programs. \\
