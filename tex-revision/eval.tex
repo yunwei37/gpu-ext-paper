@@ -23,7 +23,7 @@ We compare \sys{} policies against three classes of baselines: (1) driver defaul
 % 我们将 gpubpf 策略与三类基线对比：(1) 驱动默认行为（UVM LRU/FIFO 驱逐、原生 GPU 调度器），(2) 应用层提示（\texttt{cudaMemAdvise}），以及 (3) 框架管理的策略（如 llama.cpp 的 \texttt{ncmoe}、vLLM CPU offload、LMCache，在适用处）。
 We use PyTorch (version 2.9.0) and vLLM (version 0.11.0) with custom allocators, llama.cpp (version 7101), and Faiss (version 1.13.0) with UVM build config.
 % 我们使用 PyTorch（版本 2.9.0）和 vLLM（版本 0.11.0，配自定义分配器）、llama.cpp（版本 7101）以及采用 UVM 构建配置的 Faiss（版本 1.13.0）。
-All tests with \sys policies require no application modifications.
+All tests with \sys policies require no application source modifications.
 % 所有使用 gpubpf 策略的测试均无需修改应用。
 
 \begin{figure}
@@ -96,8 +96,8 @@ We compare five configurations: framework-managed CPU offloading (\texttt{ncmoe=
 % 我们对比五种配置：框架管理的 CPU 卸载（\texttt{ncmoe=\allowbreak{}32/64}）、默认 UVM、带应用层提示的 UVM（\texttt{cuda\-Mem\-Advise}），以及 gpubpf 主机—设备预取策略（\S\ref{sec:design-interfaces}）。
 For decode (memory-bound), the expert-offloading policy in \sys{} achieves \textbf{1.76$\times$ speedup} over application-tuned UVM hints (\texttt{cuda\-Mem\-Advise}) and 4.8$\times$ over framework offloading (\texttt{ncmoe=64}) (\Cref{fig:llama-expert-offload}).
 % 对于解码（内存受限），gpubpf 中的专家卸载策略相比经应用调优的 UVM 提示（\texttt{cuda\-Mem\-Advise}）取得 \textbf{1.76× 加速}，相比框架卸载（\texttt{ncmoe=64}）取得 4.8× 加速（\Cref{fig:llama-expert-offload}）。
-These hints improve decode over default UVM but require application modification and degrade prefill by 40\%; this policy outperforms hints on decode while preserving prefill within 4\% of default UVM, without application changes.
-% 这些提示相比默认 UVM 改善了解码，但需要修改应用，并使预填充性能下降 40\%；该策略在解码上优于提示，同时将预填充保持在默认 UVM 的 4\% 以内，且无需修改应用。
+These hints improve decode over default UVM but require application modification and degrade prefill by 40\%; the \sys{} policy improves more decoding while preserving prefill throughput within 4\% of default UVM without application source-code changes.
+% 这些提示相比默认 UVM 改善了解码，但需要修改应用，并使预填充性能下降 40\%；\sys{} 策略将预填充吞吐量保持在与默认 UVM 相差 4\% 以内，且无需修改应用源码。
 For prefill (compute-bound), framework offloading (\texttt{ncmoe=32}) achieves 13\% higher prefill throughput than this policy, but decode dominates end-to-end latency, so the decode improvement outweighs the prefill gap.%\arq{I don't understand the final data point. what has 13\% higher throughput? The graphed performance of UVM eBPF looks like it has worse performance compared to the alternatives. BTW---its very weird that none of the bars in Figure 8 are labeled "\sys"--I think that UVM eBPF is supposed to be that configuration but it does not make a lot of sense.}
 % 对于预填充（计算受限），框架卸载（\texttt{ncmoe=32}）比该策略的预填充吞吐量高 13\%，但解码主导端到端延迟，因此解码的改善超过了预填充的差距。
 
@@ -181,8 +181,8 @@ Combined with user-expressed prefetching, this eBPF policy achieves 1.44$\times$
 % 该策略与用户预取结合时，通过预取更大区域、减少阻塞缺页，又获得了 1.44× 的额外加速。
 Native GPU allocation (no UVM) achieves the highest performance when data fits in memory (1.89~s at 5M nodes) but fails with OOM beyond $\sim$8M nodes.
 % 当数据能放入内存时，原生 GPU 分配（无 UVM）性能最高（5M 节点时 1.89 秒），但在超过约 8M 节点时因 OOM 失败。
-UVM with this prefetch policy enables training at 15M nodes (2.17$\times$ oversubscription) with near-native performance and no application modification.
-% 采用该预取策略的 UVM 使训练能在 15M 节点（2.17× 超订）下进行，性能接近原生且无需修改应用。
+UVM with this prefetch policy enables training at 15M nodes (2.17$\times$ oversubscription) on a much better performance without application modification.
+% 采用该预取策略的 UVM 使训练能在 15M 节点（2.17× 超订）下进行，且无需额外修改应用源码。
 
 The policy uses sequential prefetch (375~LOC) with a uprobe tracing PyTorch allocations, determining prefetch ranges via device-traced history.
 % 该策略使用带 uprobe 追踪 PyTorch 分配的顺序预取（375 LOC），并通过设备端追踪的历史确定预取范围。
@@ -388,9 +388,9 @@ LatencyBudget (CLC) & Scheduling Block & Device & 19 \\
 \par\medskip
 \noindent\fbox{%
 \begin{minipage}{\dimexpr\columnwidth-2\fboxsep-2\fboxrule\relax}
-\textbf{Summary.} With \sys{}, policies translate application access patterns and task priorities into coordinated decisions about execution, data residency, and transfer timing.
+\textbf{Summary.} With \sys{}, AI Agent can develop policies that translate application access patterns and task priorities into coordinated decisions about execution, data residency, and transfer timing, enabling application needs to guide resource management across memory and scheduling.
 % \textbf{总结。} 借助 \sys{}，策略将应用访问模式和任务优先级转化为对执行、数据驻留和传输时机的协调决策。
-Agent-developed policies specialize these decisions to the workload, enabling application needs to guide resource management across memory and scheduling.
+% Agent-developed policies specialize these decisions to the workload, enabling application needs to guide resource management across memory and scheduling.
 % 智能体开发的策略根据工作负载制定这些决策，使应用需求能够指导跨内存与调度的资源管理。
 \end{minipage}%
 }
@@ -522,8 +522,8 @@ We evaluate device-side \sys mechanisms using a vector-add CUDA GPU kernel (32 e
 % 我们使用来自 cuda-sample~\cite{nvidia_cuda_samples} 的 vector-add CUDA GPU 内核（32 个元素、10K 次迭代）在 RTX 5090 上评估 gpubpf 的设备端机制。
 \Cref{fig:microbench}(a) compares \sys's SIMT-aware warp-level execution against eGPU~\cite{egpu} that injects eBPF bytecode without SIMT-specific verification and optimizations.
 % \Cref{fig:microbench}(a) 将 gpubpf 的 SIMT 感知 warp 级执行与 eGPU~\cite{egpu} 对比，后者注入 eBPF 字节码而不进行面向 SIMT 的验证与优化。
-The baseline incurs overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead by 60--80\%.
-% 基线因每线程执行和未合并的内存访问产生开销，而 gpubpf 的 warp 统一执行与合并 map 访问将开销降低 60--80\%。
+The baseline incurs overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead by approximately 60--80\% for most operations.
+% 基线因每线程执行和未合并的内存访问产生开销，而 gpubpf 的 warp 统一执行与合并 map 访问将多数操作的开销降低约 60--80\%。
 For compute-intensive synthetic kernels with 128--8,192 thread blocks, hooks with a lightweight map update incur 4.0--16.6\% runtime overhead, while shorter kernels incur higher relative overhead.
 % 对于包含 128--8,192 个线程块的计算密集合成内核，执行轻量 map 更新的钩子引入 4.0--16.6\% 的运行时开销，而较短内核的相对开销更高。
 \Cref{fig:microbench}(b) shows CPU map access via PCIe is 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU.

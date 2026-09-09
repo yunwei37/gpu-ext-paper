@@ -100,8 +100,8 @@ We implement \sys{} on Linux by extending the NVIDIA open GPU OS kernel modules~
 % 我们在 Linux 上实现 \sys，扩展 NVIDIA 开源 GPU OS 内核模块，并为 GPU 设备提供 eBPF SIMT 验证器和 JIT 运行时。
 We evaluate \sys{} across LLM inference, GNN training, vector search, and multi-tenant scenarios.
 % 我们在 LLM 推理、GNN 训练、向量搜索和多租户场景下评估 \sys。
-Policies based on \sys improve throughput by up to $4.8\times$ over framework offloading and $1.76\times$ over application-tuned baselines, and reduce tail latency by up to $2\times$, with low overhead and no application modifications or restarts.
-% 基于 \sys 的策略相比框架卸载最高提升 $4.8\times$ 吞吐量，相比应用调优的基线最高提升 $1.76\times$，并将尾延迟最多降低 $2\times$，同时开销很低，且无需修改或重启应用。
+Policies based on \sys improve throughput by up to $4.8\times$ over framework offloading and $1.76\times$ over application-tuned baselines, and reduce tail latency by up to $2\times$, with low overhead and no application source-code changes or restarts.
+% 基于 \sys 的策略相比框架卸载最高提升 $4.8\times$ 吞吐量，相比应用调优的基线最高提升 $1.76\times$，并将尾延迟最多降低 $2\times$，同时开销很低，且无需修改应用源码或重启应用。
 Across seven prior policies, the main metrics in \Cref{fig:matched-ports} differ by less than 2\% between \sys{} and native implementations.
 % 对于七种已有策略，\Cref{fig:matched-ports} 中各项指标在 \sys{} 实现与原生实现之间的相对差异均小于 2\%。
 We show that \sys{} enforces safety by using AI agents to generate all of the 59 evaluated eBPF policies, including eviction ordering, prefetch strategies, scheduling logic, and device-side work-stealing.

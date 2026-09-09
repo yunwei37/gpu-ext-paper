@@ -80,7 +80,7 @@ For memory observation, \sys attaches eBPF handlers at memory instructions, GPU 
 
 We realize cross-layer maps (\S\ref{sec:cross-layer-maps}) by placing shards in GPU-accessible memory tiers: cold state in host DRAM, hot state in GPU global memory, and per-warp data in GPU shared memory.
 % 我们通过将分片（shard）放置于 GPU 可访问的不同内存层级来实现跨层 map（见 \S\ref{sec:cross-layer-maps}）：冷状态放在主机 DRAM，热状态放在 GPU 全局内存，逐 warp 数据放在 GPU 共享内存。
-A runtime daemon asynchronously flushes GPU-local shards to host-visible canonical instances, providing coherent snapshots without synchronization overhead.
-% 运行时守护进程异步地将 GPU 本地分片刷回主机端可见的规范实例，在无需同步开销的情况下提供一致性快照。
+A runtime daemon asynchronously flushes GPU-local shards to host-visible canonical instances, providing periodically refreshed snapshots without synchronization overhead.
+% 运行时守护进程异步地将 GPU 本地分片刷回主机端可见的规范实例，提供周期性刷新的主机端可见快照。
 Shard updates occur at warp granularity through warp-leader threads without GPU atomic operations: handlers accumulate counters in warp-local registers, aggregate per warp, and store into GPU-local shards for periodic host flush.
 % 分片更新以 warp 粒度通过 warp leader 线程完成，且不依赖 GPU 原子操作：处理函数在 warp 本地寄存器中累积计数器，按 warp 聚合后写入 GPU 本地分片，再由主机端定期刷回。

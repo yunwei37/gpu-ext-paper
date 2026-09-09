@@ -98,7 +98,7 @@ First, policies are application-bound, requiring per-framework implementation an
 % 第一，策略绑定于特定应用，需逐框架实现，无法跨生态复用。
 Second, process-level isolation prevents cross-tenant visibility and coordinated memory-scheduling decisions across tenants~\cite{xiao2018gandiva,yu2020fine}; hardware partitioning such as MIG imposes fixed resource boundaries that cannot be dynamically rebalanced.
 % 第二，进程级隔离阻碍了跨租户可见性与跨租户的协同内存—调度决策；MIG 等硬件分区施加了固定资源边界，无法动态再平衡。
-Third, user-space code cannot access privileged driver mechanisms, leaving policies constrained to GPU kernel launch boundaries and unable to execute on latency-critical paths (e.g., page-fault handlers), perform precise preemption, or exploit GPU-side warp-level access patterns.
+Third, user-space code cannot access privileged driver mechanisms, leaving policies constrained to GPU kernel launch boundaries and unable to execute on latency-critical paths (e.g., page-fault handlers), perform precise preemption on driver or device states, or exploit GPU-side warp-level access patterns.
 % 第三，用户态代码无法访问特权驱动机制，策略被限制在 GPU 内核启动边界，无法在延迟敏感路径（如缺页处理程序）上执行，无法执行精确抢占，也无法利用 GPU 侧的 warp 级访问模式。
 In summary, these frameworks are safe and dynamic but not full-stack.
 % 总之，这些框架安全、动态，但非全栈。

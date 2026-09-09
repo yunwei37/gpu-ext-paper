@@ -91,8 +91,8 @@ Policies, as verified eBPF programs invoking OS kernel functions (\emph{kfuncs})
 % 策略是经过验证的 eBPF 程序，可调用 OS 内核函数（\emph{kfunc}），附加到驱动事件、用户态 uprobe 和设备端事件上。
 Each trigger asynchronously initiates multiple proactive or deferred state transitions across memory and scheduling domains without blocking, coordinated through eBPF workqueues.
 % 每个触发通过 eBPF 工作队列协调，异步地跨内存和调度领域发起多个主动或被延迟的状态转换，且不阻塞。
-For example, a uprobe on \texttt{cudaLaunchKernel} concurrently initiates a 6.6\,ms DMA prefetch based on device observations and preempts another tenant to free GPU memory.
-% 例如，\texttt{cudaLaunchKernel} 上的 uprobe 并发地基于设备观测发起一次 6.6\,ms 的 DMA 预取，并抢占另一租户以释放 GPU 内存。
+For example, a uprobe on \texttt{cudaLaunchKernel} concurrently initiates a 6.6\,ms DMA prefetch based on device observations and preempts another tenant to reduce resource contention.
+% 例如，\texttt{cudaLaunchKernel} 上的 uprobe 并发地基于设备观测发起一次 6.6\,ms 的 DMA 预取，并抢占另一租户以减少资源争用。
 
 \input{tex-revision/fig_exec_model}
 
