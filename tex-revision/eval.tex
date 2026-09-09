@@ -77,8 +77,8 @@ This highlights \sys's programmability: different workloads require different sc
 
 We provided an AI coding agent (Claude Code with Opus 4.5) with \sys{}'s eBPF interfaces; the agent autonomously generated all policy logic without human review or guidance, while humans authored only the initial framework and benchmark harness.
 % 我们向一个 AI 编程智能体（Claude Code，Opus 4.5）提供 gpubpf 的 eBPF 接口；智能体在无人审阅或指导的情况下自主生成了全部策略逻辑，人类只编写初始框架和基准测试工具。
-All 59 policies evaluated were produced via a fully automated generate-test-iterate loop.
-% 评估的全部 59 个策略均由完全自动化的“生成—测试—迭代”循环产出。
+All 59 policies evaluated in the agent exploration study were produced via a fully automated generate-test-iterate loop.
+% 智能体探索研究中评估的全部 59 个策略均由完全自动化的“生成—测试—迭代”循环产出。
 Over 20 days, the agent performed 974 benchmark runs and 244 code edits, exploring 59 distinct policies and consuming 5.5M tokens (\$388 API cost); approximately 75\% of explored policies yielded negative results before being iteratively corrected.
 % 在 20 多天里，智能体执行了 974 次基准运行、244 次代码修改，探索了 59 个不同策略，消耗 5.5M token（API 费用 388 美元）；约 75\% 被探索的策略在迭代修正前得到的是负面结果。
 We documented 50 safety events (24 logic bugs, 18 performance regressions, 2 verifier rejections, 2 GPU verifier-caught overflows, 4 others), all recovered without OS panics or data corruption, typically within minutes and without application restarts.
