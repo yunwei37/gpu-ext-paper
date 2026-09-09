@@ -238,6 +238,11 @@ This work used Claude and Codex as generative AI tools for coding and language i
 % 本工作使用 Claude 和 Codex 等生成式 AI 工具辅助编程与语言润色。
 
 \bibliographystyle{ACM-Reference-Format}
+% Preserve terminal ! or ? in article titles without the style's extra period.
+\ExplSyntaxOn
+\cs_set:Npn \showarticletitle #1
+  { #1 \regex_match:nnT { [!?] \Z } { #1 } { \peek_meaning_remove:NT . { } } }
+\ExplSyntaxOff
 \balance
 % \bibliography{cite}
 \bibliography{tex-revision/cite}
