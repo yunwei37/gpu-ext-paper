@@ -424,26 +424,26 @@ LatencyBudget (CLC) & Scheduling Block & Device & 19 \\
 System & Original policy & Original mechanism and \sys{} implementation \\
 % 系统。原有策略。原有机制与 gpubpf 实现。
 \midrule
-MoE-Infinity~\cite{xue2025moeinfinity} & Match access predictions, rank expert prefetches, and select eviction victims. & The original system uses a user-space runtime to manage expert transfers. \sys{} implements cache decisions as host-side programs. \\
-% MoE-Infinity：匹配访问预测、排列专家预取顺序并选择驱逐对象。原系统使用用户态运行时管理专家传输，gpubpf 通过主机侧程序实现缓存决策。
+MoE-Infinity~\cite{xue2025moeinfinity} & Uses predicted expert accesses to prioritize prefetching and choose which experts to evict. & The original system uses a user-space runtime to manage expert transfers. \sys{} implements cache decisions as host-side programs. \\
+% MoE-Infinity：根据预测的专家访问，确定预取优先级并选择要驱逐的专家。原系统使用用户态运行时管理专家传输，gpubpf 通过主机侧程序实现缓存决策。
 \addlinespace
-Expert Buffering~\cite{huang2023towards} & Admit experts to the cache and prioritize eviction of experts unused by the current batch. & The original system uses a user-space cache to manage GPU buffers and CPU-to-GPU copies. \sys{} implements admission and eviction as host-side programs. \\
-% Expert Buffering：决定专家缓存准入，优先驱逐当前批次不用的专家。原系统使用用户态缓存管理 GPU 缓冲区和 CPU 到 GPU 的复制，gpubpf 通过主机侧程序实现准入与驱逐。
+Expert Buffering~\cite{huang2023towards} & Chooses which experts to cache, evicting those unused by the current batch first. & The original system uses a user-space cache to manage GPU buffers and CPU-to-GPU copies. \sys{} implements admission and eviction as host-side programs. \\
+% Expert Buffering：决定缓存哪些专家，并优先驱逐当前批次不用的专家。原系统使用用户态缓存管理 GPU 缓冲区和 CPU 到 GPU 的复制，gpubpf 通过主机侧程序实现准入与驱逐。
 \addlinespace
-FineMoE~\cite{yu2026finemoe} & Select a dynamic set of experts for speculative prefetch. & The original system uses a user-space cache with CUDA runtime transfers. \sys{} implements dynamic expert selection as a host-side program. \\
-% FineMoE：动态选择推测预取的专家集合。原系统使用用户态缓存，通过 CUDA runtime 传输数据，gpubpf 通过主机侧程序实现动态专家选择。
+FineMoE~\cite{yu2026finemoe} & Dynamically chooses which predicted experts to load before they are needed. & The original system uses a user-space cache with CUDA runtime transfers. \sys{} implements dynamic expert selection as a host-side program. \\
+% FineMoE：从预测会用到的专家中动态选择提前加载的对象。原系统使用用户态缓存，通过 CUDA runtime 传输数据，gpubpf 通过主机侧程序实现动态专家选择。
 \addlinespace
-Hummingbird~\cite{hu2026hummingbird} & Split background kernels to fill foreground idle intervals, with priority-aware memory management. & The original system schedules split kernels on the host, remaps thread-block coordinates on the device, and modifies UVM for memory management. The \sys{} policy pairs host-side task admission with device-side block-coordinate mapping. \\
-% Hummingbird：拆分后台 GPU 内核以填充前台空闲区间，并按优先级管理内存。原系统在主机侧调度拆分后的 GPU 内核，在设备侧映射线程块坐标，并修改 UVM 管理内存，gpubpf 的设计将主机侧任务准入与设备侧线程块坐标映射结合。
+Hummingbird~\cite{hu2026hummingbird} & Runs smaller background kernels during foreground idle intervals and manages memory by task priority. & The original system schedules split kernels on the host, remaps thread-block coordinates on the device, and modifies UVM for memory management. The \sys{} policy pairs host-side task admission with device-side block-coordinate mapping. \\
+% Hummingbird：在前台空闲期间运行拆分后的后台 GPU 内核，并按任务优先级管理内存。原系统在主机侧调度拆分后的 GPU 内核，在设备侧映射线程块坐标，并修改 UVM 管理内存，gpubpf 的设计将主机侧任务准入与设备侧线程块坐标映射结合。
 \addlinespace
-POD-Attention~\cite{kamath2025pod} & Proportionally select prefill or decode work for each SM. & The original system selects work inside the fused GPU kernel. In \sys{}, the host prepares launches and a device-side program selects work within the unchanged fused kernel. \\
-% POD-Attention：按比例为各 SM 选择 prefill 或 decode 工作。原系统在融合 GPU 内核中选择工作，gpubpf 由主机准备启动，设备侧程序在保留的融合 GPU 内核中选择工作。
+POD-Attention~\cite{kamath2025pod} & Assigns prefill or decode work to each SM according to the desired balance between the two. & The original system selects work inside the fused GPU kernel. In \sys{}, the host prepares launches and a device-side program selects work within the unchanged fused kernel. \\
+% POD-Attention：根据 prefill 与 decode 的目标比例，为各 SM 分配相应工作。原系统在融合 GPU 内核中选择工作，gpubpf 由主机准备启动，设备侧程序在保留的融合 GPU 内核中选择工作。
 \addlinespace
-XSched~\cite{shen2025xsched} & Select the highest-priority task through preemptible command queues. & The original system controls queues on the host, adds device-side kernel-entry checks at Level 2, and uses driver interfaces at Level 3. The \sys{} policy assigns queue selection to host programs and kernel-entry decisions to device programs. \\
-% XSched：通过可抢占命令队列选择最高优先级任务。原系统在主机侧控制队列，在 Level 2 加入设备侧内核入口检查，在 Level 3 使用驱动接口，gpubpf 的设计由主机侧程序选择队列，由设备侧程序决定内核能否开始执行。
+XSched~\cite{shen2025xsched} & Runs the highest-priority queued task, preempting lower-priority work when needed. & The original system controls queues on the host, adds device-side kernel-entry checks at Level 2, and uses driver interfaces at Level 3. The \sys{} policy assigns queue selection to host programs and kernel-entry decisions to device programs. \\
+% XSched：运行队列中优先级最高的任务，必要时抢占低优先级任务。原系统在主机侧控制队列，在 Level 2 加入设备侧内核入口检查，在 Level 3 使用驱动接口，gpubpf 的设计由主机侧程序选择队列，由设备侧程序决定内核能否开始执行。
 \addlinespace
-GPREEMPT~\cite{fan2025gpreempt} & Control task admission and assign timeslices by priority. & The original system controls task blocking and release in user space and modifies the GPU driver to control timeslices. \sys{} implements these decisions with programs in user space and the GPU driver. \\
-% GPREEMPT：控制任务准入并按优先级分配时间片。原系统在用户态控制任务阻塞与释放，并修改 GPU 驱动以控制时间片，gpubpf 通过用户态和 GPU 驱动中的程序实现这些决策。
+GPREEMPT~\cite{fan2025gpreempt} & Uses task priority to decide which tasks may run and how much GPU time each receives. & The original system controls task blocking and release in user space and modifies the GPU driver to control timeslices. \sys{} implements these decisions with programs in user space and the GPU driver. \\
+% GPREEMPT：根据任务优先级，决定允许哪些任务运行以及为各任务分配多少 GPU 时间。原系统在用户态控制任务阻塞与释放，并修改 GPU 驱动以控制时间片，gpubpf 通过用户态和 GPU 驱动中的程序实现这些决策。
 \bottomrule
 \end{tabularx}
 \end{table*}
