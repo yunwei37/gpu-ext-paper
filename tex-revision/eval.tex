@@ -454,8 +454,8 @@ GPREEMPT~\cite{fan2025gpreempt} & Uses task priority to decide which tasks may r
 % 方法
 In \Cref{fig:matched-ports}, we compare the workload baseline with the native policy to measure policy benefit.
 % 在 \Cref{fig:matched-ports} 中，我们比较工作负载基线与原生策略，以衡量策略收益。
-We then compare the \sys{} and native (without \sys{}) implementations of the same policy to measure the cost of \sys{}, keeping the workload and underlying execution unchanged.
-% 随后，我们在保持工作负载和底层执行不变的条件下，比较同一策略的 \sys{} 实现与原生实现（不使用 \sys{}），以衡量 \sys{} 的执行代价。
+We then compare the \sys{} and native implementations of the same policy to measure the cost of \sys{}, keeping the workload and underlying execution unchanged.
+% 随后，我们在保持工作负载和底层执行不变的条件下，比较同一策略的 \sys{} 实现与原生实现，以衡量 \sys{} 的执行代价。
 Unless stated otherwise, we report medians with confidence intervals.
 % 除非另有说明，我们报告中位数及置信区间。
 
@@ -481,8 +481,6 @@ GPREEMPT lowers LC response p99 from 1.796~ms to 1.615~ms (native) and 1.610~ms 
 \subsection{RQ2: Mechanism Cost}
 % RQ2：机制代价
 \label{sec:rq2-cost}
-
-We measure hook, observability, and map-placement overheads below.
 
 \paragraph{Verification Overhead.}
 % 验证开销。
