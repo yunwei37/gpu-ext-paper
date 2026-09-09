@@ -242,6 +242,19 @@ Only 2 of 8 policies yielded positive results.
 
 % Across all four case studies, \sys's programmable policies exploit workload structure (experts, KV-cache, graph structure, index layout) that existing UVM and framework-level mechanisms cannot leverage, and the agent's exploration followed a consistent pattern: broad initial policy, failure-driven refinement, and iterative convergence, with eBPF containment ensuring every failed attempt was recovered in seconds rather than requiring driver rebuilds or reboots.
 
+\par\medskip
+\noindent\fbox{%
+\begin{minipage}{\dimexpr\columnwidth-2\fboxsep-2\fboxrule\relax}
+In the KV-cache case, the agent combined stride prefetching for weights with sequential prefetching for KV-cache and adjusted prefetch aggressiveness to PCIe utilization.
+% 在 KV-cache 案例中，智能体将权重的步长预取与 KV-cache 的顺序预取相结合，并根据 PCIe 利用率调节预取强度。
+For GNN training, it selected one-block lookahead to avoid saturating PCIe.
+% 对于 GNN 训练，智能体选择提前一个 block 预取，以避免耗尽 PCIe 带宽。
+These findings suggest that programmable memory policies should account for both data access patterns and the bandwidth shared by competing transfers.
+% 这些发现表明，可编程内存策略应同时考虑数据访问模式，以及相互竞争的传输所共享的带宽。
+\end{minipage}%
+}
+\par\medskip
+
 \subsubsection{Multi-Tenant Memory, Bandwidth, and Scheduling}
 % 多租户内存、带宽与调度
 \label{sec:rq1-mt}

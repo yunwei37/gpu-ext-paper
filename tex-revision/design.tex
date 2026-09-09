@@ -122,6 +122,13 @@ When a policy requests a resource change, the driver checks whether the change i
 \Cref{tab:safety-rules} summarizes the rules and their enforcement.
 % \Cref{tab:safety-rules} 汇总了这些规则及其执行方式。
 
+\paragraph{Trusted computing base.}
+% 可信计算基。
+The trusted computing base (TCB) comprises the host OS, GPU driver and firmware, policy verifiers and compilation toolchain, and \sys{}'s driver module, hooks, helpers, and transition validators.
+% 可信计算基（TCB）包括主机 OS、GPU 驱动与固件、策略验证器与编译工具链，以及 \sys{} 的驱动模块、钩子、helper 和转移验证器。
+Policy safety assumes correct operation of the GPU hardware and this TCB.
+% 策略安全以 GPU 硬件和上述 TCB 正确运行为前提。
+
 \subsubsection{Transition Validation}
 % 驱动持有的转移验证
 
@@ -210,13 +217,6 @@ Invalid prefetch range & Valid migration range & Native prefetch \\
 % 安全规则与典型拒绝行为。程序在执行前被拒绝。资源请求在发起转移前被检查。
 \label{tab:safety-rules}
 \end{table}
-
-\paragraph{Trusted computing base.}
-% 可信计算基。
-The trusted computing base (TCB) comprises the host OS, GPU driver and firmware, policy verifiers and compilation toolchain, and \sys{}'s driver module, hooks, helpers, and transition validators.
-% 可信计算基（TCB）包括主机 OS、GPU 驱动与固件、策略验证器与编译工具链，以及 \sys{} 的驱动模块、钩子、helper 和转移验证器。
-Policy safety assumes correct operation of the GPU hardware and this TCB.
-% 策略安全以 GPU 硬件和上述 TCB 正确运行为前提。
 
 \subsubsection{Warp-level Execution Optimizations}
 % warp 级执行优化
