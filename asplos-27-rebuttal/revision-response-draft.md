@@ -1,21 +1,21 @@
-Draft: 
+Draft reply message: 
 
-Thank you for the detailed feedback. We have organized the revision around the following sections.
+Thank you for the detailed feedback. We organized the revision around the main issues raised by the reviewers and the shepherd.
 
-  1. Abstract, Introduction, and Conclusion
-      - Clarified that the headline performance improvements come from policies implemented through gpubpf, addressing the shepherd’s and Reviewer F’s concern about policy versus mechanism.
-      - Added a summary of comparisons with native implementations of seven prior policies to put the cost of the general mechanism in perspective.
-
-  2. Design and Implementation
-      - Added a Transition Validation subsection explaining resource-ownership checks, current-state validation, conflicting requests, and synchronization between validation and execution (Reviewers B, F).
-      - Expanded the SIMT verification explanation to describe how uniformity propagates through computations and control flow, including joins and loops.
-      - Added a safety-rule table (Table 1) connecting rejected behaviors to safety properties and system responses, and an explicit TCB. These explanations are grouped under Runtime Verification and Optimizations (Reviewers B, F).
-      - Integrated author-response clarifications on storage/CXL extensions, independent tenant policies, stale statistics, application-policy interactions, and raw observation records. Implementation also discusses portability and future accelerator interfaces (Reviewers A, D, E, F).
-
-  3. Evaluation
-      - Organized the evaluation around policy expressibility and benefits (RQ1) and mechanism cost (RQ2).
-      - Added Policies from Prior Systems, grouping the seven-policy capability table and baseline/native/gpubpf comparisons to distinguish expressibility, policy benefits, and implementation overhead, including measured performance differences. (Table 2 and Fig 15; Reviewers E, F)
-      - Expanded Multi-Tenant Memory, Bandwidth, and Scheduling with five-policy comparisons across three workloads and varying oversubscription ratios, showing the additional benefit of coordinating memory and scheduling. (Fig 12; Reviewer F)
-      - Added RTX 5090 observability comparisons (Fig 16; Reviewer A) and trampoline scaling measurements (Reviewer D).
-      - Added a Summary highlighting how application access patterns and task priorities guide coordinated execution, data residency, and transfer timing, and how agent-developed policies specialize these decisions to workloads, addressing the shepherd’s request for policy insights.
-      - Checked the compiled revision for the shepherd’s typographic nits: paragraph headings no longer show duplicate periods, and bibliography entries no longer display stray braces.
+Policy vs. mechanism and prior systems
+Clarified in the Abstract, Introduction, Evaluation, and Conclusion which headline improvements come from policies implemented through gpubpf versus the gpubpf mechanism itself.
+Added a policy-expressibility table and comparisons with seven policies from prior systems, including baseline/native/gpubpf results to quantify the overhead of the general mechanism.
+Expanded the discussion of prior systems and explicitly identify policies and policy combinations enabled by gpubpf, including those produced through the agentic workflow.
+Safety, verification, and implementation
+Added a Transition Validation subsection describing resource-ownership checks.
+Expanded the SIMT verifier description, including propagation through computations, branches, joins, and loops.
+Added a safety-rule table (Table 1), rejected-policy examples, failure modes, and a description of the trusted computing base and verifier responsibilities.
+Added discussions of stale statistics, per-tenant policies, storage/CXL extensions, application-policy interactions, raw observations, portability, and future accelerator interfaces.
+Evaluation
+Reorganized the evaluation around policy expressibility and benefits (RQ1) and mechanism cost (RQ2).
+Added seven-policy prior-system comparisons (Table 2 and Fig. 15)
+Expanded multi-tenant memory/bandwidth/scheduling experiments across five configs and three workloads (Fig. 12)
+Added RTX 5090 and trampoline-scaling measurements (Fig. 16).
+Clarified when results arise from application behavior, policy choices, or mechanism overhead.
+Highlighted new policy implemented in gpubpf by AI Agents and summary them.
+Fixed the noted typographic issues and typos
