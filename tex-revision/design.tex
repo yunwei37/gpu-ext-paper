@@ -98,8 +98,8 @@ For example, a uprobe on \texttt{cudaLaunchKernel} concurrently initiates a 6.6\
 
 To ensure OS kernel safety, verified kfuncs restrict policy actions to two dimensions: \emph{selection} (choosing resources, e.g., eviction order, tenant preemption priority) and \emph{timing} (when to act, e.g., proactive prefetch).
 % 为保证 OS 内核安全，经验证的 kfunc 将策略动作限制在两个维度：\emph{选择}（选择资源，如逐出顺序、租户抢占优先级）和\emph{时机}（何时行动，如主动预取）。
-The driver always controls underlying state machines, so policies only select ordering and timing of driver-managed operations, cannot allocate memory or remove tasks, and revert to FIFO defaults under resource pressure or misconfiguration.
-% 驱动始终掌控底层状态机；策略只能选择驱动管理的操作的顺序和时机，不能分配内存或移除任务，并在资源压力或配置错误时回退到 FIFO 默认行为。
+The driver always controls underlying state machines, so policies only select ordering and timing of driver-managed operations, cannot allocate memory or remove tasks, and fall back to the driver's original behavior under resource pressure or misconfiguration.
+% 驱动始终掌控底层状态机；策略只能选择驱动管理的操作的顺序和时机，不能分配内存或移除任务，并在资源压力或配置错误时回退到驱动原有的行为。
 Currently, a single policy program is loaded system-wide but may internally differentiate tenant treatment for priorities, similar to sched\_ext; per-tenant isolation is future work.
 % 目前，单个策略程序系统级加载，但可在内部按优先级区分对待租户，类似 sched\_ext；按租户隔离是未来工作。
 Independent tenant policies would attach to separate cgroups, with permissions controlling policy installation and map access and budgets limiting each tenant's policy execution.

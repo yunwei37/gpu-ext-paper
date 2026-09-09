@@ -111,9 +111,17 @@ def _draw(panels: list[dict], paths: list[Path]) -> None:
             figure.subplots_adjust(left=.06, right=.995, bottom=.31, top=.69, wspace=.95)
         else:
             figure.tight_layout(rect=(0, 0, 1, .94), h_pad=1.0, w_pad=1.5)
+        export_bbox = None
+        if len(panels) == 7:
+            from matplotlib.transforms import Bbox
+            figure.canvas.draw()
+            tight_bbox = figure.get_tightbbox(figure.canvas.get_renderer())
+            # Trim only the bottom; retain the 7-inch width and label sizes.
+            export_bbox = Bbox.from_extents(
+                0, max(0, tight_bbox.y0 - .03), *figure.get_size_inches())
         try:
             for path in paths:
-                figure.savefig(path, dpi=300)
+                figure.savefig(path, dpi=300, bbox_inches=export_bbox, pad_inches=0)
         finally:
             plt.close(figure)
 
