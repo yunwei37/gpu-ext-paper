@@ -245,12 +245,10 @@ Only 2 of 8 policies yielded positive results.
 \par\medskip
 \noindent\fbox{%
 \begin{minipage}{\dimexpr\columnwidth-2\fboxsep-2\fboxrule\relax}
-In the KV-cache case, the agent combined stride prefetching for weights with sequential prefetching for KV-cache and adjusted prefetch aggressiveness to PCIe utilization.
-% 在 KV-cache 案例中，智能体将权重的步长预取与 KV-cache 的顺序预取相结合，并根据 PCIe 利用率调节预取强度。
-For GNN training, it selected one-block lookahead to avoid saturating PCIe.
-% 对于 GNN 训练，智能体选择提前一个 block 预取，以避免耗尽 PCIe 带宽。
-These findings suggest that programmable memory policies should account for both data access patterns and the bandwidth shared by competing transfers.
-% 这些发现表明，可编程内存策略应同时考虑数据访问模式，以及相互竞争的传输所共享的带宽。
+\textbf{Summary.} With \sys{}, policies translate application access patterns and task priorities into coordinated decisions about execution, data residency, and transfer timing.
+% \textbf{总结。} 借助 \sys{}，策略将应用访问模式和任务优先级转化为对执行、数据驻留和传输时机的协调决策。
+Agent-developed policies specialize these decisions to the workload, enabling application needs to guide resource management across memory and scheduling.
+% 智能体开发的策略根据工作负载制定这些决策，使应用需求能够指导跨内存与调度的资源管理。
 \end{minipage}%
 }
 \par\medskip
@@ -451,8 +449,8 @@ GPREEMPT~\cite{fan2025gpreempt} & Uses task priority to decide which tasks may r
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{tex-revision/img/results-raw/revision/matched-policy-panels.pdf}
-\caption{Policy comparisons: workload baseline, native policy, and \sys. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) prefetching all positively predicted experts, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. Panel (e) uses Llama decode batch 128. Bars show medians over five runs per configuration, except (e) means and (f) ten runs. Whiskers in (b,f,g) show full ranges. Panel (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s.}
-% 策略比较：工作负载基线、原生策略与 gpubpf。基线为关闭预测的专家缓存（a）、固定 K 的 FIFO（b）、预取所有预测会用到的专家（c）、默认调度（d、g）、双流 FlashAttention（e）和原生 CUDA（f）。面板（e）使用 Llama 解码批量 128。柱形为每种配置五次运行的中位数，但（e）为均值、（f）使用十次运行。（b、f、g）的须线表示完整范围。（g）为每秒 100 个 VGG19 LC 请求，对应 ResNet152 BE 每秒 100 或 200 请求。
+\caption{Policy comparisons: workload baseline, native policy, and \sys. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) prefetching all positively predicted experts, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. In (d), Per. and Burst denote periodic and BurstGPT arrivals. Panel (e) uses Llama decode batch 128. Bars show medians over five runs per configuration, except (e) means and (f) ten runs. Whiskers in (b,f,g) show full ranges. Panel (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s.}
+% 策略比较：工作负载基线、原生策略与 gpubpf。基线为关闭预测的专家缓存（a）、固定 K 的 FIFO（b）、预取所有预测会用到的专家（c）、默认调度（d、g）、双流 FlashAttention（e）和原生 CUDA（f）。（d）中 Per. 和 Burst 分别表示周期性和 BurstGPT 到达模式。面板（e）使用 Llama 解码批量 128。柱形为每种配置五次运行的中位数，但（e）为均值、（f）使用十次运行。（b、f、g）的须线表示完整范围。（g）为每秒 100 个 VGG19 LC 请求，对应 ResNet152 BE 每秒 100 或 200 请求。
 \label{fig:matched-ports}
 \end{figure*}
 

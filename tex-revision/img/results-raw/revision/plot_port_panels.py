@@ -86,15 +86,13 @@ def _draw(panels: list[dict], paths: list[Path]) -> None:
             if "samples" in panel:
                 top = max(v for sample in panel["samples"] for values in sample.values() for v in values)
             axis.set_ylim(0, top * 1.22)
-            if panel["id"] == "expert-buffering" and "samples" in panel:
-                group = panel["groups"][0]
-                reduction = 100 * (1 - group["port"] / group["baseline"])
-                axis.text(.1, top * 1.035, f"−{reduction:.2f}%",
-                          ha="center", va="bottom", fontsize=7)
             axis.set_xticks(range(len(panel["groups"])),
                             [g["label"] if panel["id"] != "finemoe" else ""
                              for g in panel["groups"]])
-            if panel["id"] in ("hummingbird", "gpreempt"):
+            if panel["id"] == "hummingbird":
+                axis.set_xticklabels([{"periodic": "Per.", "BurstGPT": "Burst"}.get(
+                    g["label"], g["label"]) for g in panel["groups"]])
+            if panel["id"] == "gpreempt":
                 axis.tick_params(axis="x", labelrotation=55)
                 for label in axis.get_xticklabels():
                     label.set_horizontalalignment("right")
