@@ -96,8 +96,8 @@ We compare five configurations: framework-managed CPU offloading (\texttt{ncmoe=
 % 我们对比五种配置：框架管理的 CPU 卸载（\texttt{ncmoe=\allowbreak{}32/64}）、默认 UVM、带应用层提示的 UVM（\texttt{cuda\-Mem\-Advise}），以及 gpubpf 主机—设备预取策略（\S\ref{sec:design-interfaces}）。
 For decode (memory-bound), the expert-offloading policy in \sys{} achieves \textbf{1.76$\times$ speedup} over application-tuned UVM hints (\texttt{cuda\-Mem\-Advise}) and 4.8$\times$ over framework offloading (\texttt{ncmoe=64}) (\Cref{fig:llama-expert-offload}).
 % 对于解码（内存受限），gpubpf 中的专家卸载策略相比经应用调优的 UVM 提示（\texttt{cuda\-Mem\-Advise}）取得 \textbf{1.76× 加速}，相比框架卸载（\texttt{ncmoe=64}）取得 4.8× 加速（\Cref{fig:llama-expert-offload}）。
-These hints improve decode over default UVM but require application modification and degrade prefill by 40\%; the \sys{} policy improves more decoding while preserving prefill throughput within 4\% of default UVM without application source-code changes.
-% 这些提示相比默认 UVM 改善了解码，但需要修改应用，并使预填充性能下降 40\%；\sys{} 策略将预填充吞吐量保持在与默认 UVM 相差 4\% 以内，且无需修改应用源码。
+These hints improve decode over default UVM but require application modification and degrade prefill by 40\%; the \sys{} policy further improves decode throughput while preserving prefill throughput within 4\% of default UVM without application source-code changes.
+% 这些提示相比默认 UVM 改善了解码，但需要修改应用，并使预填充性能下降 40\%；\sys{} 策略进一步提升解码吞吐量，同时将预填充吞吐量保持在与默认 UVM 相差 4\% 以内，且无需修改应用源码。
 For prefill (compute-bound), framework offloading (\texttt{ncmoe=32}) achieves 13\% higher prefill throughput than this policy, but decode dominates end-to-end latency, so the decode improvement outweighs the prefill gap.%\arq{I don't understand the final data point. what has 13\% higher throughput? The graphed performance of UVM eBPF looks like it has worse performance compared to the alternatives. BTW---its very weird that none of the bars in Figure 8 are labeled "\sys"--I think that UVM eBPF is supposed to be that configuration but it does not make a lot of sense.}
 % 对于预填充（计算受限），框架卸载（\texttt{ncmoe=32}）比该策略的预填充吞吐量高 13\%，但解码主导端到端延迟，因此解码的改善超过了预填充的差距。
 
@@ -158,8 +158,10 @@ The resulting policy (totaling $\sim$680~LOC) effectively prevents thrashing see
 
 \end{figure}
 
-For LMCache's local-disk backend, an agent-developed policy prioritizes reads over background writes while limiting each write's total deferral to 200~ms.
-% 对 LMCache 的本地磁盘后端，智能体开发的策略优先处理读请求，并将每个后台写请求的累计推迟时间限制在 200 ms 内。
+We also evaluate read/write scheduling for KV-cache offloading using LMCache's local-disk backend.
+% 我们还使用 LMCache 的本地磁盘后端评估 KV-cache 卸载中的读写调度。
+An agent-developed policy prioritizes reads over background writes while limiting each write's total deferral to 200~ms.
+% 智能体开发的策略优先处理读请求，并将每个后台写请求的累计推迟时间限制在 200 ms 内。
 Across five paired runs, median read p99, measured from scheduled request arrival, falls from 323.707~ms with FIFO to 123.141~ms with the native policy and 118.097~ms with the same policy in \sys{}.
 % 在五组配对运行中，从请求的预定到达时刻起算的读请求 p99 延迟中位数，由 FIFO 下的 323.707 ms 降至原生策略下的 123.141 ms，以及同一策略在 \sys{} 中的 118.097 ms。
 The median paired reduction with the \sys{} policy relative to FIFO is 61.9\%.
@@ -181,8 +183,8 @@ Combined with user-expressed prefetching, this eBPF policy achieves 1.44$\times$
 % 该策略与用户预取结合时，通过预取更大区域、减少阻塞缺页，又获得了 1.44× 的额外加速。
 Native GPU allocation (no UVM) achieves the highest performance when data fits in memory (1.89~s at 5M nodes) but fails with OOM beyond $\sim$8M nodes.
 % 当数据能放入内存时，原生 GPU 分配（无 UVM）性能最高（5M 节点时 1.89 秒），但在超过约 8M 节点时因 OOM 失败。
-UVM with this prefetch policy enables training at 15M nodes (2.17$\times$ oversubscription) on a much better performance without application modification.
-% 采用该预取策略的 UVM 使训练能在 15M 节点（2.17× 超订）下进行，且无需额外修改应用源码。
+UVM with this prefetch policy enables training at 15M nodes (2.17$\times$ oversubscription) with lower epoch times than default UVM, without application modification.
+% 采用该预取策略的 UVM 使训练能在 15M 节点（2.17× 超订）下进行，单轮时间低于默认 UVM，且无需修改应用。
 
 The policy uses sequential prefetch (375~LOC) with a uprobe tracing PyTorch allocations, determining prefetch ranges via device-traced history.
 % 该策略使用带 uprobe 追踪 PyTorch 分配的顺序预取（375 LOC），并通过设备端追踪的历史确定预取范围。
@@ -388,8 +390,8 @@ LatencyBudget (CLC) & Scheduling Block & Device & 19 \\
 \par\medskip
 \noindent\fbox{%
 \begin{minipage}{\dimexpr\columnwidth-2\fboxsep-2\fboxrule\relax}
-\textbf{Summary.} With \sys{}, AI Agent can develop policies that translate application access patterns and task priorities into coordinated decisions about execution, data residency, and transfer timing, enabling application needs to guide resource management across memory and scheduling.
-% \textbf{总结。} 借助 \sys{}，策略将应用访问模式和任务优先级转化为对执行、数据驻留和传输时机的协调决策。
+\textbf{Summary.} With \sys{}, AI agents can develop policies that translate application access patterns and task priorities into coordinated decisions about execution, data residency, and transfer timing, enabling application needs to guide resource management across memory and scheduling.
+% \textbf{总结。} 借助 \sys{}，AI 智能体可以开发策略，将应用访问模式和任务优先级转化为对执行、数据驻留和传输时机的协调决策，使应用需求能够指导跨内存与调度的资源管理。
 % Agent-developed policies specialize these decisions to the workload, enabling application needs to guide resource management across memory and scheduling.
 % 智能体开发的策略根据工作负载制定这些决策，使应用需求能够指导跨内存与调度的资源管理。
 \end{minipage}%

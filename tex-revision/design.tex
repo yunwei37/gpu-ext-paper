@@ -40,8 +40,8 @@ Memory chunks move between host and device memory via eviction and prefetching.
 % 内存块通过逐出和预取在主机内存和设备内存之间移动。
 GPU kernels (launched tasks) and GPU thread blocks (parallel execution units within kernels) transition among ready, running, and finished states through scheduling and preemption operations.
 % GPU 内核（已启动的任务）和 GPU 线程块（内核内的并行执行单元）通过调度和抢占操作在就绪、运行和完成状态之间转换。
-The model could extend to storage and CXL tiers by adding placement and transfer states, with policies choosing where and when to move data and each backend validating and executing those moves.
-% 该模型可通过增加放置与传输状态扩展到存储和 CXL 层级，由策略选择数据移往何处以及何时移动，并由各后端验证和执行这些移动。
+Extending the model to storage or CXL tiers would require corresponding placement states and backend-validated transfers.
+% 将该模型扩展到存储或 CXL 层级需要相应的放置状态和经后端验证的传输操作。
 
 \subsection{GPU-Specific Challenges for eBPF Extensibility}
 % eBPF 可扩展性的 GPU 特有挑战
@@ -100,10 +100,10 @@ To ensure OS kernel safety, verified kfuncs restrict policy actions to two dimen
 % 为保证 OS 内核安全，经验证的 kfunc 将策略动作限制在两个维度：\emph{选择}（选择资源，如逐出顺序、租户抢占优先级）和\emph{时机}（何时行动，如主动预取）。
 The driver always controls underlying state machines, so policies only select ordering and timing of driver-managed operations, cannot allocate memory or remove tasks, and fall back to the driver's original behavior under resource pressure or misconfiguration.
 % 驱动始终掌控底层状态机；策略只能选择驱动管理的操作的顺序和时机，不能分配内存或移除任务，并在资源压力或配置错误时回退到驱动原有的行为。
-Currently, a single policy program is loaded system-wide but may internally differentiate tenant treatment for priorities, similar to sched\_ext; per-tenant isolation is future work.
-% 目前，单个策略程序系统级加载，但可在内部按优先级区分对待租户，类似 sched\_ext；按租户隔离是未来工作。
-Independent tenant policies would attach to separate cgroups, with permissions controlling policy installation and map access and budgets limiting each tenant's policy execution.
-% 独立的租户策略需要分别挂载到各自的 cgroup，通过权限控制策略安装和 map 访问，并通过预算限制各租户的策略执行。
+Currently, a single system-wide policy can differentiate tenant priorities, similar to sched\_ext.
+% 单个系统级策略可以区分租户优先级，类似 sched\_ext。
+Independent tenant policies are future work and would require separate permissions, map isolation, and execution budgets.
+% 当前不支持独立的租户策略；这需要独立的权限控制、map 隔离和执行预算。
 
 \subsection{Runtime Verification and Optimizations}
 % 运行时验证与优化
@@ -236,10 +236,8 @@ When access patterns change faster than the synchronization interval, policies c
 % 当访问模式变化快于同步周期时，策略可以提高同步频率，以开销换取数据新鲜度。
 When application heuristics interfere with a policy, the policy can adjust its prefetch aggressiveness using observed access patterns and memory pressure.
 % 当应用自身的优化策略与资源策略相互干扰时，资源策略可以根据观测到的访存模式和内存压力调整预取强度。
-Counters can be combined across shards using associative operations such as addition.
-% 计数器可以通过加法等满足结合律的运算跨分片合并。
-Maps can also store individual records for the host or GPU to read.
-% Map 也可以保存单条记录。
+Maps can hold individual records for host or GPU access and counters that merge across shards through associative operations such as addition.
+% Map 保存供主机或 GPU 访问的单条记录，以及可通过加法等满足结合律的运算跨分片合并的计数器。
 
 \subsection{Example: MoE Expert Offloading}
 % 示例：MoE 专家卸载

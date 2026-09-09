@@ -9,12 +9,12 @@ We integrated lightweight instrumentation ($\sim$100 LOC) into NVIDIA's open GPU
 % 我们在 NVIDIA 开放 GPU OS 内核模块中集成了轻量级插桩（约 100 行代码），将内存与调度状态变迁暴露为 GPU 专用 kfunc（见 \S\ref{sec:impl-host}）。
 Our user-space loader and JIT infrastructure ($\sim$10 KLOC) builds upon bpftime's framework~\cite{bpftime} for device-side code generation, while an LLVM-based backend ($\sim$1 KLOC) translates the restricted \sys eBPF instruction subset into GPU device code (PTX) (\S\ref{sec:impl-gpu}).
 % 我们的用户态加载器与 JIT 基础设施（约 10 KLOC）基于 bpftime 框架~\cite{bpftime} 构建，用于设备端代码生成；同时，基于 LLVM 的后端（约 1 KLOC）将受限的 gpubpf eBPF 指令子集翻译为 GPU 设备代码（PTX）（见 \S\ref{sec:impl-gpu}）。
-Although our implementation targets NVIDIA GPUs, the host-side design aligns with generic Linux abstractions (HMM/\texttt{migrate\_vma}~\cite{rocm-gpu-memory,linux-gpusvm-doc}, DRM scheduler~\cite{drm-gpu-sched,amdgpu-userq-doc}), and the device-side can be extended to generate vendor-neutral IR~\cite{spirv-ir-rfc} for future portability.
-% 尽管我们的实现面向 NVIDIA GPU，但主机端设计遵循通用 Linux 抽象（HMM/\texttt{migrate\_vma}~\cite{rocm-gpu-memory,linux-gpusvm-doc}、DRM 调度器~\cite{drm-gpu-sched,amdgpu-userq-doc}），设备端也可扩展为生成厂商中立的 IR~\cite{spirv-ir-rfc}，以支持未来的可移植性。
-A port would retain the policy interface and state-machine model while adapting driver hooks, code generation, and instrumentation to the target GPU.
-% 移植时可以保留策略接口和状态机模型，同时针对目标 GPU 调整驱动钩子、代码生成和插桩。
-Future accelerators could expose hooks for validated resource transitions and access to runtime statistics directly in hardware or firmware.
-% 未来的加速器可以直接在硬件或固件中提供经过验证的资源转移钩子，以及运行时统计信息的访问接口。
+The host design aligns with Linux HMM/\texttt{migrate\_vma}~\cite{rocm-gpu-memory,linux-gpusvm-doc} and DRM scheduling~\cite{drm-gpu-sched,amdgpu-userq-doc}, and device code generation could target vendor-neutral IR~\cite{spirv-ir-rfc} with their LLVM backend.
+% 主机端设计与 Linux HMM/\texttt{migrate\_vma}~\cite{rocm-gpu-memory,linux-gpusvm-doc} 和 DRM 调度~\cite{drm-gpu-sched,amdgpu-userq-doc} 相契合；设备端代码生成可面向厂商中立的 IR~\cite{spirv-ir-rfc}。
+Porting beyond NVIDIA would require adapting driver hooks, instrumentation, and code generation.
+% 移植到 NVIDIA 以外的 GPU 需要适配驱动钩子、插桩和代码生成。
+Future hardware or firmware support for validated transition hooks and runtime statistics could simplify such ports.
+% 未来硬件或固件若支持经过验证的转移钩子和运行时统计，可简化此类移植。
 
 \subsection{Host-side Integration}
 % 主机端集成
