@@ -87,8 +87,7 @@ def _draw(panels: list[dict], paths: list[Path]) -> None:
                 top = max(v for sample in panel["samples"] for values in sample.values() for v in values)
             axis.set_ylim(0, top * 1.22)
             axis.set_xticks(range(len(panel["groups"])),
-                            [g["label"] if panel["id"] != "finemoe" else ""
-                             for g in panel["groups"]])
+                            [g["label"] for g in panel["groups"]])
             if panel["id"] == "hummingbird":
                 axis.set_xticklabels([{"periodic": "Per.", "BurstGPT": "Burst"}.get(
                     g["label"], g["label"]) for g in panel["groups"]])
