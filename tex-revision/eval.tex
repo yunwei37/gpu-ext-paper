@@ -105,8 +105,8 @@ Device-side eBPF tracing of per-warp memory accesses revealed that expert activa
 % 对每 warp 内存访问的设备端 eBPF 追踪表明，专家激活遵循可预测的步长序列，并识别出被频繁访问的共享层。
 For eviction, the agent tested FIFO ordering before converging on LFU, which retains frequently-accessed shared layers while evicting cold expert pages.
 % 在驱逐方面，智能体先测试 FIFO 顺序，最终收敛到 LFU——它保留被频繁访问的共享层，同时驱逐冷的专家页面。
-The final policy combines device-side access observation (45~LOC), host-side stride prefetch (472~LOC), and LFU eviction (304~LOC), totaling $\sim$820~LOC (\S\ref{sec:design-interfaces}).
-% 最终策略结合了设备端访问观测（45 LOC）、主机端步长预取（472 LOC）和 LFU 驱逐（304 LOC），共约 820 LOC（\S\ref{sec:design-interfaces}）。
+The final policy combines device-side access observation (45~LOC), driver-side stride prefetch (472~LOC), and driver-side LFU eviction (304~LOC), totaling $\sim$820~LOC (\S\ref{sec:design-interfaces}).
+% 最终策略结合了设备端访问观测（45 LOC）、驱动端步长预取（472 LOC）和驱动端 LFU 驱逐（304 LOC），共约 820 LOC（\S\ref{sec:design-interfaces}）。
 
 % \xiangyu{Are those hints easy to find in many scenarios? Maybe we should clarify it. Otherwise, it seems that \sys{} uses some tricks to win the competition.}
 
@@ -173,8 +173,8 @@ We evaluate \sys on PyTorch-based GCN training with random graphs of varying siz
 % \Cref{fig:gnn-epoch} 展示了五种配置下的单轮时间：原生 GPU 分配（无 UVM）、带与不带用户态预取（\texttt{cudaMemPrefetchAsync}）的 UVM，以及各自叠加通过 gpubpf 实现的预取策略的 UVM 配置。
 With UVM enabled via a custom allocator, each epoch allocates memory on CPU and migrates to GPU on demand, incurring overhead.
 % 通过自定义分配器启用 UVM 后，每轮先在 CPU 上分配内存再按需迁移到 GPU，带来开销。
-Developers can pre-migrate pages via \texttt{cudaMemPrefetchAsync}, achieving 5.5$\times$ speedup at moderate oversubscription, but this requires application modification.
-% 开发者可以通过 \texttt{cudaMemPrefetchAsync} 预迁移页面，在中等超订下获得 5.5× 加速，但这需要修改应用。
+User-space frameworks can pre-migrate pages via \texttt{cudaMemPrefetchAsync}, achieving 5.5$\times$ speedup at moderate oversubscription, but this requires application modification.
+% 用户态框架可以通过 \texttt{cudaMemPrefetchAsync} 预迁移页面，在中等超订下获得 5.5× 加速，但这需要修改应用。
 Without user hints, this policy optimizes page fault handling via aggressive prefetching, achieving 2.65$\times$ speedup transparently.
 % 在没有用户提示的情况下，该策略通过激进预取优化缺页处理，透明地取得 2.65× 加速。
 Combined with user-expressed prefetching, this eBPF policy achieves 1.44$\times$ additional speedup by prefetching larger regions and reducing blocking faults.
@@ -254,8 +254,8 @@ We evaluate \sys's eBPF struct\_ops scheduling policies on \emph{compute-bound} 
 % 我们在\emph{计算密集型}（SM 受限）的多租户工作负载上评估 gpubpf 基于 eBPF 的 struct\_ops 调度策略，不涉及内存超订。
 2 latency-critical (LC) processes and 4 best-effort (BE) processes run concurrently, each with 4 CUDA streams submitting 50 compute kernels.
 % 2 个延迟关键（LC）进程与 4 个尽力型（BE）进程并发运行，每个进程通过 4 条 CUDA 流提交 50 个计算内核。
-We compare the native scheduler against a \sys{} preemption policy equivalent to GPREEMPT's~\cite{fan2025gpreempt} priority-based timeslice scheduling, with differentiated timeslices (LC: 1s, BE: 200$\mu$s), implemented as an eBPF program (925~LOC) without unsafe modification to the driver source.
-% 我们将原生调度器与 gpubpf 抢占策略对比，该策略等价于 GPREEMPT~\cite{fan2025gpreempt} 的基于优先级的时间片调度，采用差异化时间片（LC：1 秒，BE：200$\mu$秒），以 eBPF 程序实现（925 LOC），无需对驱动源码进行不安全的修改。
+We compare the native scheduler against a \sys{} preemption policy equivalent to GPREEMPT's~\cite{fan2025gpreempt} priority-based timeslice scheduling, with differentiated driver-controlled timeslices (LC: 1s, BE: 200$\mu$s), implemented as an eBPF program (925~LOC) without unsafe modification to the driver source.
+% 我们将原生调度器与 gpubpf 抢占策略对比，该策略等价于 GPREEMPT~\cite{fan2025gpreempt} 的基于优先级的时间片调度，采用由驱动控制的差异化时间片（LC：1 秒，BE：200$\mu$秒），以 eBPF 程序实现（925 LOC），无需对驱动源码进行不安全的修改。
 This scheduling policy reduces LC P99 launch latency by 96\% (1188$\mu$s $\to$ 53$\mu$s).
 % 该调度策略将 LC 的 P99 启动延迟降低 96\%（1188$\mu$秒 $\to$ 53$\mu$秒）。
 BE throughput remains nearly unchanged at 11.38 kernels/s with the native scheduler and 11.47 kernels/s with this policy (+0.8\%).
