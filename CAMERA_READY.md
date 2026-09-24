@@ -1,7 +1,7 @@
 # gpu_ext camera-ready working copy
 
 This local version changes the system name and camera-ready presentation
-and adds a short artifact appendix. The paper's existing prose, captions,
+and adds an artifact appendix with verification details. The paper's existing prose, captions,
 and comments are preserved.
 
 ## Build
@@ -32,11 +32,13 @@ is not part of the camera-ready deliverable.
   cannot replace curves through directory iteration order. Its nine plotted
   curves retain their original coordinates; all eight figures retain their
   numeric labels.
-- Appendix A contains only the artifact repository, a brief inventory, and
-  the artifact-guide link. No verification pseudocode or agent-workflow
-  exposition is added to the paper.
+- Appendix A retains the artifact repository, brief inventory, and guide
+  link. It adds abstract resource-request and transition-validation pseudocode
+  with resource-specific synchronization, checks, fallback, and initiation,
+  the SIMT verifier's worklist algorithm, and three paired rejection and
+  acceptance examples. It does not add agent-workflow exposition.
 
-The built PDF has 16 pages, including the artifact appendix. The final build
+The built PDF has 16 pages, including one artifact/verification appendix page. The final build
 has no errors, overfull boxes, or unresolved references. All nine existing
 body-section source files match the pre-edit backup apart from system-name
 substitution, and all original main-file comment lines are retained.

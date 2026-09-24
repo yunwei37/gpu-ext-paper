@@ -8,3 +8,94 @@ It includes the system implementation, resource-management policies, benchmark h
 % 工件包含系统实现、资源管理策略、基准测试工具和已记录的实验结果。
 The \href{https://github.com/eunomia-bpf/gpu_ext/blob/master/ARTIFACT.md}{artifact guide} provides the paper-to-artifact mapping and instructions for building, running, and reanalyzing the experiments.
 % 工件指南提供论文与工件的对应关系，以及构建、运行和实验结果再分析的说明。
+
+The \href{https://github.com/eunomia-bpf/gpu_ext/blob/master/docs/revision-safety-design.md}{implementation guide} links the following validation procedures to their source and retained tests.
+% 实现指南将以下校验过程链接到源码及保留的测试。
+
+\subsection{Transition Validation}
+% 转移校验
+The pseudocode uses resource-specific routines for synchronization, state validation, fallback, and transition initiation.
+% 伪代码通过资源专用函数完成同步、状态校验、回退和转移发起。
+
+\begin{lstlisting}[language={},numbers=none,xleftmargin=0pt,columns=fullflexible,keepspaces=true]
+record(slot, action):
+    if not slot.attempted:
+        slot = (attempted=true, conflict=false, action)
+        return RECORDED
+    if slot.conflict: return CONFLICT
+    if slot.action == action: return REPEAT
+    slot.conflict = true
+    return CONFLICT
+
+apply(resource, observed, request):
+    with driver_guard(resource):
+        current = driver_state(resource)
+        if not valid_owner(resource, observed):
+            return fallback(resource, request,
+                            INVALID_OWNER)
+        if not valid_state(observed, current):
+            return fallback(resource, request, STALE_STATE)
+        if request.conflict:
+            return fallback(resource, request, CONFLICT)
+        if not request.attempted:
+            return fallback(resource, request, NO_REQUEST)
+        if not allowed(current, request.action):
+            return fallback(resource, request,
+                            INVALID_ACTION)
+        return initiate_native(resource, request.action)
+\end{lstlisting}
+
+% Keep the verifier algorithm together in the next column.
+\newpage
+\subsection{SIMT Verifier}
+% SIMT 验证器
+The analysis state contains register and stack-byte uniformity tags, pointer provenance, and map identities; \texttt{transfer} applies instruction and helper semantics, and \texttt{join} merges incoming states.
+% 分析状态包含寄存器与栈字节的一致性标签、指针来源和 map 标识；transfer 应用指令与 helper 语义，join 合并传入状态。
+
+\begin{lstlisting}[language={},numbers=none,xleftmargin=0pt,columns=fullflexible,keepspaces=true]
+verify_gpu(program, maps):
+    reject malformed input or unsupported GPU maps
+    if PREVAIL(program, GPU helper/map model,
+               termination=true) fails: reject
+    state = {entry: initial_state()}
+    worklist = [entry]
+    while worklist is not empty:
+        pc = pop(worklist)
+        out = transfer(program[pc], state[pc])
+        for s in successors(pc):
+            new = out if s not in state
+                  else join(state[s], out)
+            if s not in state or new != state[s]:
+                state[s] = new
+                enqueue(worklist, s)
+    for each reachable instruction and input state:
+        require uniform branch operands
+        require uniform atomic target addresses
+        require uniform map keys and update flags
+        require uniform shared-map payloads
+        reject prohibited helpers and nonuniform
+               checked host-bridge payloads
+    accept only if all checks pass
+\end{lstlisting}
+
+Runtime rejection requires a verifier-enabled build in strict mode; warning-only and disabled modes do not enforce rejection.
+% 加载时拒绝非法程序要求构建启用验证器且运行于严格模式；仅告警或禁用模式不强制拒绝。
+The following pairs were tested through the public GPU-verifier entry point.
+% 以下配对通过 GPU 验证器的公开入口测试。
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabularx}{\columnwidth}{@{}XX@{}}
+\toprule
+Rejected program & Accepted control \\
+\midrule
+Branch on lane ID & Branch on warp ID \\
+Lane-derived map key & Warp-derived map key \\
+Lane-derived shared-map value & Warp-derived shared-map value \\
+\bottomrule
+\end{tabularx}
+\caption{Paired SIMT rejection and acceptance examples.}
+% 配对的 SIMT 拒绝与接受示例。
+\label{tab:appendix-simt-pairs}
+\end{table}
