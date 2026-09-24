@@ -23,8 +23,8 @@ is not part of the camera-ready deliverable.
   and experiment identifiers keep their original names.
 - The ten authors, order, affiliations, and emails in `authors.tex` follow
   the supplied HotCRP record. Individual ACM metadata is retained; the
-  visible author list occupies one line, followed by shared affiliations
-  and the supplied contact email. The custom renderer only affects the
+  visible author list occupies one line, followed by shared affiliations,
+  with no email line. The custom renderer only affects the
   title's author block.
 - CCS concepts, keywords, acknowledgments, and ACM reference format enabled.
 - Eight active figure assets have updated system-name labels. The FAISS
