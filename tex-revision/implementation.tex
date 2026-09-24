@@ -4,11 +4,11 @@
 \label{sec:implementation}
 
 We implemented \sys on Linux 6.15, extending the OS kernel with a standalone file ($\sim$1 KLOC) that handles hook registration and verifier extensions.
-% 我们在 Linux 6.15 上实现了 gpubpf，用一个独立的文件（约 1 KLOC）扩展 OS 内核，负责钩子注册和 verifier 扩展。
+% 我们在 Linux 6.15 上实现了 gpu\_ext，用一个独立的文件（约 1 KLOC）扩展 OS 内核，负责钩子注册和 verifier 扩展。
 We integrated lightweight instrumentation ($\sim$100 LOC) into NVIDIA's open GPU OS kernel modules to expose memory and scheduling state transitions as GPU-specific kfuncs (\S\ref{sec:impl-host}).
 % 我们在 NVIDIA 开放 GPU OS 内核模块中集成了轻量级插桩（约 100 行代码），将内存与调度状态变迁暴露为 GPU 专用 kfunc（见 \S\ref{sec:impl-host}）。
 Our user-space loader and JIT infrastructure ($\sim$10 KLOC) builds upon bpftime's framework~\cite{bpftime} for device-side code generation, while an LLVM-based backend ($\sim$1 KLOC) translates the restricted \sys eBPF instruction subset into GPU device code (PTX) (\S\ref{sec:impl-gpu}).
-% 我们的用户态加载器与 JIT 基础设施（约 10 KLOC）基于 bpftime 框架~\cite{bpftime} 构建，用于设备端代码生成；同时，基于 LLVM 的后端（约 1 KLOC）将受限的 gpubpf eBPF 指令子集翻译为 GPU 设备代码（PTX）（见 \S\ref{sec:impl-gpu}）。
+% 我们的用户态加载器与 JIT 基础设施（约 10 KLOC）基于 bpftime 框架~\cite{bpftime} 构建，用于设备端代码生成；同时，基于 LLVM 的后端（约 1 KLOC）将受限的 gpu\_ext eBPF 指令子集翻译为 GPU 设备代码（PTX）（见 \S\ref{sec:impl-gpu}）。
 The host design aligns with Linux HMM/\texttt{migrate\_vma}~\cite{rocm-gpu-memory,linux-gpusvm-doc} and DRM scheduling~\cite{drm-gpu-sched,amdgpu-userq-doc}, and device code generation could target vendor-neutral IR~\cite{spirv-ir-rfc} with their LLVM backend.
 % 主机端设计与 Linux HMM/\texttt{migrate\_vma}~\cite{rocm-gpu-memory,linux-gpusvm-doc} 和 DRM 调度~\cite{drm-gpu-sched,amdgpu-userq-doc} 相契合；设备端代码生成可面向厂商中立的 IR~\cite{spirv-ir-rfc}。
 Porting beyond NVIDIA would require adapting driver hooks, instrumentation, and code generation.
@@ -22,7 +22,7 @@ Future hardware or firmware support for validated transition hooks and runtime s
 \paragraph{Memory State-Transition Hooks.}
 % 内存状态变迁钩子
 \sys extends the NVIDIA Open GPU OS Kernel Modules~\cite{nvidia-open-gpu}, instrumenting the UVM module at four code locations: \emph{activate} (chunk allocation), \emph{access} (page fault), \emph{evict\_prepare} (eviction candidate selection), and \emph{prefetch} (proactive migration).
-% gpubpf 扩展了 NVIDIA 开放 GPU OS 内核模块~\cite{nvidia-open-gpu}，在四处代码位置对 UVM 模块进行插桩：\emph{activate}（chunk 分配）、\emph{access}（缺页）、\emph{evict\_prepare}（驱逐候选选择）和 \emph{prefetch}（主动迁移）。
+% gpu\_ext 扩展了 NVIDIA 开放 GPU OS 内核模块~\cite{nvidia-open-gpu}，在四处代码位置对 UVM 模块进行插桩：\emph{activate}（chunk 分配）、\emph{access}（缺页）、\emph{evict\_prepare}（驱逐候选选择）和 \emph{prefetch}（主动迁移）。
 At each hook, the driver constructs a context (e.g., 2MB-aligned region range, fault address, block size) and invokes the attached eBPF handler.
 % 在每个钩子处，驱动构造一个上下文（例如 2MB 对齐的区域范围、缺页地址、块大小），并调用挂载的 eBPF 处理函数。
 Eviction hooks operate at 2MB granularity; prefetch hooks operate at page granularity and can prefetch as many pages as needed.
@@ -54,12 +54,12 @@ For device-side programs, it uses PREVAIL~\cite{prevail-verifier} with GPU helpe
 After verification, the user-space backend translates device-side bytecode into PTX, inlining helper functions and map accesses.
 % 验证通过后，用户态后端将设备端字节码翻译为 PTX，并内联辅助函数和 map 访问。
 Unlike the workshop version~\cite{egpu}, which relies on atomic synchronization, \sys{} avoids cross-SM primitives to prevent hardware stalls.
-% 与依赖原子同步的研讨会版本~\cite{egpu}不同，gpubpf 避免使用跨 SM 原语，以防止硬件停顿。
+% 与依赖原子同步的研讨会版本~\cite{egpu}不同，gpu\_ext 避免使用跨 SM 原语，以防止硬件停顿。
 
 \paragraph{Device-Side State-Transition Hooks.}
 % 设备端状态变迁钩子
 \sys hooks device-side state transitions (GPU kernel launch, memory access, execution-phase boundaries) by using ptrace to pause applications, intercepting CUDA runtime APIs, extracting GPU kernel PTX, inserting binary trampolines, and reloading instrumented GPU kernels without application recompilation or restart.
-% gpubpf 通过 ptrace 暂停应用、拦截 CUDA 运行时 API、提取 GPU 内核 PTX、插入二进制 trampoline 并重新加载插桩后的 GPU 内核，对设备端状态变迁（GPU 内核启动、内存访问、执行阶段边界）进行挂钩，且无需重新编译或重启应用。
+% gpu\_ext 通过 ptrace 暂停应用、拦截 CUDA 运行时 API、提取 GPU 内核 PTX、插入二进制 trampoline 并重新加载插桩后的 GPU 内核，对设备端状态变迁（GPU 内核启动、内存访问、执行阶段边界）进行挂钩，且无需重新编译或重启应用。
 Applications can also load the runtime at startup using \texttt{LD\_PRELOAD}.
 % 应用也可以通过 \texttt{LD\_PRELOAD} 在启动时加载运行时。
 For applications without PTX, host-side policies still operate through driver hooks, and an alternative instrumentation inserts eBPF code into SASS.
@@ -69,9 +69,9 @@ Trampolines insert prologue/epilogue logic for SIMT register preservation.
 In each trampoline, per-lane inputs are aggregated using \texttt{\_\_ballot\_\allowbreak{}sync} and \texttt{\_\_shfl\_\allowbreak{}sync}, with a warp leader selected via \texttt{\_\_ffs\allowbreak{}(\_\_active\-mask())} to execute the scalar eBPF handler once per warp, broadcasting results via shuffle instructions.
 % 在每个 trampoline 中，使用 \texttt{\_\_ballot\_\allowbreak{}sync} 和 \texttt{\_\_shfl\_\allowbreak{}sync} 聚合逐 lane 的输入，并通过 \texttt{\_\_ffs\allowbreak{}(\_\_active\-mask())} 选出 warp leader，使标量 eBPF 处理函数每个 warp 只执行一次，再通过 shuffle 指令广播结果。
 For block-level scheduling, \sys implements policies using persistent GPU kernels that poll and claim logical work units; on Blackwell GPUs, we use cluster launch control APIs~\cite{cuda-clc} to schedule thread blocks.
-% 对于块级调度，gpubpf 使用常驻 GPU 内核（轮询并认领逻辑工作单元）来实现策略；在 Blackwell GPU 上，我们使用 cluster launch control API~\cite{cuda-clc} 来调度线程块。
+% 对于块级调度，gpu\_ext 使用常驻 GPU 内核（轮询并认领逻辑工作单元）来实现策略；在 Blackwell GPU 上，我们使用 cluster launch control API~\cite{cuda-clc} 来调度线程块。
 For memory observation, \sys attaches eBPF handlers at memory instructions, GPU kernel function boundaries, and tracepoints to capture access patterns and issue policy hints to the host driver via cross-layer maps (e.g., device L2 prefetch can trigger a host callback for extended prefetch).
-% 对于内存观测，gpubpf 在内存指令、GPU 内核函数边界和 tracepoint 处挂载 eBPF 处理函数，以捕获访问模式并通过跨层 map 向主机端驱动下发策略提示（例如，设备端 L2 预取可触发主机端回调以进行扩展预取）。
+% 对于内存观测，gpu\_ext 在内存指令、GPU 内核函数边界和 tracepoint 处挂载 eBPF 处理函数，以捕获访问模式并通过跨层 map 向主机端驱动下发策略提示（例如，设备端 L2 预取可触发主机端回调以进行扩展预取）。
 
 \paragraph{Hierarchical Maps and Cross-Domain State}
 % 分层 Map 与跨域状态

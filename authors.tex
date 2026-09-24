@@ -1,0 +1,66 @@
+% Author order, affiliations, and emails follow the supplied HotCRP record.
+% Keep individual author metadata for PDF metadata and publication export.
+\author{Yusheng Zheng}
+\affiliation{\institution{UC Santa Cruz}}
+\email{yzhen165@ucsc.edu}
+\author{Tong Yu}
+\affiliation{\institution{eunomia-bpf Community}}
+\email{yt.xyxx@gmail.com}
+\author{Yiwei Yang}
+\affiliation{\institution{UC Santa Cruz}}
+\email{yyang363@ucsc.edu}
+\author{Minghui Jiang}
+\affiliation{\institution{Alibaba Group}}
+\email{shimei.jmh@alibaba-inc.com}
+\author{Xiangyu Gao}
+\affiliation{\institution{University of Washington}}
+\email{xiangyug@cs.washington.edu}
+\author{Jianchang Su}
+\affiliation{\institution{University of Connecticut}}
+\email{jianchang.su@uconn.edu}
+\author{Wenan Mao}
+\affiliation{\institution{Alibaba Group}}
+\email{wenan.mwa@alibaba-inc.com}
+\author{Wei Zhang}
+\affiliation{\institution{University of Connecticut}}
+\email{wei.13.zhang@uconn.edu}
+\author{Dan Williams}
+\affiliation{\institution{Virginia Tech}}
+\email{djwillia@vt.edu}
+\author{Andi Quinn}
+\affiliation{\institution{University of California Santa Cruz}}
+\email{aquinn1@ucsc.edu}
+\renewcommand{\shortauthors}{Yusheng Zheng et al.}
+
+% Compact single-line author display requested for this version.
+% Only the title's author renderer is customized; paper geometry and body
+% typography remain those of acmart sigplan. Structured metadata stays above.
+\makeatletter
+\renewcommand{\@mkauthors}{%
+  \begingroup
+  \hsize=\textwidth
+  \global\setbox\mktitle@bx=\vbox{%
+    \unvbox\mktitle@bx\par\medskip
+    \centering
+    {\fontsize{8.5}{10.5}\selectfont
+    \mbox{Yusheng Zheng\textsuperscript{1},
+    Tong Yu\textsuperscript{2},
+    Yiwei Yang\textsuperscript{1},
+    Minghui Jiang\textsuperscript{3},
+    Xiangyu Gao\textsuperscript{4},
+    Jianchang Su\textsuperscript{5},
+    Wenan Mao\textsuperscript{3},
+    Wei Zhang\textsuperscript{5},
+    Dan Williams\textsuperscript{6},
+    Andi Quinn\textsuperscript{1}}\par}
+    {\small
+    \textsuperscript{1}University of California Santa Cruz\quad
+    \textsuperscript{2}eunomia-bpf Community\quad
+    \textsuperscript{3}Alibaba Group\par
+    \textsuperscript{4}University of Washington\quad
+    \textsuperscript{5}University of Connecticut\quad
+    \textsuperscript{6}Virginia Tech\par
+    \href{mailto:yzhen165@ucsc.edu}{\nolinkurl{yzhen165@ucsc.edu}}\par}
+    \medskip}
+  \endgroup}
+\makeatother

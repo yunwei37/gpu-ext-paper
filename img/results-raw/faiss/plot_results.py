@@ -14,8 +14,20 @@ from pathlib import Path
 data_dir = Path(__file__).parents[5] / 'workloads' / 'faiss' / 'results'
 results_dir = Path(__file__).parent
 
-# 读取所有结果文件
-result_files = list(data_dir.glob("*.json"))
+# Explicit inputs for the published figure. Directory glob order previously
+# selected the last run for each configuration, silently changing curves when
+# other experiment results were present. Preserve the original nine curves.
+result_files = [data_dir / name for name in (
+    "SIFT100M_IVF4096_Flat_uvm_20260301_003018.json",
+    "SIFT100M_IVF4096_Flat_uvm_baseline.json",
+    "SIFT100M_IVF4096_Flat_uvm_prefetch_adaptive_tree.json",
+    "SIFT20M_IVF4096_Flat_baseline.json",
+    "SIFT20M_IVF4096_Flat_cpu.json",
+    "SIFT20M_IVF4096_Flat_uvm_20260216_185029.json",
+    "SIFT50M_IVF4096_Flat_uvm_prefetch_adaptive_tree.json",
+    "SIFT50M_IVF4096_Flat_uvm_baseline.json",
+    "SIFT1M_IVF4096_Flat_uvm_20260217_084502.json",
+)]
 
 def parse_filename(filename):
     name = filename.stem
@@ -149,7 +161,7 @@ legend_elements = [
     Line2D([0], [0], color='tab:blue', marker='o', markersize=8, linewidth=2, label='CPU'),
     Line2D([0], [0], color='tab:green', marker='o', markersize=8, linewidth=2, label='GPU'),
     Line2D([0], [0], color='tab:orange', marker='o', markersize=8, linewidth=2, label='UVM Baseline'),
-    Line2D([0], [0], color='tab:red', marker='o', markersize=8, linewidth=2, label='UVM gpubpf'),
+    Line2D([0], [0], color='tab:red', marker='o', markersize=8, linewidth=2, label='UVM gpu_ext'),
     # 数据集（右图）
     Line2D([0], [0], color='tab:blue', marker='o', markersize=10, linewidth=2, linestyle='-', label='SIFT50M (right)'),
     Line2D([0], [0], color='tab:red', marker='s', markersize=10, linewidth=2, linestyle='-', label='SIFT100M (right)'),

@@ -109,7 +109,7 @@ def main():
                     linestyle=style["linestyle"],
                     linewidth=style["linewidth"],
                     markersize=14,
-                    label=name)
+                    label=name.replace("gpubpf", "gpu_ext"))
 
     # Add vertical line for GPU memory limit
     ax.axvline(x=8, color='gray', linestyle=':', alpha=0.8, linewidth=2)

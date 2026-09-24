@@ -17,7 +17,7 @@ import statistics
 from pathlib import Path
 
 COLORS = {"baseline": "#666666", "original": "#D97706", "port": "#0072B2"}
-LEGEND = (("baseline", "Baseline"), ("original", "Native policy"), ("port", "gpubpf"))
+LEGEND = (("baseline", "Baseline"), ("original", "Native policy"), ("port", "gpu_ext"))
 STYLE = {"font.family": "DejaVu Sans", "font.size": 7,
          "axes.labelsize": 7, "xtick.labelsize": 7, "ytick.labelsize": 7,
          "legend.fontsize": 7, "axes.spines.top": False,

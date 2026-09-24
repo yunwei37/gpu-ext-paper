@@ -234,7 +234,7 @@ def _draw(data: dict, paths: list[Path]) -> None:
             axis.grid(axis="y", alpha=.25, linewidth=.6)
             axis.axhline(0, color="#555555", linewidth=.6)
         axes[0].set_ylabel("Prefill throughput loss (%)")
-        handles = [Patch(facecolor=ARM_COLORS["gpubpf"], label="gpubpf"),
+        handles = [Patch(facecolor=ARM_COLORS["gpubpf"], label="gpu_ext"),
                    Patch(facecolor=ARM_COLORS["nvbit"], hatch="//", label="NVBit")]
         figure.legend(handles=handles, loc="upper center", ncol=2, frameon=False,
                       bbox_to_anchor=(.5, 1.0), handlelength=1.1,

@@ -1,4 +1,4 @@
-\documentclass[sigplan,anonymous,review,nonacm]{acmart}
+\documentclass[sigplan,screen]{acmart}
 \setcounter{secnumdepth}{3}
 
 % === Functional packages ===
@@ -12,7 +12,6 @@
 \usepackage{subcaption}
 \usepackage{tabularx}
 \usepackage{comment}
-\geometry{top=1in,bottom=1in,left=0.75in,right=0.75in,includeheadfoot}
 % cleveref after hyperref (loaded by acmart)
 \usepackage{cleveref}
 
@@ -54,7 +53,7 @@
 \newcommand*\circled[1]{\tikz[baseline=(char.base)]{
   \node[shape=circle,draw=black!80,line width=0.2mm,inner sep=0.1pt] (char) {#1};}}
 
-\newcommand{\sys}{gpubpf\xspace}
+\newcommand{\sys}{gpu\_ext\xspace}
 \newcommand{\sysdriver}{\sys-Driver\xspace}
 \newcommand{\sysdevice}{\sys-Device\xspace}
 \newcommand{\tech}{GPU eBPF Extension Framework\xspace}
@@ -108,20 +107,28 @@
 % Allow extra stretch to prevent overfull hboxes from inline \texttt{} code
 \emergencystretch=2em
 
-% === ACM conference metadata ===
-\setcopyright{none}
-\settopmatter{printacmref=false}
-\renewcommand\footnotetextcopyrightpermission[1]{}
+% Keep the ACM reference paragraph together instead of splitting the author
+% list across columns. Its font and spacing remain those of acmart.
+\makeatletter
+\let\camera@mkbibcitation\@mkbibcitation
+\renewcommand{\@mkbibcitation}{%
+  \begingroup\interlinepenalty=10000
+  \camera@mkbibcitation
+  \endgroup}
+\makeatother
 
-\acmConference[ASPLOS '27]{Proceedings of the 32nd ACM International Conference on Architectural Support for Programming Languages and Operating Systems}{April 11--15, 2027}{Crete, Greece}
-\acmYear{2027}
+% === ACM conference metadata ===
+% === Camera-ready publication metadata ===
+\input{camera-ready-metadata}
+
+\title[gpu\_ext: GPU Resource Management with eBPF]{gpu\_ext: Safe and Programmable OS-Level GPU Resource Management with eBPF}
+\input{authors}
 
 % === 正文开始 ===
 \begin{document}
 
 % \title{\sys: An eBPF Extensible OS Policy Interface for GPU Systems}
 % \title{\sys: eBPF Extensions for GPU Resource Management}
-\title{Safe and Programmable OS-Level  GPU Resource Management with eBPF}
 
 \iffalse % real authors (hidden by anonymous option, kept for camera-ready)
 \author{Yusheng Zheng}
@@ -207,6 +214,39 @@
 % %safe, programmable eBPF extensions across the GPU's OS kernel driver and device. Unlike existing CPU-focused policy interfaces which rely on synchronous callbacks and local resource control, \sys addresses GPU-specific challenges: high latency of cross-device coordination, coupling of memory management and scheduling decisions, and limited device observability. To overcome these, \sys decouples policy triggers from their effects across the host-device boundary, modeling GPU resource management as programmable, asynchronous transitions on resource state machines directed by verified eBPF programs. To further bridge the visibility gap, \sys enables safe eBPF execution directly on GPU hardware with a SIMT-aware verifier. Evaluated on the Linux NVIDIA GPU driver, \sys with AI-generated policies improves throughput by $1.76\times$ over application-tuned baselines and reduces tail latency by up to $2\times$, without application modifications.
 % \end{abstract}
 
+% CCS concepts
+\begin{CCSXML}
+<ccs2012>
+   <concept>
+       <concept_id>10011007.10011006.10011008.10011009.10011015</concept_id>
+       <concept_desc>Software and its engineering~Virtual memory</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10011007.10011006.10011008.10011024.10011028</concept_id>
+       <concept_desc>Software and its engineering~Scheduling</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10011007.10011006.10011039</concept_id>
+       <concept_desc>Software and its engineering~Formal software verification</concept_desc>
+       <concept_significance>300</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10010520.10010521.10010537.10010540</concept_id>
+       <concept_desc>Computer systems organization~Graphics processors</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+ </ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Software and its engineering~Virtual memory}
+\ccsdesc[500]{Software and its engineering~Scheduling}
+\ccsdesc[300]{Software and its engineering~Formal software verification}
+\ccsdesc[500]{Computer systems organization~Graphics processors}
+
+\keywords{GPU resource management, eBPF, OS kernel extensibility, memory management, scheduling, unified virtual memory}
+
 \input{tex-revision/abstract}
 
 \maketitle
@@ -232,10 +272,11 @@
 
 % NOTE: \begin{acks} is suppressed by the anonymous option.
 % CFP requires GenAI disclosure to be visible in submission.
-\section*{Acknowledgments}
+\begin{acks}
 % 致谢
 This work used Claude and Codex as generative AI tools for coding and language improvements.
 % 本工作使用 Claude 和 Codex 等生成式 AI 工具辅助编程与语言润色。
+\end{acks}
 
 \bibliographystyle{ACM-Reference-Format}
 % Preserve terminal ! or ? in article titles without the style's extra period.
@@ -243,8 +284,16 @@ This work used Claude and Codex as generative AI tools for coding and language i
 \cs_set:Npn \showarticletitle #1
   { #1 \regex_match:nnT { [!?] \Z } { #1 } { \peek_meaning_remove:NT . { } } }
 \ExplSyntaxOff
-\balance
 % \bibliography{cite}
 \bibliography{tex-revision/cite}
+
+% The appendix follows the references and is outside the main-body page count.
+% Keep the artifact appendix on a separate page.
+\makeatletter
+\@ACM@balancefalse
+\makeatother
+\clearpage
+\appendix
+\input{tex-revision/appendix}
 
 \end{document}

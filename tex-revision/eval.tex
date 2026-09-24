@@ -7,24 +7,24 @@ Our evaluation addresses two research questions:
 
 \begin{itemize}[leftmargin=*]
   \item \textbf{RQ1 (Policy Expressibility and Benefits):} Can AI agents safely express GPU resource-management policies, including those from published state-of-the-art systems, through \sys{}? Do these policies improve performance?
-  % RQ1（策略可表达性与收益）：AI 智能体能否通过 gpubpf 安全地表达 GPU 资源管理策略，包括已发表最先进系统中的策略？这些策略能否提升性能？
+  % RQ1（策略可表达性与收益）：AI 智能体能否通过 gpu\_ext 安全地表达 GPU 资源管理策略，包括已发表最先进系统中的策略？这些策略能否提升性能？
   \item \textbf{RQ2 (Mechanism Cost):} What runtime overhead does \sys{} add for hooks, observability, and policy execution?
-  % RQ2（机制代价）：gpubpf 的钩子、可观测功能和策略执行引入了多少运行时开销？
+  % RQ2（机制代价）：gpu\_ext 的钩子、可观测功能和策略执行引入了多少运行时开销？
 \end{itemize}
 
 \subsection{Methodology and Setup}
 % 方法论与实验设置
 
 We evaluate \sys on two machines: Server~A with Intel Core Ultra~9 285K (24 cores), 128~GB DDR5 RAM, and NVIDIA RTX~5090 GPU; Server~B with dual Intel Gold 6138 (80 cores), 256~GB RAM, and NVIDIA P40 GPU.
-% 我们在两台机器上评估 gpubpf：服务器 A 配备 Intel Core Ultra 9 285K（24 核）、128 GB DDR5 内存和 NVIDIA RTX 5090 GPU；服务器 B 配备双路 Intel Gold 6138（80 核）、256 GB 内存和 NVIDIA P40 GPU。
+% 我们在两台机器上评估 gpu\_ext：服务器 A 配备 Intel Core Ultra 9 285K（24 核）、128 GB DDR5 内存和 NVIDIA RTX 5090 GPU；服务器 B 配备双路 Intel Gold 6138（80 核）、256 GB 内存和 NVIDIA P40 GPU。
 Unless otherwise specified, experiments run on Server~A, averaging 10 trials using the geometric mean.
 % 除非另有说明，实验均在服务器 A 上进行，每项结果取 10 次试验的几何平均值。
 We compare \sys{} policies against three classes of baselines: (1) driver defaults (UVM LRU/FIFO eviction, native GPU scheduler), (2) application-level hints (\texttt{cudaMemAdvise}), and (3) framework-managed policies (e.g., llama.cpp \texttt{ncmoe}, vLLM CPU offload, LMCache) where applicable.
-% 我们将 gpubpf 策略与三类基线对比：(1) 驱动默认行为（UVM LRU/FIFO 驱逐、原生 GPU 调度器），(2) 应用层提示（\texttt{cudaMemAdvise}），以及 (3) 框架管理的策略（如 llama.cpp 的 \texttt{ncmoe}、vLLM CPU offload、LMCache，在适用处）。
+% 我们将 gpu\_ext 策略与三类基线对比：(1) 驱动默认行为（UVM LRU/FIFO 驱逐、原生 GPU 调度器），(2) 应用层提示（\texttt{cudaMemAdvise}），以及 (3) 框架管理的策略（如 llama.cpp 的 \texttt{ncmoe}、vLLM CPU offload、LMCache，在适用处）。
 We use PyTorch (version 2.9.0) and vLLM (version 0.11.0) with custom allocators, llama.cpp (version 7101), and Faiss (version 1.13.0) with UVM build config.
 % 我们使用 PyTorch（版本 2.9.0）和 vLLM（版本 0.11.0，配自定义分配器）、llama.cpp（版本 7101）以及采用 UVM 构建配置的 Faiss（版本 1.13.0）。
 All tests with \sys policies require no application source modifications.
-% 所有使用 gpubpf 策略的测试均无需修改应用。
+% 所有使用 gpu\_ext 策略的测试均无需修改应用。
 
 \begin{figure}
 \centering
@@ -57,7 +57,7 @@ However, sequential prefetch (375~LOC) degrades performance by 8\% due to patter
 \paragraph{Single-Tenant Block Scheduler.}
 % 单租户块调度器。
 We apply a \sys-based thread block scheduler to workloads with load imbalance.
-% 我们将基于 gpubpf 的线程块调度器应用于存在负载不均衡的工作负载。
+% 我们将基于 gpu\_ext 的线程块调度器应用于存在负载不均衡的工作负载。
 Using cluster-style launch where persistent worker blocks pull work units via \texttt{should\_\allowbreak{}try\_steal}, we evaluate three policies: FixedWork (static block assignment, no scheduler), Greedy (always-steal, 16~LOC), and LatencyBudget (workload-aware with per-block time limits, 19~LOC).
 % 采用集群式启动，由持久工作块通过 \texttt{should\_\allowbreak{}try\_steal} 拉取工作单元，我们评估三种策略：FixedWork（静态块分配，无调度器）、Greedy（总是窃取，16 LOC）和 LatencyBudget（感知负载、带每块时间限制的策略，19 LOC）。
 \Cref{fig:clc-policies}b compares these policies across two GEMM workloads.
@@ -69,14 +69,14 @@ Under heavy-tail workloads where 10\% of blocks perform 100--200$\times$ more wo
 LatencyBudget, which caps per-block stealing time, matches the fixed-work baseline.
 % LatencyBudget 限制了每块的窃取时间，与固定分配基线持平。
 This highlights \sys's programmability: different workloads require different scheduling strategies.
-% 这凸显了 gpubpf 的可编程性：不同工作负载需要不同的调度策略。
+% 这凸显了 gpu\_ext 的可编程性：不同工作负载需要不同的调度策略。
 
 \subsubsection{Agent-Driven Policy Exploration Case Studies}
 % 智能体驱动的策略探索案例研究
 \label{sec:rq1-agent}
 
 We provided an AI coding agent (Claude Code with Opus 4.5) with \sys{}'s eBPF interfaces; the agent autonomously generated all policy logic without human review or guidance, while humans authored only the initial framework and benchmark harness.
-% 我们向一个 AI 编程智能体（Claude Code，Opus 4.5）提供 gpubpf 的 eBPF 接口；智能体在无人审阅或指导的情况下自主生成了全部策略逻辑，人类只编写初始框架和基准测试工具。
+% 我们向一个 AI 编程智能体（Claude Code，Opus 4.5）提供 gpu\_ext 的 eBPF 接口；智能体在无人审阅或指导的情况下自主生成了全部策略逻辑，人类只编写初始框架和基准测试工具。
 All 59 policies evaluated in the agent exploration study were produced via a fully automated generate-test-iterate loop.
 % 智能体探索研究中评估的全部 59 个策略均由完全自动化的“生成—测试—迭代”循环产出。
 Over 20 days, the agent performed 974 benchmark runs and 244 code edits, exploring 59 distinct policies and consuming 5.5M tokens (\$388 API cost); approximately 75\% of explored policies yielded negative results before being iteratively corrected.
@@ -91,9 +91,9 @@ Equivalent bugs in modified GPU drivers risk kernel panics, requiring recompilat
 We evaluate \sys on GPT-OSS-120B MXFP4 MoE (59~GB) in llama.cpp on RTX 5090 (32~GB), requiring 1.84$\times$ oversubscription.
 % 我们在 RTX 5090（32 GB）上的 llama.cpp 中评估 GPT-OSS-120B MXFP4 MoE（59 GB），需要 1.84× 超订。
 We compare five configurations: framework-managed CPU offloading (\texttt{ncmoe=\allowbreak{}32/64}), default UVM, UVM with application-level hints (\texttt{cuda\-Mem\-Advise}), and a \sys{} host-device prefetch policy (\S\ref{sec:design-interfaces}).
-% 我们对比五种配置：框架管理的 CPU 卸载（\texttt{ncmoe=\allowbreak{}32/64}）、默认 UVM、带应用层提示的 UVM（\texttt{cuda\-Mem\-Advise}），以及 gpubpf 主机—设备预取策略（\S\ref{sec:design-interfaces}）。
+% 我们对比五种配置：框架管理的 CPU 卸载（\texttt{ncmoe=\allowbreak{}32/64}）、默认 UVM、带应用层提示的 UVM（\texttt{cuda\-Mem\-Advise}），以及 gpu\_ext 主机—设备预取策略（\S\ref{sec:design-interfaces}）。
 For decode (memory-bound), the expert-offloading policy in \sys{} achieves \textbf{1.76$\times$ speedup} over application-tuned UVM hints (\texttt{cuda\-Mem\-Advise}) and 4.8$\times$ over framework offloading (\texttt{ncmoe=64}) (\Cref{fig:llama-expert-offload}).
-% 对于解码（内存受限），gpubpf 中的专家卸载策略相比经应用调优的 UVM 提示（\texttt{cuda\-Mem\-Advise}）取得 \textbf{1.76× 加速}，相比框架卸载（\texttt{ncmoe=64}）取得 4.8× 加速（\Cref{fig:llama-expert-offload}）。
+% 对于解码（内存受限），gpu\_ext 中的专家卸载策略相比经应用调优的 UVM 提示（\texttt{cuda\-Mem\-Advise}）取得 \textbf{1.76× 加速}，相比框架卸载（\texttt{ncmoe=64}）取得 4.8× 加速（\Cref{fig:llama-expert-offload}）。
 These hints improve decode over default UVM but require application modification and degrade prefill by 40\%; the \sys{} policy further improves decode throughput while preserving prefill throughput within 4\% of default UVM without application source-code changes.
 % 这些提示相比默认 UVM 改善了解码，但需要修改应用，并使预填充性能下降 40\%；\sys{} 策略进一步提升解码吞吐量，同时将预填充吞吐量保持在与默认 UVM 相差 4\% 以内，且无需修改应用源码。
 For prefill (compute-bound), framework offloading (\texttt{ncmoe=32}) achieves 13\% higher prefill throughput than this policy, but decode dominates end-to-end latency, so the decode improvement outweighs the prefill gap.%\arq{I don't understand the final data point. what has 13\% higher throughput? The graphed performance of UVM eBPF looks like it has worse performance compared to the alternatives. BTW---its very weird that none of the bars in Figure 8 are labeled "\sys"--I think that UVM eBPF is supposed to be that configuration but it does not make a lot of sense.}
@@ -131,11 +131,11 @@ We stress KV-cache growth by sending 100 concurrent requests from ShareGPT~\cite
 Existing solutions offload KV-cache or experts but not both; UVM attempts on-demand migration of both, leading to thrashing.
 % 现有方案只卸载 KV-cache 或专家权重之一；UVM 则尝试对二者按需迁移，导致抖动。
 We compare vLLM's CPU-offload mode (\texttt{--cpu-offload-gb 8}) against a UVM policy in \sys{}.
-% 我们将 vLLM 的 CPU 卸载模式（\texttt{--cpu-offload-gb 8}）与通过 gpubpf 实现的 UVM 策略进行对比。
+% 我们将 vLLM 的 CPU 卸载模式（\texttt{--cpu-offload-gb 8}）与通过 gpu\_ext 实现的 UVM 策略进行对比。
 This policy improves mean and p99 time-to-first-token by 1.7--2$\times$ and reduces mean time per output token by 27.3\% relative to vLLM's default framework-managed offload (\Cref{fig:vllm-kv-offload}), achieving similar mean latencies to LMCache~\cite{lmcache}, a state-of-the-art KV-cache offloading framework.
 % 相比 vLLM 默认的框架管理卸载，该策略将平均和 p99 首 token 时间改善 1.7--2×，并将平均每输出 token 时间降低 27.3\%（\Cref{fig:vllm-kv-offload}），平均延迟与最先进的 KV-cache 卸载框架 LMCache~\cite{lmcache} 相近。
 Notably, UVM without \sys policies performs worse than vLLM's offload, while this policy performs similarly to the best framework offloading, with better tail latency, dynamically and transparently.
-% 值得注意的是，没有 gpubpf 策略的 UVM 表现不如 vLLM 的卸载，而该策略以动态、透明的方式达到了与最佳框架卸载相当的效果，且尾延迟更优。
+% 值得注意的是，没有 gpu\_ext 策略的 UVM 表现不如 vLLM 的卸载，而该策略以动态、透明的方式达到了与最佳框架卸载相当的效果，且尾延迟更优。
 
 Under memory pressure, the main challenge is managing two competing data types: KV-cache, exhibiting temporal locality (recent tokens accessed frequently during attention) and per-request spatial locality, and model weights with stride patterns in matrix operations.
 % 在内存压力下，主要挑战是管理两类相互竞争的数据：具有时间局部性（最近的 token 在注意力计算中被频繁访问）和每请求空间局部性的 KV-cache，以及在矩阵运算中具有步长模式的模型权重。
@@ -168,9 +168,9 @@ The median paired reduction with the \sys{} policy relative to FIFO is 61.9\%.
 \paragraph{Graph Neural Networks (GNN Training).}
 % 图神经网络（GNN 训练）。
 We evaluate \sys on PyTorch-based GCN training with random graphs of varying sizes (1M--15M nodes, 10 edges/node).
-% 我们基于 PyTorch 的 GCN 训练评估 gpubpf，使用规模不一的随机图（1M--15M 节点，每节点 10 条边）。
+% 我们基于 PyTorch 的 GCN 训练评估 gpu\_ext，使用规模不一的随机图（1M--15M 节点，每节点 10 条边）。
 \Cref{fig:gnn-epoch} shows epoch time across five configurations: native GPU allocation (no UVM), UVM with and without user-space prefetching (\texttt{cudaMemPrefetchAsync}), and each UVM configuration with the prefetch policy in \sys{}.
-% \Cref{fig:gnn-epoch} 展示了五种配置下的单轮时间：原生 GPU 分配（无 UVM）、带与不带用户态预取（\texttt{cudaMemPrefetchAsync}）的 UVM，以及各自叠加通过 gpubpf 实现的预取策略的 UVM 配置。
+% \Cref{fig:gnn-epoch} 展示了五种配置下的单轮时间：原生 GPU 分配（无 UVM）、带与不带用户态预取（\texttt{cudaMemPrefetchAsync}）的 UVM，以及各自叠加通过 gpu\_ext 实现的预取策略的 UVM 配置。
 With UVM enabled via a custom allocator, each epoch allocates memory on CPU and migrates to GPU on demand, incurring overhead.
 % 通过自定义分配器启用 UVM 后，每轮先在 CPU 上分配内存再按需迁移到 GPU，带来开销。
 User-space frameworks can pre-migrate pages via \texttt{cudaMemPrefetchAsync}, achieving 5.5$\times$ speedup at moderate oversubscription, but this requires application modification.
@@ -208,7 +208,7 @@ We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4
 IVF indexes have a two-level structure: frequently-accessed centroids and larger posting lists, and Faiss operations have two distinct phases: BUILD performs sequential scans while SEARCH issues random accesses.
 % IVF 索引具有两级结构：被频繁访问的聚类中心和更大的 posting list；Faiss 操作有两个不同阶段：BUILD 执行顺序扫描，SEARCH 发起随机访问。
 The Faiss policy in \sys{} reduces build time by 21--29\% on 50M, scaling to 27--40\% on 100M as memory pressure grows.
-% 在 50M 规模上，通过 gpubpf 实现的 Faiss 策略将构建时间降低 21--29\%，在 100M 上随内存压力增大扩大到 27--40\%。
+% 在 50M 规模上，通过 gpu\_ext 实现的 Faiss 策略将构建时间降低 21--29\%，在 100M 上随内存压力增大扩大到 27--40\%。
 For search workloads on SIFT100M, this policy reduces latency by 10--16\% across different \texttt{nprobe} settings.
 % 对于 SIFT100M 检索工作负载，该策略在不同 \texttt{nprobe} 设置下将延迟降低 10--16\%。
 As shown in \Cref{fig:faiss-perf}, the converged policy ($\sim$890~LOC: sequential prefetch 375~LOC + stride prefetch 472~LOC + device-side 45~LOC) prefetches posting lists sequentially for oversubscribed datasets and uses stride prediction for K-means iterations during index construction; device-side eBPF programs also trigger prefetching of corresponding posting lists.
@@ -244,18 +244,18 @@ Only 2 of 8 policies yielded positive results.
 \label{sec:rq1-mt}
 
 We evaluate \sys on multi-tenant GPU workloads, comparing per-tenant policies against global and framework-managed approaches.
-% 我们在多租户 GPU 工作负载上评估 gpubpf，将每租户策略与全局策略和框架管理的方法进行对比。
+% 我们在多租户 GPU 工作负载上评估 gpu\_ext，将每租户策略与全局策略和框架管理的方法进行对比。
 The tenants share an unpartitioned GPU managed by a system-wide policy.
 % 租户共享一块由系统级策略管理的未分区 GPU。
 
 \paragraph{Compute-bound Scheduler (LC + BE)}
 % 计算密集型调度器（LC + BE）。
 We evaluate \sys's eBPF struct\_ops scheduling policies on \emph{compute-bound} (SM-limited) multi-tenant workloads, without memory oversubscription.
-% 我们在\emph{计算密集型}（SM 受限）的多租户工作负载上评估 gpubpf 基于 eBPF 的 struct\_ops 调度策略，不涉及内存超订。
+% 我们在\emph{计算密集型}（SM 受限）的多租户工作负载上评估 gpu\_ext 基于 eBPF 的 struct\_ops 调度策略，不涉及内存超订。
 2 latency-critical (LC) processes and 4 best-effort (BE) processes run concurrently, each with 4 CUDA streams submitting 50 compute kernels.
 % 2 个延迟关键（LC）进程与 4 个尽力型（BE）进程并发运行，每个进程通过 4 条 CUDA 流提交 50 个计算内核。
 We compare the native scheduler against a \sys{} preemption policy equivalent to GPREEMPT's~\cite{fan2025gpreempt} priority-based timeslice scheduling, with differentiated driver-controlled timeslices (LC: 1s, BE: 200$\mu$s), implemented as an eBPF program (925~LOC) without unsafe modification to the driver source.
-% 我们将原生调度器与 gpubpf 抢占策略对比，该策略等价于 GPREEMPT~\cite{fan2025gpreempt} 的基于优先级的时间片调度，采用由驱动控制的差异化时间片（LC：1 秒，BE：200$\mu$秒），以 eBPF 程序实现（925 LOC），无需对驱动源码进行不安全的修改。
+% 我们将原生调度器与 gpu\_ext 抢占策略对比，该策略等价于 GPREEMPT~\cite{fan2025gpreempt} 的基于优先级的时间片调度，采用由驱动控制的差异化时间片（LC：1 秒，BE：200$\mu$秒），以 eBPF 程序实现（925 LOC），无需对驱动源码进行不安全的修改。
 This scheduling policy reduces LC P99 launch latency by 96\% (1188$\mu$s $\to$ 53$\mu$s).
 % 该调度策略将 LC 的 P99 启动延迟降低 96\%（1188$\mu$秒 $\to$ 53$\mu$秒）。
 BE throughput remains nearly unchanged at 11.38 kernels/s with the native scheduler and 11.47 kernels/s with this policy (+0.8\%).
@@ -266,7 +266,7 @@ BE throughput remains nearly unchanged at 11.38 kernels/s with the native schedu
 % \includegraphics[width=\columnwidth]{img/results-raw/multi-tenant/scheduler_latency_throughput.pdf}
 %
 % \caption{Multi-tenant GPU scheduling with \sys{} (LC: latency-critical, BE: best-effort).}
-% % 使用 gpubpf 的多租户 GPU 调度（LC：延迟关键型，BE：尽力型）。
+% % 使用 gpu\_ext 的多租户 GPU 调度（LC：延迟关键型，BE：尽力型）。
 % \label{fig:scheduler-latency}
 % % \vspace{-1.5em}
 % \end{figure}
@@ -275,7 +275,7 @@ BE throughput remains nearly unchanged at 11.38 kernels/s with the native schedu
 % \paragraph{Memory-bound Priority Differentiation.}
 % % 内存密集型优先级区分。
 % We evaluate \sys's memory policies for priority differentiation on \emph{memory-bound} workloads under UVM oversubscription using HotSpot~\cite{che2009rodinia} (spatial locality), GEMM from PolyBench~\cite{grauer2012auto} (compute-intensive, memory-bound under UVM oversubscription), and K-Means~\cite{gu2020uvmbench} (sparse access).
-% % 我们在 UVM 超订下使用 HotSpot~\cite{che2009rodinia}（空间局部性）、来自 PolyBench~\cite{grauer2012auto} 的 GEMM（计算密集，在 UVM 超订下为内存受限）和 K-Means~\cite{gu2020uvmbench}（稀疏访问），在\emph{内存密集型}工作负载上评估 gpubpf 的内存优先级区分策略。
+% % 我们在 UVM 超订下使用 HotSpot~\cite{che2009rodinia}（空间局部性）、来自 PolyBench~\cite{grauer2012auto} 的 GEMM（计算密集，在 UVM 超订下为内存受限）和 K-Means~\cite{gu2020uvmbench}（稀疏访问），在\emph{内存密集型}工作负载上评估 gpu\_ext 的内存优先级区分策略。
 % Each experiment runs two concurrent processes competing for GPU memory.
 % % 每个实验运行两个并发进程竞争 GPU 内存。
 % Policy labels use priority values 0--100 (lower = higher priority): \texttt{Prefetch(lo,hi)} prefetches pages for processes in that range (454~LOC), while \texttt{Evict(lo,hi)} selects eviction victims accordingly (472~LOC).
@@ -286,7 +286,7 @@ BE throughput remains nearly unchanged at 11.38 kernels/s with the native schedu
 % \Cref{fig:all-kernels-priority} shows that without policies, both processes degrade severely due to memory thrashing.
 % % \Cref{fig:all-kernels-priority} 显示，没有策略时，两个进程都因内存抖动而严重退化。
 % With \sys memory priority policies, total completion time improves by 55--92\%, and high-priority processes complete 6--19\% faster.
-% % 使用 gpubpf 内存优先级策略后，总完成时间改善 55--92\%，高优先级进程完成速度加快 6--19\%。
+% % 使用 gpu\_ext 内存优先级策略后，总完成时间改善 55--92\%，高优先级进程完成速度加快 6--19\%。
 % % In the original comparison, GPREEMPT-style~\cite{fan2025gpreempt} scheduler timeslice policies improve completion time by less than 1\%.
 % % 在原有比较中，GPREEMPT 式~\cite{fan2025gpreempt}调度器时间片策略对完成时间的改善不足 1\%。
 % The paired Scheduler$^\dagger$ and Combined$^\dagger$ measurements compare scheduling alone with jointly enabled scheduling and memory priority.
@@ -333,7 +333,7 @@ Combining memory priority with scheduling further reduces high-priority completi
 We run two tenants sharing a single GPU: T1 is a high-priority \texttt{llama.cpp} inference service (LC workload) serving 100 ShareGPT prompts at 0.2 RPS, and T2 is a background PyTorch GNN training job (BE workload) with 8M nodes requiring 36GB peak memory (oversubscribed).
 % 我们让两个租户共享一块 GPU：T1 是高优先级的 \texttt{llama.cpp} 推理服务（LC 工作负载），以 0.2 RPS 服务 100 条 ShareGPT 提示；T2 是后台的 PyTorch GNN 训练作业（BE 工作负载），8M 节点，峰值内存需求 36GB（超订）。
 We compare default UVM (driver FIFO/LRU) against \sys per-tenant memory and scheduler policies ($\sim$926~LOC, combining Quota LRU, Tree-based Prefetch, and Dynamic Timeslice).
-% 我们将默认 UVM（驱动 FIFO/LRU）与 gpubpf 的每租户内存和调度器策略（约 926 LOC，结合 Quota LRU、基于树的预取和动态时间片）进行对比。
+% 我们将默认 UVM（驱动 FIFO/LRU）与 gpu\_ext 的每租户内存和调度器策略（约 926 LOC，结合 Quota LRU、基于树的预取和动态时间片）进行对比。
 \Cref{fig:two-tenant} shows mutual improvement: LC TPOT drops by 40--45\% and TTFT by 14--20\%, while GNN training simultaneously improves by 28\%, approaching the ideal fair share baseline.
 % \Cref{fig:two-tenant} 显示双方同时受益：LC 的 TPOT 下降 40--45\%，TTFT 下降 14--20\%，同时 GNN 训练也改善 28\%，接近理想的公平份额基线。
 This shows the combined memory and scheduling policies in \sys{} reduce contention for both workloads rather than favoring one over the other.
@@ -353,7 +353,7 @@ This shows the combined memory and scheduling policies in \sys{} reduce contenti
 \centering
 \includegraphics[width=\textwidth]{img/results-raw/runtime/microbench_comparison.pdf}
 \caption{Device-side overhead. (a) Naive per-thread injection vs \sys's SIMT-aware execution. (b) CPU map access latency via PCIe vs GPU-side operations.}
-% 设备端开销。(a) 朴素的每线程注入与 gpubpf 的 SIMT 感知执行对比。(b) 经 PCIe 的 CPU map 访问延迟与 GPU 端操作对比。
+% 设备端开销。(a) 朴素的每线程注入与 gpu\_ext 的 SIMT 感知执行对比。(b) 经 PCIe 的 CPU map 访问延迟与 GPU 端操作对比。
 \label{fig:microbench}
 \end{figure*}
 
@@ -413,28 +413,28 @@ We evaluate the seven policies in \Cref{tab:published-policies}.
 \begin{tabularx}{\textwidth}{@{} >{\hsize=0.5\hsize\raggedright\arraybackslash}X >{\hsize=0.9\hsize\raggedright\arraybackslash}X >{\hsize=1.6\hsize\raggedright\arraybackslash}X @{}}
 \toprule
 System & Original policy & Original and \sys{} implementation \\
-% 系统。原有策略。原有机制与 gpubpf 实现。
+% 系统。原有策略。原有机制与 gpu\_ext 实现。
 \midrule
 MoE-Infinity~\cite{xue2025moeinfinity} & Uses predicted expert accesses to prioritize prefetching and choose which experts to evict. & The original system uses a user-space runtime to manage expert transfers. \sys{} implements cache decisions as host-side programs. \\
-% MoE-Infinity：根据预测的专家访问，确定预取优先级并选择要驱逐的专家。原系统使用用户态运行时管理专家传输，gpubpf 通过主机侧程序实现缓存决策。
+% MoE-Infinity：根据预测的专家访问，确定预取优先级并选择要驱逐的专家。原系统使用用户态运行时管理专家传输，gpu\_ext 通过主机侧程序实现缓存决策。
 \addlinespace
 Expert Buffering~\cite{huang2023towards} & Chooses which experts to cache, evicting those unused by the current batch first. & The original system uses a user-space cache to manage GPU buffers and CPU-to-GPU copies. \sys{} implements admission and eviction as host-side programs. \\
-% Expert Buffering：决定缓存哪些专家，并优先驱逐当前批次不用的专家。原系统使用用户态缓存管理 GPU 缓冲区和 CPU 到 GPU 的复制，gpubpf 通过主机侧程序实现准入与驱逐。
+% Expert Buffering：决定缓存哪些专家，并优先驱逐当前批次不用的专家。原系统使用用户态缓存管理 GPU 缓冲区和 CPU 到 GPU 的复制，gpu\_ext 通过主机侧程序实现准入与驱逐。
 \addlinespace
 FineMoE~\cite{yu2026finemoe} & Dynamically chooses which predicted experts to load before they are needed. & The original system uses a user-space cache with CUDA runtime transfers. \sys{} implements dynamic expert selection as a host-side program. \\
-% FineMoE：从预测会用到的专家中动态选择提前加载的对象。原系统使用用户态缓存，通过 CUDA runtime 传输数据，gpubpf 通过主机侧程序实现动态专家选择。
+% FineMoE：从预测会用到的专家中动态选择提前加载的对象。原系统使用用户态缓存，通过 CUDA runtime 传输数据，gpu\_ext 通过主机侧程序实现动态专家选择。
 \addlinespace
 Hummingbird~\cite{hu2026hummingbird} & Runs smaller background kernels during foreground idle intervals and manages memory by task priority. & The original system schedules split kernels on the host, remaps thread-block coordinates on the device, and modifies UVM for memory management. The \sys{} policy pairs host-side task admission with device-side block-coordinate mapping. \\
-% Hummingbird：在前台空闲期间运行拆分后的后台 GPU 内核，并按任务优先级管理内存。原系统在主机侧调度拆分后的 GPU 内核，在设备侧映射线程块坐标，并修改 UVM 管理内存，gpubpf 的设计将主机侧任务准入与设备侧线程块坐标映射结合。
+% Hummingbird：在前台空闲期间运行拆分后的后台 GPU 内核，并按任务优先级管理内存。原系统在主机侧调度拆分后的 GPU 内核，在设备侧映射线程块坐标，并修改 UVM 管理内存，gpu\_ext 的设计将主机侧任务准入与设备侧线程块坐标映射结合。
 \addlinespace
 POD-Attention~\cite{kamath2025pod} & Assigns prefill or decode work to each SM according to the desired balance between the two. & The original system selects work inside the fused GPU kernel. In \sys{}, the host prepares launches and a device-side program selects work within the unchanged fused kernel. \\
-% POD-Attention：根据 prefill 与 decode 的目标比例，为各 SM 分配相应工作。原系统在融合 GPU 内核中选择工作，gpubpf 由主机准备启动，设备侧程序在保留的融合 GPU 内核中选择工作。
+% POD-Attention：根据 prefill 与 decode 的目标比例，为各 SM 分配相应工作。原系统在融合 GPU 内核中选择工作，gpu\_ext 由主机准备启动，设备侧程序在保留的融合 GPU 内核中选择工作。
 \addlinespace
 XSched~\cite{shen2025xsched} & Runs the highest-priority queued task, preempting lower-priority work when needed. & The original system controls queues on the host, adds device-side kernel-entry checks at Level 2, and uses driver interfaces at Level 3. The \sys{} policy assigns queue selection to host programs and kernel-entry decisions to device programs. \\
-% XSched：运行队列中优先级最高的任务，必要时抢占低优先级任务。原系统在主机侧控制队列，在 Level 2 加入设备侧内核入口检查，在 Level 3 使用驱动接口，gpubpf 的设计由主机侧程序选择队列，由设备侧程序决定内核能否开始执行。
+% XSched：运行队列中优先级最高的任务，必要时抢占低优先级任务。原系统在主机侧控制队列，在 Level 2 加入设备侧内核入口检查，在 Level 3 使用驱动接口，gpu\_ext 的设计由主机侧程序选择队列，由设备侧程序决定内核能否开始执行。
 \addlinespace
 GPREEMPT~\cite{fan2025gpreempt} & Uses task priority to decide which tasks may run and how much GPU time each receives. & The original system controls task blocking and release in user space and modifies the GPU driver to control timeslices. \sys{} implements these decisions with programs in user space and the GPU driver. \\
-% GPREEMPT：根据任务优先级，决定允许哪些任务运行以及为各任务分配多少 GPU 时间。原系统在用户态控制任务阻塞与释放，并修改 GPU 驱动以控制时间片，gpubpf 通过用户态和 GPU 驱动中的程序实现这些决策。
+% GPREEMPT：根据任务优先级，决定允许哪些任务运行以及为各任务分配多少 GPU 时间。原系统在用户态控制任务阻塞与释放，并修改 GPU 驱动以控制时间片，gpu\_ext 通过用户态和 GPU 驱动中的程序实现这些决策。
 \bottomrule
 \end{tabularx}
 \end{table*}
@@ -443,7 +443,7 @@ GPREEMPT~\cite{fan2025gpreempt} & Uses task priority to decide which tasks may r
 \centering
 \includegraphics[width=\textwidth]{tex-revision/img/results-raw/revision/matched-policy-panels.pdf}
 \caption{Policy comparisons. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) prefetching all positively predicted experts, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. In (d), Per. and Burst denote periodic and BurstGPT arrivals. Panel (e) uses Llama decode batch 128. Bars show medians, whiskers show full ranges. Panel (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s.}
-% 策略比较：工作负载基线、原生策略与 gpubpf 策略。基线为关闭预测的专家缓存（a）、固定 K 的 FIFO（b）、预取所有预测会用到的专家（c）、默认调度（d、g）、双流 FlashAttention（e）和原生 CUDA（f）。（d）中 Per. 和 Burst 分别表示周期性和 BurstGPT 到达模式。面板（e）使用 Llama 解码批量 128。柱形为每种配置五次运行的中位数，但（e）为均值、（f）使用十次运行。（b、f、g）的须线表示完整范围。（g）为每秒 100 个 VGG19 LC 请求，对应 ResNet152 BE 每秒 100 或 200 请求。
+% 策略比较：工作负载基线、原生策略与 gpu\_ext 策略。基线为关闭预测的专家缓存（a）、固定 K 的 FIFO（b）、预取所有预测会用到的专家（c）、默认调度（d、g）、双流 FlashAttention（e）和原生 CUDA（f）。（d）中 Per. 和 Burst 分别表示周期性和 BurstGPT 到达模式。面板（e）使用 Llama 解码批量 128。柱形为每种配置五次运行的中位数，但（e）为均值、（f）使用十次运行。（b、f、g）的须线表示完整范围。（g）为每秒 100 个 VGG19 LC 请求，对应 ResNet152 BE 每秒 100 或 200 请求。
 \label{fig:matched-ports}
 \end{figure*}
 
@@ -487,7 +487,7 @@ Load-time verification takes 141~ms for \texttt{kernel\-ret\-snoop} and 12~ms fo
 \paragraph{Host Runtime Overhead.}
 % 主机运行时开销。
 We quantify the overhead of the \sys driver runtime independent of policy logic using GEMM from PolyBench~\cite{grauer2012auto} and HotSpot~\cite{che2009rodinia} (1.1$\times$ oversubscription, 35~GB working set) on RTX 5090.
-% 我们使用 PolyBench~\cite{grauer2012auto} 的 GEMM 和 HotSpot~\cite{che2009rodinia}（1.1× 超订、35 GB 工作集）在 RTX 5090 上量化 gpubpf 驱动运行时独立于策略逻辑的开销。
+% 我们使用 PolyBench~\cite{grauer2012auto} 的 GEMM 和 HotSpot~\cite{che2009rodinia}（1.1× 超订、35 GB 工作集）在 RTX 5090 上量化 gpu\_ext 驱动运行时独立于策略逻辑的开销。
 With hooks enabled but no policy attached, the overhead is less than 0.2\%.
 % 启用钩子但不附加策略时，开销小于 0.2\%。
 
@@ -502,7 +502,7 @@ On the device, \texttt{kernel\-ret\-snoop} (153~LOC) records GPU kernel return t
 Overhead is measured as token/s degradation during prefill.
 % 开销以预填充期间 token/s 的下降来衡量。
 On the P40, \sys achieves 3--14\% overhead versus NVBit's 85--93\%, due to the warp-uniform execution model.
-% 在 P40 上，得益于 warp 统一执行模型，gpubpf 的开销为 3--14\%，而 NVBit 为 85--93\%。
+% 在 P40 上，得益于 warp 统一执行模型，gpu\_ext 的开销为 3--14\%，而 NVBit 为 85--93\%。
 In panel (b), the three tools incur 5.57\%, 2.97\%, and 0.22\% overhead with \sys{}, compared with 99.62\%, 10.35\%, and 8.80\% with NVBit, respectively.
 % 在面板（b）中，三个工具在 \sys{} 下的开销依次为 5.57\%、2.97\% 和 0.22\%，在 NVBit 下分别为 99.62\%、10.35\% 和 8.80\%。
 Attaching to a running process takes 273\,ms on average from \texttt{bpftime trace} startup to first GPU kernel detection, without application restart.
@@ -519,14 +519,14 @@ Attaching to a running process takes 273\,ms on average from \texttt{bpftime tra
 \paragraph{Device-side Runtime Optimization.}
 % 设备端运行时优化。
 We evaluate device-side \sys mechanisms using a vector-add CUDA GPU kernel (32 elements, 10K iterations) from cuda-sample~\cite{nvidia_cuda_samples} on RTX 5090.
-% 我们使用来自 cuda-sample~\cite{nvidia_cuda_samples} 的 vector-add CUDA GPU 内核（32 个元素、10K 次迭代）在 RTX 5090 上评估 gpubpf 的设备端机制。
+% 我们使用来自 cuda-sample~\cite{nvidia_cuda_samples} 的 vector-add CUDA GPU 内核（32 个元素、10K 次迭代）在 RTX 5090 上评估 gpu\_ext 的设备端机制。
 \Cref{fig:microbench}(a) compares \sys's SIMT-aware warp-level execution against eGPU~\cite{egpu} that injects eBPF bytecode without SIMT-specific verification and optimizations.
-% \Cref{fig:microbench}(a) 将 gpubpf 的 SIMT 感知 warp 级执行与 eGPU~\cite{egpu} 对比，后者注入 eBPF 字节码而不进行面向 SIMT 的验证与优化。
+% \Cref{fig:microbench}(a) 将 gpu\_ext 的 SIMT 感知 warp 级执行与 eGPU~\cite{egpu} 对比，后者注入 eBPF 字节码而不进行面向 SIMT 的验证与优化。
 The baseline incurs overhead due to per-thread execution and uncoalesced memory access, while \sys's warp-uniform execution and coalesced map access reduce overhead by approximately 60--80\% for most operations.
-% 基线因每线程执行和未合并的内存访问产生开销，而 gpubpf 的 warp 统一执行与合并 map 访问将多数操作的开销降低约 60--80\%。
+% 基线因每线程执行和未合并的内存访问产生开销，而 gpu\_ext 的 warp 统一执行与合并 map 访问将多数操作的开销降低约 60--80\%。
 For an arithmetic test kernel, trampoline overhead stays within 1.2--2.2~$\mu$s as active warps increase 8$\times$, while per-thread map-update cost grows roughly proportionally.
 % 对于一个整数运算测试内核，活跃 warp 数增加 8 倍时，仅执行返回的钩子开销保持在 1.2--2.2 微秒范围内，而逐线程 map 更新成本近似成比例增长。
 \Cref{fig:microbench}(b) shows CPU map access via PCIe is 6000$\times$ slower than GPU-side operations, motivating \sys's hierarchical map design that keeps hot state on GPU.
-% \Cref{fig:microbench}(b) 显示，经 PCIe 的 CPU map 访问比 GPU 端操作慢 6000×，这促使 gpubpf 采用将热状态保留在 GPU 上的分层 map 设计。
+% \Cref{fig:microbench}(b) 显示，经 PCIe 的 CPU map 访问比 GPU 端操作慢 6000×，这促使 gpu\_ext 采用将热状态保留在 GPU 上的分层 map 设计。
 We do not compare policy-level performance against the prior workshop version or Neutrino because they are limited to read-only observability (\S\ref{sec:background}). %\arq{Do we need this experimentation?  I guess you're wanting to show that this current version of the system is better than the workshop version, but I wonder if that is entirely surprising.}
 % 我们不在策略层面与先前的工作坊版本或 Neutrino 比较，因为它们仅限于只读可观测性（\S\ref{sec:background}）。

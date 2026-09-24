@@ -5,7 +5,7 @@ TEX=main.tex
 PDF=main.pdf
 RESUB_TEX=resubmission-changes.tex
 RESUB_PDF=resubmission-changes.pdf
-TEX_SRCS=$(wildcard tex-revision/*.tex) $(TEX)
+TEX_SRCS=$(wildcard tex-revision/*.tex) $(TEX) authors.tex camera-ready-metadata.tex
 IMG_SRCS=$(wildcard img/*.pdf img/*.png img/pattern/*.pdf img/pattern/vector_add/*.pdf img/results-raw/*/*.pdf tex-revision/img/results-raw/revision/*.pdf)
 BIB=tex-revision/cite.bib
 
@@ -34,9 +34,17 @@ PLOT_SCRIPTS = \
 	img/results-raw/multi-tenant/plot_colocated_results.py \
 	img/pattern/vector_add/plot_thread_scheduling.py
 
-.PHONY: all clean distclean figures
+.PHONY: all camera-ready revision-note clean distclean figures
 
-all: $(PDF) $(RESUB_PDF)
+all: camera-ready
+
+camera-ready: gpu_ext.pdf
+
+gpu_ext.pdf: $(PDF)
+	cp $(PDF) $@
+
+# Historical resubmission note: opt in; not a camera-ready deliverable.
+revision-note: $(RESUB_PDF)
 
 figures:
 	@echo "Regenerating all figures..."
@@ -59,7 +67,7 @@ $(RESUB_PDF): $(RESUB_TEX)
 
 $(PDF): $(TEX_SRCS) $(IMG_SRCS) $(BIB)
 	$(LATEX) $(LATEXFLAGS) $(TEX)
-	$(BIBTEX) main || true
+	$(BIBTEX) main
 	$(LATEX) $(LATEXFLAGS) $(TEX)
 	$(LATEX) $(LATEXFLAGS) $(TEX)
 
