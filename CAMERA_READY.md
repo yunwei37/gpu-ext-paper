@@ -38,6 +38,11 @@ is not part of the camera-ready deliverable.
   cannot replace curves through directory iteration order. Its nine plotted
   curves retain their original coordinates; all eight figures retain their
   numeric labels.
+- ACM accepts only Type 1 or TrueType fonts. Twelve matplotlib figure PDFs
+  embedded Type 3 fonts; their text was converted to outlines with
+  Ghostscript (`-dNoOutputFonts`, lossless image settings), keeping page
+  size, raster images, and appearance. Re-running the plot scripts brings
+  Type 3 fonts back unless matplotlib uses `pdf.fonttype: 42`.
 - Appendix A retains the artifact repository, brief inventory, and guide
   link. It adds abstract resource-request and transition-validation pseudocode
   with resource-specific synchronization, checks, fallback, and initiation,
