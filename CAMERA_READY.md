@@ -18,15 +18,21 @@ is not part of the camera-ready deliverable.
 ## Presentation
 
 - ACM `sigplan` layout, with anonymous/review mode removed and standard
-  template geometry restored.
-- System and title name: `gpu_ext`. Historical API, repository, raw-data,
-  and experiment identifiers keep their original names.
-- The ten authors, order, affiliations, and emails in `authors.tex` follow
-  the supplied HotCRP record. Individual ACM metadata is retained; the
-  visible author list occupies one line, followed by shared affiliations,
-  with no email line. The custom renderer only affects the
-  title's author block.
-- CCS concepts, keywords, acknowledgments, and ACM reference format enabled.
+  template geometry restored. The repository bundles acmart v2.20
+  (`acmart.cls`, `ACM-Reference-Format.bst`) so the build does not depend on
+  the system TeX Live version.
+- Title: the accepted title, "Safe and Programmable OS-Level GPU Resource
+  Management with eBPF", without a system-name prefix. System name in the
+  body: `gpu_ext`. Historical API, repository, raw-data, and experiment
+  identifiers keep their original names.
+- The ten authors, order, and emails in `authors.tex` follow the ACM
+  rights-review record. Each author uses the standard acmart block
+  (institution, city, country, email); grouped author strings are not
+  allowed by ACM/Sheridan. These values must stay identical to the ACM
+  rights-review form.
+- CCS concepts, keywords, acknowledgments (NSF Award #2530909 and NEUTC;
+  Williams' group: NSF award 2236966 and the eBPF Foundation; generative-AI
+  disclosure), and ACM reference format enabled. The final page is balanced.
 - Eight active figure assets have updated system-name labels. The FAISS
   plot now lists its original nine input files explicitly so unrelated runs
   cannot replace curves through directory iteration order. Its nine plotted
@@ -38,19 +44,17 @@ is not part of the camera-ready deliverable.
   the SIMT verifier's worklist algorithm, and three paired rejection and
   acceptance examples. It does not add agent-workflow exposition.
 
-The built PDF has 16 pages, including one artifact/verification appendix page. The final build
-has no errors, overfull boxes, or unresolved references. All nine existing
-body-section source files match the pre-edit backup apart from system-name
-substitution, and all original main-file comment lines are retained.
+The built PDF has 17 pages: a 13-page body (including acknowledgments),
+references, and one artifact/verification appendix page. The build has no
+errors, overfull boxes, or unresolved references.
 
-## Publication fields still to supply
+## Publication fields
 
-`camera-ready-metadata.tex` contains the conference name, date and location
-from the [official ASPLOS 2027 site](https://www.asplos-conference.org/asplos2027/).
-Replace its pending settings with the exact ACM rights-form block when
-received. No license, DOI, ISBN, or artifact-evaluation badge has been
-invented. The current file leaves DOI/ISBN empty and uses `setcopyright{none}`
-until those publication-specific values are supplied.
+`camera-ready-metadata.tex` uses Sheridan's ASPLOS 2027 V1 CR+CC-BY block:
+Proceedings volume title, ISBN 979-8-4007-3012-2/2027/04, and DOI
+10.1145/3845814.3850045 (Sheridan submission v1fp1797). Keep the license
+(`setcctype`) identical to the choice on the ACM rights-review form, and
+compare all values with the rights-review confirmation email.
 
 ## Artifact boundary
 

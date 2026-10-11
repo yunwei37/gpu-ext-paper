@@ -121,7 +121,7 @@
 % === Camera-ready publication metadata ===
 \input{camera-ready-metadata}
 
-\title[gpu\_ext: GPU Resource Management with eBPF]{gpu\_ext: Safe and Programmable OS-Level GPU Resource Management with eBPF}
+\title{Safe and Programmable OS-Level GPU Resource Management with eBPF}
 \input{authors}
 
 % === 正文开始 ===
@@ -274,6 +274,8 @@
 % CFP requires GenAI disclosure to be visible in submission.
 \begin{acks}
 % 致谢
+This work is supported in part by the National Science Foundation under Award \#2530909 and by NEUTC.
+Williams' group is supported in part by NSF award number 2236966 and a grant from the eBPF Foundation.
 This work used Claude and Codex as generative AI tools for coding and language improvements.
 % 本工作使用 Claude 和 Codex 等生成式 AI 工具辅助编程与语言润色。
 \end{acks}
@@ -288,10 +290,7 @@ This work used Claude and Codex as generative AI tools for coding and language i
 \bibliography{tex-revision/cite}
 
 % The appendix follows the references and is outside the main-body page count.
-% Keep the artifact appendix on a separate page.
-\makeatletter
-\@ACM@balancefalse
-\makeatother
+% Keep the artifact appendix on a separate page; acmart balances the final page.
 \clearpage
 \appendix
 \input{tex-revision/appendix}
