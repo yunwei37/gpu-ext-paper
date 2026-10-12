@@ -9,7 +9,7 @@ We integrated lightweight instrumentation ($\sim$100 LOC) into NVIDIA's open GPU
 % 我们在 NVIDIA 开放 GPU OS 内核模块中集成了轻量级插桩（约 100 行代码），将内存与调度状态变迁暴露为 GPU 专用 kfunc（见 \S\ref{sec:impl-host}）。
 Our user-space loader and JIT infrastructure ($\sim$10 KLOC) builds upon bpftime's framework~\cite{bpftime} for device-side code generation, while an LLVM-based backend ($\sim$1 KLOC) translates the restricted \sys eBPF instruction subset into GPU device code (PTX) (\S\ref{sec:impl-gpu}).
 % 我们的用户态加载器与 JIT 基础设施（约 10 KLOC）基于 bpftime 框架~\cite{bpftime} 构建，用于设备端代码生成；同时，基于 LLVM 的后端（约 1 KLOC）将受限的 gpu\_ext eBPF 指令子集翻译为 GPU 设备代码（PTX）（见 \S\ref{sec:impl-gpu}）。
-The host design aligns with Linux HMM/\texttt{migrate\_vma}~\cite{rocm-gpu-memory,linux-gpusvm-doc} and DRM scheduling~\cite{drm-gpu-sched,amdgpu-userq-doc}, and device code generation could target vendor-neutral IR~\cite{spirv-ir-rfc} with their LLVM backend.
+The host design aligns with Linux HMM/\texttt{migrate\_vma}~\cite{linux-gpusvm-doc} and DRM scheduling~\cite{drm-gpu-sched}, and device code generation could target vendor-neutral IR~\cite{spirv-ir-rfc} with their LLVM backend.
 % 主机端设计与 Linux HMM/\texttt{migrate\_vma}~\cite{rocm-gpu-memory,linux-gpusvm-doc} 和 DRM 调度~\cite{drm-gpu-sched,amdgpu-userq-doc} 相契合；设备端代码生成可面向厂商中立的 IR~\cite{spirv-ir-rfc}。
 Porting beyond NVIDIA would require adapting driver hooks, instrumentation, and code generation.
 % 移植到 NVIDIA 以外的 GPU 需要适配驱动钩子、插桩和代码生成。
@@ -49,7 +49,7 @@ Policies triggered from uprobes or tracepoints can also preempt running GPU kern
 % 验证与 JIT 编译
 The prototype uses Linux's eBPF verifier for kernel-resident host programs.
 % 原型使用 Linux 的 eBPF 验证器验证驻留内核的主机程序。
-For device-side programs, it uses PREVAIL~\cite{prevail-verifier} with GPU helper and map models, followed by the uniformity analysis and SIMT checks in \S\ref{sec:verification}.
+For device-side programs, it uses PREVAIL~\cite{gershuni2019prevail,prevail-verifier} with GPU helper and map models, followed by the uniformity analysis and SIMT checks in \S\ref{sec:verification}.
 % 对于设备端程序，原型使用带 GPU helper 与 map 模型的 PREVAIL~\cite{prevail-verifier}，随后执行 \S\ref{sec:verification} 中的一致性分析与 SIMT 检查。
 After verification, the user-space backend translates device-side bytecode into PTX, inlining helper functions and map accesses.
 % 验证通过后，用户态后端将设备端字节码翻译为 PTX，并内联辅助函数和 map 访问。

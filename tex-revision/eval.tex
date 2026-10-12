@@ -21,7 +21,7 @@ Unless otherwise specified, experiments run on Server~A, averaging 10 trials usi
 % 除非另有说明，实验均在服务器 A 上进行，每项结果取 10 次试验的几何平均值。
 We compare \sys{} policies against three classes of baselines: (1) driver defaults (UVM LRU/FIFO eviction, native GPU scheduler), (2) application-level hints (\texttt{cudaMemAdvise}), and (3) framework-managed policies (e.g., llama.cpp \texttt{ncmoe}, vLLM CPU offload, LMCache) where applicable.
 % 我们将 gpu\_ext 策略与三类基线对比：(1) 驱动默认行为（UVM LRU/FIFO 驱逐、原生 GPU 调度器），(2) 应用层提示（\texttt{cudaMemAdvise}），以及 (3) 框架管理的策略（如 llama.cpp 的 \texttt{ncmoe}、vLLM CPU offload、LMCache，在适用处）。
-We use PyTorch (version 2.9.0) and vLLM (version 0.11.0) with custom allocators, llama.cpp (version 7101), and Faiss (version 1.13.0) with UVM build config.
+We use PyTorch~\cite{paszke2019pytorch} (version 2.9.0) and vLLM~\cite{kwon2023efficient} (version 0.11.0) with custom allocators, llama.cpp~\cite{llamacpp} (version 7101), and Faiss~\cite{johnson2021faiss} (version 1.13.0) with UVM build config.
 % 我们使用 PyTorch（版本 2.9.0）和 vLLM（版本 0.11.0，配自定义分配器）、llama.cpp（版本 7101）以及采用 UVM 构建配置的 Faiss（版本 1.13.0）。
 All tests with \sys policies require no application source modifications.
 % 所有使用 gpu\_ext 策略的测试均无需修改应用。
@@ -88,7 +88,7 @@ Equivalent bugs in modified GPU drivers risk kernel panics, requiring recompilat
 
 \paragraph{Expert Offloading (llama.cpp GPT-OSS-120B)}
 % 专家卸载（llama.cpp GPT-OSS-120B）。
-We evaluate \sys on GPT-OSS-120B MXFP4 MoE (59~GB) in llama.cpp on RTX 5090 (32~GB), requiring 1.84$\times$ oversubscription.
+We evaluate \sys on GPT-OSS-120B~\cite{openai2025gptoss} MXFP4 MoE (59~GB) in llama.cpp on RTX 5090 (32~GB), requiring 1.84$\times$ oversubscription.
 % 我们在 RTX 5090（32 GB）上的 llama.cpp 中评估 GPT-OSS-120B MXFP4 MoE（59 GB），需要 1.84× 超订。
 We compare five configurations: framework-managed CPU offloading (\texttt{ncmoe=\allowbreak{}32/64}), default UVM, UVM with application-level hints (\texttt{cuda\-Mem\-Advise}), and a \sys{} host-device prefetch policy (\S\ref{sec:design-interfaces}).
 % 我们对比五种配置：框架管理的 CPU 卸载（\texttt{ncmoe=\allowbreak{}32/64}）、默认 UVM、带应用层提示的 UVM（\texttt{cuda\-Mem\-Advise}），以及 gpu\_ext 主机—设备预取策略（\S\ref{sec:design-interfaces}）。
@@ -122,7 +122,7 @@ The final policy combines device-side access observation (45~LOC), driver-side s
 
 \paragraph{KV-cache Offloading (vLLM Qwen-30B MoE)}
 % KV-cache 卸载（vLLM Qwen-30B MoE）。
-We evaluate \sys on the Qwen-30B FP8 MoE model ($\approx$30GB) on RTX 5090 (32GB).
+We evaluate \sys on the Qwen-30B~\cite{yang2025qwen3} FP8 MoE model ($\approx$30GB) on RTX 5090 (32GB).
 % 我们在 RTX 5090（32GB）上评估 Qwen-30B FP8 MoE 模型（约 30GB）。
 The model nearly fills GPU VRAM, so the default no-offload configuration OOMs under load.
 % 该模型几乎占满 GPU 显存，因此默认的不卸载配置在负载下会 OOM。
@@ -203,7 +203,7 @@ Suspecting lock contention initially, the agent identified PCIe bandwidth satura
 
 \paragraph{Faiss Vector Search.}
 % Faiss 向量检索。
-We evaluate \sys on vector similarity search using the SIFT dataset with an IVF4096,Flat index, scaling from 20M (9.5GB) to 50M (24GB) and 100M (48GB, exceeding GPU memory).
+We evaluate \sys on vector similarity search using the SIFT dataset~\cite{jegou2011pq} with an IVF4096,Flat index, scaling from 20M (9.5GB) to 50M (24GB) and 100M (48GB, exceeding GPU memory).
 % 我们使用 SIFT 数据集和 IVF4096,Flat 索引评估向量相似度检索，规模从 20M（9.5GB）到 50M（24GB）再到 100M（48GB，超过 GPU 显存）。
 IVF indexes have a two-level structure: frequently-accessed centroids and larger posting lists, and Faiss operations have two distinct phases: BUILD performs sequential scans while SEARCH issues random accesses.
 % IVF 索引具有两级结构：被频繁访问的聚类中心和更大的 posting list；Faiss 操作有两个不同阶段：BUILD 执行顺序扫描，SEARCH 发起随机访问。
@@ -442,7 +442,7 @@ GPREEMPT~\cite{fan2025gpreempt} & Uses task priority to decide which tasks may r
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{tex-revision/img/results-raw/revision/matched-policy-panels.pdf}
-\caption{Policy comparisons. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) prefetching all positively predicted experts, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. In (d), Per. and Burst denote periodic and BurstGPT arrivals. Panel (e) uses Llama decode batch 128. Bars show medians, whiskers show full ranges. Panel (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s.}
+\caption{Policy comparisons. Baselines are (a) prediction-disabled expert caching, (b) fixed-$K$ FIFO, (c) prefetching all positively predicted experts, (d,g) default scheduling, (e) two-stream FlashAttention, and (f) native CUDA. In (d), Per. and Burst denote periodic and BurstGPT~\cite{wang2025burstgpt} arrivals. Panel (e) uses Llama decode batch 128. Bars show medians, whiskers show full ranges. Panel (g) uses VGG19 LC at 100 requests/s with ResNet152 BE at 100 or 200 requests/s.}
 % 策略比较：工作负载基线、原生策略与 gpu\_ext 策略。基线为关闭预测的专家缓存（a）、固定 K 的 FIFO（b）、预取所有预测会用到的专家（c）、默认调度（d、g）、双流 FlashAttention（e）和原生 CUDA（f）。（d）中 Per. 和 Burst 分别表示周期性和 BurstGPT 到达模式。面板（e）使用 Llama 解码批量 128。柱形为每种配置五次运行的中位数，但（e）为均值、（f）使用十次运行。（b、f、g）的须线表示完整范围。（g）为每秒 100 个 VGG19 LC 请求，对应 ResNet152 BE 每秒 100 或 200 请求。
 \label{fig:matched-ports}
 \end{figure*}

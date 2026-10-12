@@ -27,14 +27,14 @@ GPU devices execute kernels via SIMT (Single Instruction, Multiple Threads); on 
 % \arq{I think this should be two paragraphs: one that talks about workload diversity and the second that then talks about the need for different policies.}
 GPU workloads exhibit diverse resource access patterns.
 % GPU 负载呈现出多样的资源访问模式。
-Results from \sys{}'s eBPF-based tracing tools (\S\ref{sec:eval}) confirm this diversity: \Cref{fig:access_patterns} captures memory page-fault addresses over time under UVM, showing that LLM MoE inference exhibits periodic stride bursts from expert activations; GNN training shows irregular random access from pointer-chasing graph traversal; and vector search alternates between sequential scans (index build) and random probes (query)~\cite{pan2024survey,cao2023gpu}.
+Results from \sys{}'s eBPF-based tracing tools (\S\ref{sec:eval}) confirm this diversity: \Cref{fig:access_patterns} captures memory page-fault addresses over time under UVM, showing that LLM MoE inference exhibits periodic stride bursts from expert activations; GNN training shows irregular random access from pointer-chasing graph traversal; and vector search alternates between sequential scans (index build) and random probes (query)~\cite{pan2024survey,johnson2021faiss}.
 % \sys{} 基于 eBPF 的追踪工具（\S\ref{sec:eval}）的结果证实了这种多样性：\Cref{fig:access_patterns} 捕获了 UVM 下随时间变化的内存缺页地址，显示 LLM MoE 推理因专家激活呈现周期性步长突发；GNN 训练因指针跳转的图遍历呈现不规则随机访问；向量搜索则在顺序扫描（索引构建）与随机探测（查询）之间交替。
 \Cref{fig:thread_scheduling} reveals a 127$\times$ SM scheduling load imbalance in a vector-add GPU kernel, invisible to host-side drivers.
 % \Cref{fig:thread_scheduling} 揭示了向量加法 GPU 内核中 127$\times$ 的 SM 调度负载不均，主机侧驱动无法察觉。
 
 These diverse patterns require workload-specific policies across all three domains.
 % 这些多样的模式要求三个领域均采用面向负载的策略。
-UVM eviction and prefetch policies alone can impact execution time by up to 73\%~\cite{ganguly2019interplay,park2025helm}: MoE inference favors specialized eviction over default LRU~\cite{sheng2023flexgen,kwon2023efficient}, while GNN training demands aggressive sequential prefetch~\cite{lin2024towards,wang2016gunrock}, but each can degrade other workloads.
+UVM eviction and prefetch policies alone can impact execution time by up to 73\%~\cite{ganguly2019interplay,park2025helm}: MoE inference favors specialized eviction over default LRU~\cite{huang2023towards,xue2025moeinfinity,yu2026finemoe}, while GNN training demands aggressive sequential prefetch~\cite{lin2024towards,wang2016gunrock}, but each can degrade other workloads.
 % 仅 UVM 淘汰与预取策略就可使执行时间变化高达 73\%：MoE 推理偏好专用淘汰而非默认 LRU，而 GNN 训练需要激进的顺序预取，但两者都会损害其他负载。
 Compute scheduling requires adaptive priority and preemption policies as multi-tenant demands fluctuate~\cite{fan2025gpreempt,wang2024gcaps}, and SM load imbalance benefits from custom thread scheduling.
 % 多租户需求波动时，计算调度需要自适应的优先级与抢占策略，SM 负载不均则受益于自定义线程调度。
@@ -92,11 +92,11 @@ Despite improved performance, all these approaches require OS kernel or driver m
 
 \paragraph{Host User-Space Runtimes and Libraries.}
 % 主机用户态运行时与库。
-User-space frameworks~\cite{ng2023paella,gim2025pie,shen2025xsched,chen2025ktransformers,coppock2025lithos} offer programmability but face three limitations.
+User-space frameworks~\cite{ng2023paella,gim2025pie,shen2025xsched,chen2025ktransformers,coppock2025lithos,strati2024orion} offer programmability but face three limitations.
 % 用户态框架提供了可编程性，但面临三大局限。
 First, policies are application-bound, requiring per-framework implementation and preventing reuse across ecosystems.
 % 第一，策略绑定于特定应用，需逐框架实现，无法跨生态复用。
-Second, process-level isolation prevents cross-tenant visibility and coordinated memory-scheduling decisions across tenants~\cite{xiao2018gandiva,yu2020fine}; hardware partitioning such as MIG imposes fixed resource boundaries that cannot be dynamically rebalanced.
+Second, process-level isolation prevents cross-tenant visibility and coordinated memory-scheduling decisions across tenants~\cite{xiao2018gandiva,yu2020fine}; hardware partitioning such as MIG~\cite{nvidia-mig} imposes fixed resource boundaries that cannot be dynamically rebalanced.
 % 第二，进程级隔离阻碍了跨租户可见性与跨租户的协同内存—调度决策；MIG 等硬件分区施加了固定资源边界，无法动态再平衡。
 Third, user-space code cannot access privileged driver mechanisms, leaving policies constrained to GPU kernel launch boundaries and unable to execute on latency-critical paths (e.g., page-fault handlers), perform precise preemption on driver or device states, or exploit GPU-side warp-level access patterns.
 % 第三，用户态代码无法访问特权驱动机制，策略被限制在 GPU 内核启动边界，无法在延迟敏感路径（如缺页处理程序）上执行，无法执行精确抢占，也无法利用 GPU 侧的 warp 级访问模式。

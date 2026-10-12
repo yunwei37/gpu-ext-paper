@@ -8,9 +8,9 @@
 % sched\_ext、cache\_ext 和 XDP 通过在固定决策点进行同步 eBPF 回调来扩展 Linux 子系统；
 \sys generalizes this to asynchronous, cross-device effects on user-defined events (\S\ref{sec:design-interfaces}).
 % 而 \sys 将其泛化为在用户自定义事件上产生异步、跨设备的效应 (\S\ref{sec:design-interfaces})。
-Driver-level GPU resource managers~\cite{kato2011timegraph,kato2012gdev,kernelintercept,fan2025gpreempt,wang2024gcaps,coppock2025lithos} require unsafe OS kernel driver modifications and service interruptions to change policy.
+Driver-level GPU resource managers~\cite{kato2011timegraph,kato2012gdev,kernelintercept,han2022reef,fan2025gpreempt,wang2024gcaps} require unsafe OS kernel driver modifications and service interruptions to change policy.
 % 驱动层 GPU 资源管理器~\cite{kato2011timegraph,kato2012gdev,kernelintercept,fan2025gpreempt,wang2024gcaps,coppock2025lithos} 需要不安全的 OS 内核驱动修改,并伴随服务中断才能更换策略。
-User-space frameworks~\cite{ng2023paella,shen2025xsched,gim2025pie,chen2025ktransformers} offer programmability but lack cross-tenant visibility and privileged hardware control (\S\ref{sec:motivation-limitations}).
+User-space frameworks~\cite{ng2023paella,shen2025xsched,gim2025pie,chen2025ktransformers,coppock2025lithos,strati2024orion} offer programmability but lack cross-tenant visibility and privileged hardware control (\S\ref{sec:motivation-limitations}).
 % 用户态框架~\cite{ng2023paella,shen2025xsched,gim2025pie,chen2025ktransformers} 提供可编程性,但缺乏跨租户可见性和特权硬件控制 (\S\ref{sec:motivation-limitations})。
 \sys offers runtime-programmable policies without either limitation.
 % \sys 在运行时提供可编程策略,且没有上述任何一种局限。

@@ -14,7 +14,7 @@ Unfortunately, finding an optimal GPU resource management policy is challenging.
 % 遗憾的是，寻找最优的 GPU 资源管理策略颇具挑战。
 The optimal memory and scheduling policies vary significantly across workloads, hardware, and deployment contexts~\cite{kwon2023efficient,agrawal2024taming,lin2024towards,wang2016gunrock,shoeybi2019megatron,rasley2020deepspeed,pan2024survey,cao2023gpu}, with no one policy dominating the others.
 % 最优的内存与调度策略随负载、硬件和部署环境的不同而差异显著，不存在一个策略在所有场景下都占优。
-For example, aggressive memory prefetching improves latency for LLM MoE inference by reducing memory stalls~\cite{park2025helm,ganguly2019interplay}, but increases the latency of graph analytics queries because it over-saturates memory bandwidth~\cite{ganguly2019interplay}.
+For example, aggressive memory prefetching improves latency for LLM MoE inference by reducing memory stalls~\cite{xue2025moeinfinity,yu2026finemoe}, but increases the latency of graph analytics queries because it over-saturates memory bandwidth~\cite{ganguly2019interplay}.
 % 例如，激进的内存预取通过减少内存停顿改善了 LLM MoE 推理的延迟，但会因内存带宽过饱和而增加图分析查询的延迟。
 Additionally, throughput-oriented scheduling improves average latency of vector search but degrades tail latency for interactive inference~\cite{agrawal2024taming,fan2025gpreempt}.
 % 此外，面向吞吐量的调度改善了向量搜索的平均延迟，却恶化了交互式推理的尾延迟。
