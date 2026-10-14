@@ -1,4 +1,4 @@
-\documentclass[sigplan,screen]{acmart}
+\documentclass[sigplan,screen,pbalance]{acmart}
 \setcounter{secnumdepth}{3}
 
 % === Functional packages ===
@@ -292,8 +292,8 @@ We used Claude and Codex as generative AI tools for coding assistance and langua
 \bibliography{tex-revision/cite}
 
 % The appendix follows the references and is outside the main-body page count.
-% Keep the artifact appendix on a separate page; acmart balances the final page.
-\clearpage
+% No page break before it, so every reference/appendix page has two full or
+% balanced columns (Sheridan request); acmart balances the final page.
 \appendix
 \input{tex-revision/appendix}
 
